@@ -1,4 +1,5 @@
 streamlit
-streamlit-folium
-folium
 requests
+beautifulsoup4
+folium
+streamlit-folium
