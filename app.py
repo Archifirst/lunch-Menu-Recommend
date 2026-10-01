@@ -6,7 +6,6 @@ import urllib.parse
 import folium
 from streamlit_folium import st_folium
 
-# 카카오 REST API 키
 KAKAO_REST_KEY = "bb9c8bfabfc3d5a4c0dbdb3312d8ca30".strip()
 
 st.set_page_config(page_title="오늘 점심 뭐 먹지?", page_icon="🍱", layout="centered")
@@ -30,37 +29,67 @@ PRESET_RADIUS = {
     "직접 입력": None
 }
 
-# 기본 메뉴 및 카카오 검색 키워드 매핑
+# --- 술집 및 부적합 업종 차단용 키워드 (카테고리 & 상호명) ---
+EXCLUDED_CATEGORIES = [
+    "술집", "주점", "호프", "포차", "이자카야", "바(BAR)", "요리주점", "와인바",
+    "칵테일바", "민속주점", "맥주", "룸살롱", "단란주점", "유흥주점", "라이브카페", "나이트클럽"
+]
+
+EXCLUDED_NAME_KEYWORDS = [
+    "포차", "주점", "호프", "이자카야", "술집", "맥주", "와인", "펍", "PUB", "비어",
+    "BEER", "라운지", "BAR", "룸", "노래방", "포장마차", "야시장", "소주"
+]
+
+# 메뉴 정의 및 카테고리 선별 힌트
 DEFAULT_FOODS = [
-    ("제육볶음", "🥓", "제육볶음"),
-    ("김치찌개", "🥘", "김치찌개"),
-    ("순대국", "🍲", "순대국"),
-    ("뼈해장국", "🍖", "뼈해장국"),
-    ("돈까스", "🍱", "돈까스"),
-    ("초밥", "🍣", "초밥"),
-    ("짜장면", "🥢", "중국집"),
-    ("짬뽕", "🌶️", "짬뽕"),
-    ("칼국수", "🍜", "칼국수"),
-    ("파스타", "🍝", "파스타"),
-    ("피자", "🍕", "피자"),
-    ("햄버거", "🍔", "햄버거"),
-    ("쌀국수", "🍜", "쌀국수"),
-    ("떡볶이", "🌶", "떡볶이"),
-    ("닭갈비", "🥘", "닭갈비"),
-    ("백반", "🍱", "백반")
+    ("제육볶음", "🥓", "제육볶음", ["한식", "백반", "식당"]),
+    ("김치찌개", "🥘", "김치찌개", ["찌개", "한식", "백반"]),
+    ("순대국", "🍲", "순대국", ["순대", "국밥", "한식"]),
+    ("뼈해장국", "🍖", "뼈해장국", ["감자탕", "해장국", "국밥"]),
+    ("돈까스", "🍱", "돈까스", ["돈가스", "일식", "경양식", "양식"]),
+    ("초밥", "🍣", "초밥", ["초밥", "스시", "일식"]),
+    ("짜장면", "🥢", "중국집", ["중식", "중화요리", "중국집"]),
+    ("짬뽕", "🌶️", "짬뽕", ["중식", "중화요리", "짬뽕"]),
+    ("칼국수", "🍜", "칼국수", ["칼국수", "국수", "한식"]),
+    ("파스타", "🍝", "파스타", ["양식", "이탈리안", "패밀리레스토랑"]),
+    ("피자", "🍕", "피자", ["피자", "양식", "이탈리안"]),
+    ("햄버거", "🍔", "수제버거", ["햄버거", "패스트푸드"]),
+    ("쌀국수", "🍜", "쌀국수", ["아시아음식", "베트남음식", "쌀국수"]),
+    ("떡볶이", "🌶", "떡볶이", ["분식", "떡볶이"]),
+    ("닭갈비", "🥘", "닭갈비", ["닭갈비", "한식"]),
+    ("백반", "🍱", "백반", ["백반", "가정식", "한식"])
 ]
 
 MOOD_DATA = {
-    "🥳 기분좋음": ("양식·외식", ["파스타", "피자", "햄버거", "초밥", "돈까스"]),
+    "🥳 기분좋음": ("양식·특식", ["파스타", "피자", "햄버거", "초밥", "돈까스"]),
     "🤯 스트레스": ("매콤·화끈", ["짬뽕", "떡볶이", "제육볶음", "닭갈비"]),
     "😴 피곤·보양": ("든든한 한식", ["순대국", "뼈해장국", "백반", "김치찌개"]),
     "☔ 흐림·비": ("따끈한 국물", ["칼국수", "김치찌개", "순대국", "짬뽕"])
 }
 
-# --- 카카오 공식 API 함수 ---
+# --- 점심 식당 적합성 엄격 검증 함수 ---
+def is_valid_lunch_restaurant(place_name: str, category_name: str, preferred_tags: list = None) -> bool:
+    """술집, 주점, 펍 등을 완전 배제하고 점심 식당만 통과시킴"""
+    # 1. 카카오 카테고리 경로에서 술집/주점 제외
+    if any(ex in category_name for ex in EXCLUDED_CATEGORIES):
+        return False
+
+    # 2. 상호명에서 술집 키워드 제외
+    clean_name = place_name.replace(" ", "").upper()
+    if any(bad in clean_name for bad in [k.upper() for k in EXCLUDED_NAME_KEYWORDS]):
+        return False
+
+    # 3. 카페/디저트 제외 (빙수, 커피 전문점 등)
+    if "카페" in category_name or "디저트" in category_name or "제과,베이커리" in category_name:
+        return False
+
+    return True
+
+
+# --- 카카오 공식 API 연동 함수 ---
 
 def kakao_get_coordinates(query: str):
-    """카카오 키워드 검색으로 지역/건물명 중심 좌표 획득"""
+    """지명/건물명 중심 좌표 획득"""
     url = "https://dapi.kakao.com/v2/local/search/keyword.json"
     headers = {"Authorization": f"KakaoAK {KAKAO_REST_KEY}"}
     params = {"query": query.strip(), "size": 1}
@@ -77,7 +106,7 @@ def kakao_get_coordinates(query: str):
 
 
 def kakao_reverse_geocode(lat: float, lng: float) -> str:
-    """좌표를 카카오 행정동 명칭으로 변환"""
+    """좌표를 행정동 이름으로 변환"""
     url = "https://dapi.kakao.com/v2/local/geo/coord2regioncode.json"
     headers = {"Authorization": f"KakaoAK {KAKAO_REST_KEY}"}
     params = {"x": str(lng), "y": str(lat)}
@@ -96,20 +125,22 @@ def kakao_reverse_geocode(lat: float, lng: float) -> str:
     return "내 위치"
 
 
-def kakao_search_places(lat: float, lng: float, keyword: str, radius_km: float = 1.8):
-    """카카오 로컬 API로 반경 내 실제 영업 중인 음식점(FD6) 수집"""
+def kakao_search_places(lat: float, lng: float, keyword: str, radius_km: float = 1.8, category_tags: list = None):
+    """
+    반경 내 음식점 중 '술집/주점'을 완전 필터링하고 진짜 점심 밥집만 수집
+    """
     url = "https://dapi.kakao.com/v2/local/search/keyword.json"
     headers = {"Authorization": f"KakaoAK {KAKAO_REST_KEY}"}
     radius_meters = int(radius_km * 1000)
 
     params = {
         "query": keyword,
-        "category_group_code": "FD6",
+        "category_group_code": "FD6", # 음식점 카테고리
         "x": str(lng),
         "y": str(lat),
         "radius": min(radius_meters, 20000),
         "sort": "distance",
-        "size": 10
+        "size": 15
     }
 
     try:
@@ -117,10 +148,19 @@ def kakao_search_places(lat: float, lng: float, keyword: str, radius_km: float =
         if res.status_code == 200:
             docs = res.json().get("documents", [])
             places = []
+            
             for d in docs:
+                p_name = d.get("place_name", "")
+                cat_name = d.get("category_name", "")
+
+                # 💡 핵심: 점심 식당 적합성 검증 (술집 완전 차단)
+                if not is_valid_lunch_restaurant(p_name, cat_name, category_tags):
+                    continue
+
                 dist_m = float(d.get("distance", 0))
                 places.append({
-                    "name": d.get("place_name"),
+                    "name": p_name,
+                    "category": cat_name.split(">")[-1].strip() if ">" in cat_name else cat_name,
                     "lat": float(d.get("y")),
                     "lng": float(d.get("x")),
                     "dist": round(dist_m / 1000, 2) if dist_m > 0 else 0.1,
@@ -143,7 +183,7 @@ if "action" in qp and qp["action"] == "gps" and "lat" in qp and "lng" in qp:
             st.session_state.gps_coords = (lat_f, lng_f)
             detected_name = kakao_reverse_geocode(lat_f, lng_f)
             st.session_state.region_input_val = detected_name
-            st.toast(f"카카오맵 위치 감지: '{detected_name}'", icon="✅")
+            st.toast(f"현재 위치: '{detected_name}' 감지 완료!", icon="✅")
     except Exception:
         pass
     del st.query_params["action"]
@@ -153,7 +193,7 @@ if "action" in qp and qp["action"] == "gps" and "lat" in qp and "lng" in qp:
 
 # --- 화면 레이아웃 ---
 st.title("🍱 오늘 점심 뭐 먹지?")
-st.caption("카카오 공식 REST API(`Kakao Local Service`) 연동 완료")
+st.caption("술집·주점은 쏙 빼고, 점심 식사에 최적화된 진짜 맛집만 추천합니다.")
 st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
 
 # 1. 위치 입력창 & GPS 버튼
@@ -163,7 +203,7 @@ with col_input:
     region = st.text_input(
         "📍 기준 지역, 동 이름 또는 건물명",
         value=st.session_state.region_input_val,
-        placeholder="예시) 후평동, 서울시청, 강남역, 판교",
+        placeholder="예시) 후평동, 역삼역, 판교유스페이스",
         key="main_region_input"
     )
     if region != st.session_state.region_input_val:
@@ -185,6 +225,8 @@ with col_gps:
                     }, function(err) {
                         alert('위치 권한을 허용해 주세요!');
                     });
+                } else {
+                    alert('GPS를 지원하지 않는 브라우저입니다.');
                 }
             " style="width:100%; height:42px; background-color:#2E7D32; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">
                 내 위치 찾기
@@ -279,43 +321,42 @@ with tab2:
 card_spot = st.empty()
 detail_spot = st.empty()
 
-# 4. 실행
+# 4. 탐색 및 추첨 실행
 if spin_triggered and selected_candidates:
     detail_spot.empty()
 
-    # 1) 카카오 API로 중심 좌표 확인
     if st.session_state.gps_coords:
         c_lat, c_lng = st.session_state.gps_coords
     else:
-        with st.spinner(f"카카오 API로 '{region}'의 위치를 조회하고 있습니다..."):
+        with st.spinner(f"카카오맵에서 '{region}' 위치를 확인하고 있습니다..."):
             c_lat, c_lng = kakao_get_coordinates(region)
 
     if not c_lat:
-        region_warning_spot.error(f"⚠️ 카카오맵에서 '{region}' 위치를 찾지 못했습니다. 구체적인 지명이나 동 이름을 입력해 보세요.")
+        region_warning_spot.error(f"⚠️ '{region}' 위치를 찾지 못했습니다. 구체적인 지명이나 동 이름을 입력해 보세요.")
     else:
-        # 2) 반경 내 실제 존재하는 식당 매칭
         final_menu = None
         places = []
 
         shuffled = selected_candidates.copy()
         random.shuffle(shuffled)
 
-        with st.spinner("카카오맵에서 실제 매장을 검색 중입니다..."):
-            for m_name, m_emoji, m_kw in shuffled:
-                found = kakao_search_places(c_lat, c_lng, m_kw, radius_km=radius_km)
+        with st.spinner("술집/호프집을 제외하고 순수 밥집만 선별 중입니다..."):
+            for m_name, m_emoji, m_kw, m_tags in shuffled:
+                # 1차: 키워드로 검색 (엄격한 점심 식당 필터 적용)
+                found = kakao_search_places(c_lat, c_lng, m_kw, radius_km=radius_km, category_tags=m_tags)
                 if found:
                     final_menu = (m_name, m_emoji)
                     places = found
                     break
 
+            # 개별 메뉴에 밥집이 부족하면 한식/백반 등으로 안전하게 백업
             if not places:
-                fallback_found = kakao_search_places(c_lat, c_lng, "맛집", radius_km=radius_km)
+                fallback_found = kakao_search_places(c_lat, c_lng, "백반", radius_km=radius_km)
                 if fallback_found:
-                    final_menu = ("근처 추천 맛집", "🍱")
+                    final_menu = ("백반·가정식", "🍱")
                     places = fallback_found
 
         if final_menu and places:
-            # 애니메이션
             for i in range(6):
                 temp = random.choice(selected_candidates)
                 card_spot.markdown(
@@ -342,9 +383,9 @@ if spin_triggered and selected_candidates:
                 "id": st.session_state.spin_count
             }
         else:
-            region_warning_spot.warning(f"⚠️ 카카오맵에 '{region}' 반경 {radius_display_text} 내 등록된 식당이 없습니다. 탐색 반경을 넓혀보세요!")
+            region_warning_spot.warning(f"⚠️ '{region}' 반경 내에 등록된 적합한 식당을 찾지 못했습니다. 탐색 반경을 넓혀보세요!")
 
-# 5. 결과 화면
+# 5. 결과 화면 출력
 res = st.session_state.saved_result
 if res is not None and res.get("places"):
     card_spot.markdown(
@@ -355,7 +396,7 @@ if res is not None and res.get("places"):
             <div style="font-size: 75px; margin-bottom: 4px;">{res['emoji']}</div>
             <h1 style="color: #E65100; margin: 4px 0 6px 0; font-size: 30px;">🎉 {res['menu']} 당첨! 🎉</h1>
             <p style="color: #795548; font-size: 14px; font-weight: bold; margin: 0;">
-                카카오 API 기준 '{res['region']}' ({res['radius_text']}) 반경 추천 결과입니다!
+                '{res['region']}' ({res['radius_text']}) 반경 추천 결과입니다!
             </p>
         </div>
         """,
@@ -370,7 +411,12 @@ if res is not None and res.get("places"):
             f"""
             <div style="margin-bottom: 15px; padding: 14px 18px; 
                         background-color: #F1F8E9; border-left: 5px solid #2E7D32; border-radius: 6px;">
-                <div style="font-size: 14px; color: #2E7D32; font-weight: bold;">⭐ 오늘의 1픽 추천 맛집 (카카오맵 등록 매장)</div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 13px; color: #2E7D32; font-weight: bold;">⭐ 오늘의 1픽 추천 점심</span>
+                    <span style="font-size: 12px; background: #C8E6C9; color: #1B5E20; padding: 2px 6px; border-radius: 4px;">
+                        {top_pick.get('category', '일반음식점')}
+                    </span>
+                </div>
                 <div style="font-size: 18px; color: #1B5E20; font-weight: 800; margin-top: 4px;">
                     <a href="{top_pick.get('place_url', '#')}" target="_blank" style="text-decoration: none; color: #1B5E20;">
                         {top_pick['name']} 🔗
@@ -386,25 +432,25 @@ if res is not None and res.get("places"):
 
         if len(places) > 1:
             candidate_names = [
-                f"<b>{i+1}.</b> <a href='{p.get('place_url', '#')}' target='_blank' style='color:#333;text-decoration:none;'>{p['name']}</a> ({p['dist']}km)"
+                f"<b>{i+1}.</b> <a href='{p.get('place_url', '#')}' target='_blank' style='color:#333;text-decoration:none;'>{p['name']}</a> <span style='color:#888;font-size:12px;'>({p.get('category', '')}, {p['dist']}km)</span>"
                 for i, p in enumerate(places[1:10])
             ]
             st.markdown(
-                f"<div style='font-size: 13.5px; color: #444; line-height: 1.8; margin-bottom: 20px;'>"
+                f"<div style='font-size: 13.5px; color: #444; line-height: 1.9; margin-bottom: 20px;'>"
                 f"<b>근처 다른 추천 후보 ({len(places)-1}곳):</b><br/>"
-                f"{' &nbsp;·&nbsp; '.join(candidate_names)}"
+                f"{'<br/>'.join(candidate_names)}"
                 f"</div>",
                 unsafe_allow_html=True
             )
 
-        st.markdown("<h3 style='margin-bottom: 4px;'>🗺️ 추천 식당 카카오맵 좌표 지도</h3>", unsafe_allow_html=True)
+        st.markdown("<h3 style='margin-bottom: 4px;'>🗺️️ 추천 식당 카카오맵 좌표 지도</h3>", unsafe_allow_html=True)
         st.caption("🔴 빨간 핀: 1픽 맛집 / 🔵 파란 핀: 주변 후보 (클릭 시 카카오 상세 페이지 링크)")
 
         m = folium.Map(location=[top_pick["lat"], top_pick["lng"]], zoom_start=15, control_scale=True)
 
         folium.Marker(
             location=[top_pick["lat"], top_pick["lng"]],
-            popup=folium.Popup(f"<b>⭐ {top_pick['name']}</b><br>{top_pick['address']}<br><a href='{top_pick['place_url']}' target='_blank'>카카오맵 정보</a>", max_width=250),
+            popup=folium.Popup(f"<b>⭐ {top_pick['name']}</b><br>{top_pick['address']}<br><a href='{top_pick['place_url']}' target='_blank'>카카오맵 열기</a>", max_width=250),
             tooltip=f"⭐ 1픽: {top_pick['name']}",
             icon=folium.Icon(color="red", icon="star", prefix="fa")
         ).add_to(m)
@@ -412,7 +458,7 @@ if res is not None and res.get("places"):
         for idx, p in enumerate(places[1:10], start=2):
             folium.Marker(
                 location=[p["lat"], p["lng"]],
-                popup=folium.Popup(f"<b>{idx}. {p['name']}</b><br>{p['address']}<br><a href='{p['place_url']}' target='_blank'>카카오맵 정보</a>", max_width=250),
+                popup=folium.Popup(f"<b>{idx}. {p['name']}</b><br>{p['address']}<br><a href='{p['place_url']}' target='_blank'>카카오맵 열기</a>", max_width=250),
                 tooltip=f"{idx}. {p['name']}",
                 icon=folium.Icon(color="blue", icon="cutlery", prefix="fa")
             ).add_to(m)
