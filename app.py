@@ -40,16 +40,23 @@ EXCLUDED_NAME_KEYWORDS = [
     "BEER", "라운지", "BAR", "룸", "노래방", "포장마차", "야시장", "소주"
 ]
 
-# --- 2. 늦은 시간 / 심야 / 야식 운영 키워드 (술집 확률 높은 곳 제외) ---
+# --- 2. 전류 / 주막 / 빈대떡 전문점 제외 (막걸리 위주 주점 차단) ---
+JEON_KEYWORDS = [
+    "파전", "빈대떡", "모듬전", "부침개", "지짐이", "지짐", "육전", "전집", 
+    "전나라", "전마을", "전선생", "종로전", "원조전", "전골목", "주막", 
+    "막걸리", "동동주", "산울림", "탁주"
+]
+
+# --- 3. 늦은 시간 / 심야 / 야식 운영 키워드 제외 ---
 LATE_NIGHT_KEYWORDS = [
     "심야", "야식", "야간", "새벽", "올나잇", "달빛", "24시", "24시간", 
     "밤식당", "야포", "야한", "불밤", "야시장", "심야식당"
 ]
 
-# --- 3. 점심 부적합 업종 (구이류, 고깃집, 치킨, 꼬치) 제외 ---
+# --- 4. 점심 부적합 업종 (구이류, 고깃집, 치킨, 꼬치) 제외 ---
 NON_LUNCH_CATEGORIES = [
     "삼겹살", "갈비", "육류,고기구이", "곱창,막창", "양꼬치", "조개구이",
-    "치킨", "닭요리 > 치킨", "닭꼬치", "꼬치구이"
+    "치킨", "닭요리 > 치킨", "닭꼬치", "꼬치구이", "전,빈대떡"
 ]
 
 NON_LUNCH_NAME_KEYWORDS = [
@@ -60,13 +67,13 @@ NON_LUNCH_NAME_KEYWORDS = [
     "치킨", "통닭", "닭강정", "켄터키", "BHC", "BBQ", "교촌", "굽네", "처갓집", "노랑통닭"
 ]
 
-# --- 4. 저녁 위주 횟집/수산시장 제외 키워드 (초밥 메뉴 시 원천 차단) ---
+# --- 5. 저녁 위주 횟집/수산시장 제외 키워드 ---
 EVENING_RAW_FISH_KEYWORDS = [
     "횟집", "회센타", "회센터", "수산", "회타운", "활어", "선어", "막회", "숙성회",
     "모듬회", "물회마차", "포차회", "바다마차", "해물포차", "해산물포차", "참치정육점"
 ]
 
-# --- 5. 종합 다메뉴 프랜차이즈 ---
+# --- 6. 종합 다메뉴 프랜차이즈 ---
 MULTI_MENU_FRANCHISES = [
     "국수나무", "미소야", "역전우동", "한솥", "도시락",
     "김밥천국", "고봉민", "김가네", "얌샘", "싸다김밥", "종로김밥", 
@@ -74,7 +81,7 @@ MULTI_MENU_FRANCHISES = [
     "분식천국", "나드리김밥", "소풍김밥"
 ]
 
-# --- 6. 프랜차이즈 판별용 키워드 (개인 음식점 우대용) ---
+# --- 7. 프랜차이즈 판별용 키워드 (개인 음식점 우대용) ---
 KNOWN_FRANCHISE_BRANDS = [
     "김밥천국", "고봉민", "김가네", "얌샘", "싸다김밥", "종로김밥", "선비꼬마김밥",
     "마녀김밥", "바르다김선생", "밥버거", "토마토김밥", "국수나무", "미소야", "역전우동",
@@ -86,7 +93,7 @@ KNOWN_FRANCHISE_BRANDS = [
 
 BUNSIK_ALLOW_MENUS = {"김밥", "떡볶이", "라면", "분식"}
 
-# --- 7. 메뉴 목록 ---
+# --- 8. 메뉴 목록 ---
 DEFAULT_FOODS = [
     ("제육볶음", "🥓", "제육볶음 정식", ["한식", "백반", "식당"]),
     ("김치찌개", "🥘", "김치찌개 전문점", ["찌개", "한식", "백반"]),
@@ -124,30 +131,36 @@ def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_na
     if any(bad in clean_name for bad in [k.upper() for k in EXCLUDED_NAME_KEYWORDS]):
         return False
 
-    # [2] 늦은 시간 / 심야 / 야식 / 24시 영업 매장 제외 (주점 확률 배제)
+    # [2] 전류/전집/빈대떡/막걸리 주점 제외
+    if any(jeon in clean_name for jeon in JEON_KEYWORDS):
+        return False
+    if any(c in category_name for c in ["전,빈대떡", "빈대떡", "민속주점"]):
+        return False
+
+    # [3] 늦은 시간 / 심야 / 야식 / 24시 영업 매장 제외
     if any(late in clean_name for late in LATE_NIGHT_KEYWORDS):
         return False
     if any(late in category_name for late in ["심야", "야식"]):
         return False
 
-    # [3] 카페/디저트 제외
+    # [4] 카페/디저트 제외
     if any(c in category_name for c in ["카페", "디저트", "제과,베이커리"]):
         return False
 
-    # [4] 고깃집, 구이집, 치킨, 꼬치 제외
+    # [5] 고깃집, 구이집, 치킨, 꼬치 제외
     if any(non in category_name for non in NON_LUNCH_CATEGORIES):
         return False
     if any(bad in clean_name for bad in [k.upper() for k in NON_LUNCH_NAME_KEYWORDS]):
         return False
 
-    # [5] 종합 다메뉴 프랜차이즈 필터링 (김밥/분식이 아닐 때)
+    # [6] 종합 다메뉴 프랜차이즈 필터링 (김밥/분식이 아닐 때)
     if menu_name not in BUNSIK_ALLOW_MENUS:
         if any(brand in clean_name for brand in MULTI_MENU_FRANCHISES):
             return False
         if "분식" in category_name and not any(k in category_name for k in ["일식", "양식", "한식", "중식"]):
             return False
 
-    # [6] 초밥 메뉴 당첨 시: 저녁 위주 활어 횟집, 수산시장, 회센터 원천 차단
+    # [7] 초밥 메뉴 당첨 시: 저녁 위주 활어 횟집, 수산시장, 회센터 제외
     if menu_name == "초밥":
         if any(fish in clean_name for fish in EVENING_RAW_FISH_KEYWORDS):
             return False
@@ -158,11 +171,6 @@ def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_na
 
 
 def calculate_restaurant_priority(place: dict, menu_name: str) -> float:
-    """
-    1. 개인 음식점 우선 (-0.5점) / 프랜차이즈 감점 (+3.0점)
-    2. 김밥: 김밥집 우선 (-2.0점) / 분식집 후순위 (+4.0점)
-    3. 초밥: 스시·초밥 전문점 최우선 (-3.5점) / 일반 횟집 후순위 (+3.0점)
-    """
     p_name = place["name"]
     category = place["category"]
     dist = place["dist"]
@@ -206,7 +214,6 @@ def calculate_restaurant_priority(place: dict, menu_name: str) -> float:
 # --- 카카오 공식 API 연동 함수 ---
 
 def kakao_get_coordinates(query: str):
-    """지명/건물명 중심 좌표 획득"""
     url = "https://dapi.kakao.com/v2/local/search/keyword.json"
     headers = {"Authorization": f"KakaoAK {KAKAO_REST_KEY}"}
     params = {"query": query.strip(), "size": 1}
@@ -223,7 +230,6 @@ def kakao_get_coordinates(query: str):
 
 
 def kakao_reverse_geocode(lat: float, lng: float) -> str:
-    """좌표를 행정동 이름으로 변환"""
     url = "https://dapi.kakao.com/v2/local/geo/coord2regioncode.json"
     headers = {"Authorization": f"KakaoAK {KAKAO_REST_KEY}"}
     params = {"x": str(lng), "y": str(lat)}
@@ -243,9 +249,6 @@ def kakao_reverse_geocode(lat: float, lng: float) -> str:
 
 
 def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: str, radius_km: float = 1.8):
-    """
-    반경 내 음식점 수집 후 심야식당, 술집, 횟집, 고깃집을 제외하고 순수 주간 점심 전문점 정렬
-    """
     url = "https://dapi.kakao.com/v2/local/search/keyword.json"
     headers = {"Authorization": f"KakaoAK {KAKAO_REST_KEY}"}
     radius_meters = int(radius_km * 1000)
@@ -270,7 +273,7 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
                 p_name = d.get("place_name", "")
                 cat_name = d.get("category_name", "")
 
-                # 심야/야식/술집/저녁횟집/고깃집 필터링
+                # 전집, 술집, 고깃집 등 엄격 필터링
                 if not is_valid_specialized_restaurant(menu_name, p_name, cat_name):
                     continue
 
@@ -315,7 +318,7 @@ if "action" in qp and qp["action"] == "gps" and "lat" in qp and "lng" in qp:
 
 # --- 화면 레이아웃 ---
 st.title("🍱 오늘 점심 뭐 먹지?")
-st.caption("심야·야식 매장과 술집은 제외하고, 점심 식사에 최적화된 로컬 전문점을 추천합니다.")
+st.caption("전집·주막·술집·야식집은 제외하고, 깔끔한 점심 식사 전문점만 추천합니다.")
 st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
 
 # 1. 위치 입력창 & GPS 버튼
@@ -462,7 +465,7 @@ if spin_triggered and selected_candidates:
         shuffled = selected_candidates.copy()
         random.shuffle(shuffled)
 
-        with st.spinner("심야/야식 매장을 배제하고 점심 전문점을 엄선하는 중입니다..."):
+        with st.spinner("전집·술집을 배제하고 점심 식당을 엄선하는 중입니다..."):
             for m_name, m_emoji, m_kw, m_tags in shuffled:
                 found = kakao_search_places(c_lat, c_lng, m_name, m_kw, radius_km=radius_km)
                 if found:
@@ -485,7 +488,7 @@ if spin_triggered and selected_candidates:
                                 background: #FFF9E6; border-radius: 20px; border: 4px solid #FF9800;">
                         <div style="font-size: 65px; margin-bottom: 4px;">{temp[1]}</div>
                         <h2 style="color: #FF5722; margin: 4px 0 6px 0; font-size: 24px;">{temp[0]}</h2>
-                        <p style="color: #888; font-size: 13px; margin: 0;">{radius_display_text} 기준 주간 전문점 찾는 중... 🎲</p>
+                        <p style="color: #888; font-size: 13px; margin: 0;">{radius_display_text} 기준 전문점 찾는 중... 🎲</p>
                     </div>
                     """,
                     unsafe_allow_html=True
@@ -516,7 +519,7 @@ if res is not None and res.get("places"):
             <div style="font-size: 75px; margin-bottom: 4px;">{res['emoji']}</div>
             <h1 style="color: #E65100; margin: 4px 0 6px 0; font-size: 30px;">🎉 {res['menu']} 당첨! 🎉</h1>
             <p style="color: #795548; font-size: 14px; font-weight: bold; margin: 0;">
-                '{res['region']}' ({res['radius_text']}) 반경 주간 식당 추천 결과입니다!
+                '{res['region']}' ({res['radius_text']}) 반경 점심 전문 식당 추천 결과입니다!
             </p>
         </div>
         """,
