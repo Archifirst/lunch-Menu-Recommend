@@ -16,13 +16,13 @@ st.set_page_config(page_title="오늘 점심 뭐 먹지?", page_icon="🍱", lay
 st.markdown(
     """
     <style>
-    /* 전체 배경 및 폰트 렌더링 + 최상단 여백 축소 */
+    /* 전체 배경 및 폰트 렌더링 + 상단 여백 압축 */
     .stApp {
         background-color: #FAF8F5;
         font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo", sans-serif;
     }
     .block-container {
-        padding-top: 1.8rem !important;
+        padding-top: 1.6rem !important;
         padding-bottom: 2.5rem !important;
     }
     
@@ -37,57 +37,12 @@ st.markdown(
         border-color: #E86A3E !important;
         box-shadow: 0 0 0 2px rgba(232, 106, 62, 0.15) !important;
     }
-    
-    /* 탭 디자인: 룰렛 버튼과 동일한 전체 너비(100%) + 5:5 분할 개별 카드 박스 */
-    div[data-testid="stTabs"] {
-        width: 100% !important;
-        background: transparent !important;
-        margin-bottom: 10px !important;
-    }
-    div[data-testid="stTabs"] div[role="tablist"] {
-        display: flex !important;
-        width: 100% !important;
-        gap: 10px !important;
-        border-bottom: none !important;
-        background: transparent !important;
-        padding: 0 !important;
-    }
-    button[data-baseweb="tab"] {
-        flex: 1 1 0% !important;
-        width: 50% !important;
-        text-align: center !important;
-        justify-content: center !important;
-        align-items: center !important;
-        border-radius: 14px !important;
-        padding: 12px 0 !important;
-        font-size: 14.5px !important;
-        font-weight: 700 !important;
-        color: #7A6F66 !important;
-        background-color: #FFFFFF !important;
-        border: 1.5px solid #EBE4DC !important;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.02) !important;
-        transition: all 0.2s ease !important;
-    }
-    button[data-baseweb="tab"]:hover {
-        border-color: #F0A080 !important;
-        color: #E86A3E !important;
-        background-color: #FFFDF9 !important;
-    }
-    button[data-baseweb="tab"][aria-selected="true"] {
-        background-color: #FFF5EE !important;
-        color: #E86A3E !important;
-        border: 2px solid #E86A3E !important;
-        box-shadow: 0 3px 10px rgba(232, 106, 62, 0.12) !important;
-    }
-    div[data-baseweb="tab-highlight"] {
-        display: none !important;
-    }
 
     /* 반경 선택창 부드럽게 위에서 내려오는 드롭다운 모션 */
     @keyframes smoothSlideDown {
         0% {
             opacity: 0;
-            transform: translateY(-12px) scale(0.98);
+            transform: translateY(-10px) scale(0.98);
         }
         100% {
             opacity: 1;
@@ -99,6 +54,23 @@ st.markdown(
         transform-origin: top center;
         margin-bottom: 6px;
     }
+
+    /* 룰렛 선택 모드 박스 스타일 */
+    .roulette-mode-box {
+        width: 100%;
+        background-color: #FFFFFF;
+        border-radius: 16px;
+        padding: 16px 18px;
+        margin-bottom: 12px;
+        border: 2px solid #EAE3DB;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+        transition: all 0.25s ease;
+    }
+    .roulette-mode-box.active {
+        border-color: #E86A3E;
+        background-color: #FFFDF9;
+        box-shadow: 0 4px 14px rgba(232, 106, 62, 0.15);
+    }
     
     /* 메인 룰렛 돌리기 버튼 커스텀 */
     div.stButton > button[kind="primary"] {
@@ -106,19 +78,19 @@ st.markdown(
         color: white !important;
         border: none !important;
         border-radius: 14px !important;
-        height: 48px !important;
-        font-size: 16px !important;
+        height: 46px !important;
+        font-size: 15.5px !important;
         font-weight: 700 !important;
-        box-shadow: 0 4px 12px rgba(232, 106, 62, 0.25) !important;
+        box-shadow: 0 4px 12px rgba(232, 106, 62, 0.22) !important;
         transition: all 0.2s ease !important;
     }
     div.stButton > button[kind="primary"]:hover {
         background-color: #D65A2F !important;
-        box-shadow: 0 6px 16px rgba(232, 106, 62, 0.35) !important;
+        box-shadow: 0 6px 16px rgba(232, 106, 62, 0.32) !important;
         transform: translateY(-1px);
     }
     
-    /* 일반 버튼 및 기분 버튼 디자인 통일 */
+    /* 일반 보조 버튼 디자인 */
     div.stButton > button[kind="secondary"] {
         border-radius: 12px !important;
         border: 1.5px solid #EDE4DC !important;
@@ -138,7 +110,7 @@ st.markdown(
         transform: translateY(-1px);
     }
     
-    /* 반경 토글 버튼 전용 크기 */
+    /* 반경 토글 버튼 전용 높이 */
     div[data-testid="stColumn"] > div > div > div.stButton > button {
         height: 40px !important;
     }
@@ -158,6 +130,8 @@ if "gps_coords" not in st.session_state:
     st.session_state.gps_coords = None
 if "region_input_val" not in st.session_state:
     st.session_state.region_input_val = ""
+if "active_mode" not in st.session_state:
+    st.session_state.active_mode = "random"  # 'random' 또는 'mood'
 
 PRESET_RADIUS = {
     "🚶": 0.7,
@@ -166,7 +140,7 @@ PRESET_RADIUS = {
     "직접 입력": None
 }
 
-# --- 1. 술집 / 유흥업종 제외 ---
+# --- 1. 제외/필터링 사전 규칙 정의 ---
 EXCLUDED_CATEGORIES = [
     "술집", "주점", "호프", "포차", "이자카야", "바(BAR)", "요리주점", "와인바",
     "칵테일바", "민속주점", "맥주", "룸살롱", "단란주점", "유흥주점", "라이브카페", "나이트클럽"
@@ -177,20 +151,17 @@ EXCLUDED_NAME_KEYWORDS = [
     "BEER", "라운지", "BAR", "룸", "노래방", "포장마차", "야시장", "소주"
 ]
 
-# --- 2. 전류 / 주막 / 막걸리집 제외 ---
 JEON_KEYWORDS = [
     "파전", "빈대떡", "모듬전", "부침개", "지짐이", "지짐", "전집", 
     "전나라", "전마을", "전선생", "종로전", "원조전", "전골목", "주막", 
     "막걸리", "동동주", "산울림", "탁주"
 ]
 
-# --- 3. 늦은 시간 / 심야 / 야식 운영 키워드 제외 ---
 LATE_NIGHT_KEYWORDS = [
     "심야", "야식", "야간", "새벽", "올나잇", "달빛", "24시", "24시간", 
     "밤식당", "야포", "야한", "불밤", "야시장", "심야식당"
 ]
 
-# --- 4. 점심 부적합 업종 제외 ---
 NON_LUNCH_CATEGORIES = [
     "삼겹살", "갈비", "육류,고기구이", "곱창,막창", "양꼬치", "조개구이",
     "치킨", "닭요리 > 치킨", "닭꼬치", "꼬치구이", "전,빈대떡", "닭발"
@@ -205,7 +176,6 @@ NON_LUNCH_NAME_KEYWORDS = [
     "치킨", "통닭", "닭강정", "켄터키", "BHC", "BBQ", "교촌", "굽네", "처갓집", "노랑통닭"
 ]
 
-# --- 5. 술 안주 메뉴 키워드 ---
 DRINK_SNACK_KEYWORDS = [
     "황도", "과일안주", "과일화채", "화채", "마른안주", "먹태", "노가리", "한치", 
     "쥐포", "육포", "골뱅이소면", "골뱅이무침", "두부김치", "어묵탕", "오뎅탕", 
@@ -213,13 +183,11 @@ DRINK_SNACK_KEYWORDS = [
     "나초", "모듬포", "문어숙회", "오징어숙회", "골뱅이"
 ]
 
-# --- 6. 저녁 위주 횟집/수산시장 제외 키워드 ---
 EVENING_RAW_FISH_KEYWORDS = [
     "횟집", "회센타", "회센터", "수산", "회타운", "활어", "선어", "막회", "숙성회",
     "모듬회", "물회마차", "포차회", "바다마차", "해물포차", "해산물포차", "참치정육점"
 ]
 
-# --- 7. 종합 다메뉴 프랜차이즈 ---
 MULTI_MENU_FRANCHISES = [
     "국수나무", "미소야", "역전우동", "한솥", "도시락",
     "김밥천국", "고봉민", "김가네", "얌샘", "싸다김밥", "종로김밥", 
@@ -227,7 +195,6 @@ MULTI_MENU_FRANCHISES = [
     "분식천국", "나드리김밥", "소풍김밥"
 ]
 
-# --- 8. 프랜차이즈 판별용 키워드 ---
 KNOWN_FRANCHISE_BRANDS = [
     "김밥천국", "고봉민", "김가네", "얌샘", "싸다김밥", "종로김밥", "선비꼬마김밥",
     "마녀김밥", "바르다김선생", "밥버거", "토마토김밥", "국수나무", "미소야", "역전우동",
@@ -252,7 +219,7 @@ TONKATSU_NAME_INDICATORS = [
     "돈까스", "돈가스", "카츠", "카쯔", "가츠", "돈카츠", "돈카쯔", "포크커틀릿"
 ]
 
-# --- 9. 전국 점심 대표 메뉴 풀 (이모티콘 1개 단일화) ---
+# --- 전국 점심 대표 메뉴 풀 (이모티콘 1개 단일화) ---
 DEFAULT_FOODS = [
     ("김치찌개", "🥘", "김치찌개 전문점", ["찌개", "한식", "백반"]),
     ("된장찌개", "🍲", "된장찌개 백반", ["찌개", "한식", "백반"]),
@@ -349,7 +316,7 @@ MOOD_DATA = {
     )
 }
 
-# --- 점심시간(10:00~14:00) 영업 & 술안주 미판매 검증 함수 ---
+# --- 점심시간 및 술안주 필터 ---
 def verify_place_details(place_id: str) -> bool:
     try:
         url = f"https://place.map.kakao.com/main/v/{place_id}"
@@ -361,7 +328,6 @@ def verify_place_details(place_id: str) -> bool:
             return True
 
         data = res.json()
-
         menu_info = data.get("menuInfo", {})
         menu_list = menu_info.get("menuList", [])
         for m in menu_list:
@@ -386,7 +352,6 @@ def verify_place_details(place_id: str) -> bool:
                         end_h = int(times[1][0]) + int(times[1][1]) / 60.0
                         if end_h < start_h:
                             end_h += 24.0
-                        
                         if end_h <= 10.0 or start_h >= 14.0:
                             return False
 
@@ -395,7 +360,6 @@ def verify_place_details(place_id: str) -> bool:
         return True
 
 
-# --- 점심 전문 식당 판정 엔진 ---
 def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_name: str) -> bool:
     clean_name = place_name.replace(" ", "").upper()
 
@@ -493,8 +457,6 @@ def calculate_restaurant_priority(place: dict, menu_name: str) -> float:
 
     return score
 
-
-# --- 카카오 공식 API 연동 함수 ---
 
 def kakao_get_coordinates(query: str):
     url = "https://dapi.kakao.com/v2/local/search/keyword.json"
@@ -600,7 +562,7 @@ if qp.get("action") == "gps" and "lat" in qp and "lng" in qp:
     st.query_params.clear()
 
 
-# --- 화면 레이아웃 상단부 ---
+# --- 상단 타이틀 ---
 st.markdown("<h1 style='color: #2E1C10; font-size: 26px; font-weight: 800; margin: 0 0 2px 0;'>🍱 오늘 점심 뭐 먹지?</h1>", unsafe_allow_html=True)
 st.markdown("<div style='color: #8C827A; font-size: 13px; margin-bottom: 14px;'>점심에 집중하는 근처 로컬 밥집만 쏙 골라 추천합니다.</div>", unsafe_allow_html=True)
 
@@ -644,7 +606,7 @@ with col_gps:
         unsafe_allow_html=True
     )
 
-# 2. 반경 노출 조건 판별 (빈 값이거나 행정지명이면 숨김, 특정 건물/역/장소 입력 시에만 노출)
+# 2. 건물/역 입력 시에만 반경 노출
 clean_region = region.strip()
 is_admin_region = False
 
@@ -697,12 +659,8 @@ else:
     radius_km = 1.8
     radius_display_text = "지역 인근"
 
-# 3. 위치 미입력 경고 영역
 region_warning_spot = st.empty()
-st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
-
-# 4. 룰렛 탭 (전체 폭 100% 균등 5:5 분할 개별 카드 박스 형태)
-tab1, tab2 = st.tabs(["🎲 랜덤 룰렛", "✨ 기분 & 상황별 룰렛"])
+st.markdown("<div style='height: 6px;'></div>", unsafe_allow_html=True)
 
 spin_triggered = False
 selected_candidates = []
@@ -714,7 +672,7 @@ def show_location_warning():
                     width: 100%; height: 44px; margin: 4px 0 10px 0;
                     background-color: #FFFDF7; border: 1.5px solid #F7D488; border-radius: 12px;
                     box-shadow: 0 3px 10px rgba(247, 212, 136, 0.2);">
-            <span style="font-size: 16px; line-height: 1;">⚠️</span>
+            <span style="font-size: 16px; line-height: 1;">⚠️️</span>
             <span style="color: #6C4D0A; font-size: 13.5px; font-weight: 700; line-height: 1;">
                 위치를 입력하거나 '내 위치 찾기'를 눌러주세요!
             </span>
@@ -723,57 +681,89 @@ def show_location_warning():
         unsafe_allow_html=True
     )
 
-with tab1:
-    st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
-    if st.button("🎲 룰렛 돌리기", use_container_width=True, type="primary", key="btn_random"):
-        if not region.strip() and not st.session_state.gps_coords:
-            show_location_warning()
-        else:
-            region_warning_spot.empty()
-            selected_candidates = DEFAULT_FOODS.copy()
-            spin_triggered = True
+# --- 3. 룰렛 방식 선택 박스 (100% 폭, 독립된 2개의 선택 박스) ---
+st.markdown("<div style='margin-bottom: 6px; font-size: 14px; font-weight: 700; color: #3E3228;'>🎯 룰렛 방식 선택</div>", unsafe_allow_html=True)
 
-with tab2:
-    selected_mood = None
-    st.markdown(
-        """
-        <div style='text-align: center; color: #7A6F66; font-size: 12.5px; font-weight: 500; margin: 4px 0 10px 0;'>
-            지금 기분이나 컨디션에 딱 맞는 한 끼를 골라보세요
+# 박스 1: 완전 랜덤 룰렛 (폭 꽉 차게)
+is_random_active = "active" if st.session_state.active_mode == "random" else ""
+st.markdown(
+    f"""
+    <div class="roulette-mode-box {is_random_active}">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div>
+                <span style="font-size: 16px; font-weight: 800; color: #2E1C10;">🎲 완전 랜덤 룰렛</span>
+                <div style="font-size: 12.5px; color: #8C827A; margin-top: 2px;">호불호 없는 전국 점심 65종 중에서 즉시 무작위 추첨!</div>
+            </div>
+            <span style="font-size: 22px;">🎰</span>
         </div>
-        """,
-        unsafe_allow_html=True
-    )
-    col_m1, col_m2 = st.columns(2)
-    mood_keys = list(MOOD_DATA.keys())
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
-    with col_m1:
-        for k in mood_keys[:3]:
-            desc, _ = MOOD_DATA[k]
-            btn_label = f"{k}\n({desc})"
-            if st.button(btn_label, use_container_width=True, key=f"btn_{k}"):
-                selected_mood = k
+if st.button("🎲 랜덤 룰렛 돌리기", use_container_width=True, type="primary" if st.session_state.active_mode == "random" else "secondary", key="btn_trigger_random"):
+    st.session_state.active_mode = "random"
+    if not region.strip() and not st.session_state.gps_coords:
+        show_location_warning()
+    else:
+        region_warning_spot.empty()
+        selected_candidates = DEFAULT_FOODS.copy()
+        spin_triggered = True
 
-    with col_m2:
-        for k in mood_keys[3:]:
-            desc, _ = MOOD_DATA[k]
-            btn_label = f"{k}\n({desc})"
-            if st.button(btn_label, use_container_width=True, key=f"btn_{k}"):
-                selected_mood = k
+st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
 
-    if selected_mood:
-        if not region.strip() and not st.session_state.gps_coords:
-            show_location_warning()
-        else:
-            region_warning_spot.empty()
-            _, allowed_names = MOOD_DATA[selected_mood]
-            filtered = [f for f in DEFAULT_FOODS if f[0] in allowed_names]
-            selected_candidates = filtered if filtered else DEFAULT_FOODS
-            spin_triggered = True
+# 박스 2: 기분 & 상황별 룰렛 (폭 꽉 차게)
+is_mood_active = "active" if st.session_state.active_mode == "mood" else ""
+st.markdown(
+    f"""
+    <div class="roulette-mode-box {is_mood_active}">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div>
+                <span style="font-size: 16px; font-weight: 800; color: #2E1C10;">✨ 기분 & 상황별 맞춤 룰렛</span>
+                <div style="font-size: 12.5px; color: #8C827A; margin-top: 2px;">오늘의 컨디션이나 날씨에 딱 어울리는 메뉴군에서 룰렛 회전!</div>
+            </div>
+            <span style="font-size: 22px;">🔮</span>
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+# 상황별 룰렛 세부 선택 버튼 그리드 (선택 시 즉시 해당 테마로 룰렛 작동)
+col_m1, col_m2 = st.columns(2)
+mood_keys = list(MOOD_DATA.keys())
+selected_mood = None
+
+with col_m1:
+    for k in mood_keys[:3]:
+        desc, _ = MOOD_DATA[k]
+        btn_label = f"{k}\n({desc})"
+        if st.button(btn_label, use_container_width=True, key=f"btn_{k}"):
+            st.session_state.active_mode = "mood"
+            selected_mood = k
+
+with col_m2:
+    for k in mood_keys[3:]:
+        desc, _ = MOOD_DATA[k]
+        btn_label = f"{k}\n({desc})"
+        if st.button(btn_label, use_container_width=True, key=f"btn_{k}"):
+            st.session_state.active_mode = "mood"
+            selected_mood = k
+
+if selected_mood:
+    if not region.strip() and not st.session_state.gps_coords:
+        show_location_warning()
+    else:
+        region_warning_spot.empty()
+        _, allowed_names = MOOD_DATA[selected_mood]
+        filtered = [f for f in DEFAULT_FOODS if f[0] in allowed_names]
+        selected_candidates = filtered if filtered else DEFAULT_FOODS
+        spin_triggered = True
 
 card_spot = st.empty()
 detail_spot = st.empty()
 
-# 5. 탐색 및 추첨 실행
+# --- 4. 룰렛 애니메이션 및 식당 탐색 로직 ---
 if spin_triggered and selected_candidates:
     detail_spot.empty()
 
@@ -837,7 +827,7 @@ if spin_triggered and selected_candidates:
         else:
             region_warning_spot.warning(f"⚠️ '{region}' 반경 내에 순수 점심 식사 매장을 찾지 못했습니다. 탐색 반경을 넓혀보세요!")
 
-# 6. 결과 화면 출력
+# --- 5. 결과 화면 출력 ---
 res = st.session_state.saved_result
 if res is not None and res.get("places"):
     card_spot.markdown(
