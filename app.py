@@ -226,7 +226,7 @@ def verify_place_details(place_id: str) -> bool:
 
         data = res.json()
 
-        # [검증 1] 메뉴 목록에 전형적인 '술안주'가 포함되어 있는지 검사
+        # [검증 1] 메뉴 목록에 전형적인 '술안주'가 포함되어 있는지 검사 (계란말이 제외됨)
         menu_info = data.get("menuInfo", {})
         menu_list = menu_info.get("menuList", [])
         for m in menu_list:
@@ -489,7 +489,7 @@ st.title("🍱 오늘 점심 뭐 먹지?")
 st.caption("주변 로컬 식당 중 점심 식사에 최적화된 진짜 맛집만 엄선하여 추천합니다.")
 st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
 
-# 1. 위치 입력 라벨: 탐색반경과 동일한 15px, 중간 볼드(weight 500) 적용
+# 위치 라벨
 st.markdown("<div style='margin: 0 0 4px 0; font-size: 15px; font-weight: 500;'>📍 위치</div>", unsafe_allow_html=True)
 
 col_input, col_gps = st.columns([3.3, 1.2])
@@ -529,7 +529,7 @@ with col_gps:
         unsafe_allow_html=True
     )
 
-# 2. 탐색 반경 라벨: 동일한 15px, 중간 볼드(weight 500) 적용
+# 탐색 반경 라벨
 st.markdown("<div style='margin: 14px 0 6px 0; font-size: 15px; font-weight: 500;'>📏 탐색 반경</div>", unsafe_allow_html=True)
 c1, c2, c3, c4 = st.columns([1.0, 1.0, 1.0, 1.6], vertical_alignment="center")
 
@@ -570,7 +570,7 @@ else:
 region_warning_spot = st.empty()
 st.write("---")
 
-# 3. 룰렛 탭
+# 룰렛 탭
 tab1, tab2 = st.tabs(["🎲 랜덤 룰렛", "😊 기분 & 상황별 룰렛"])
 
 spin_triggered = False
@@ -614,7 +614,7 @@ with tab2:
 card_spot = st.empty()
 detail_spot = st.empty()
 
-# 4. 탐색 및 추첨 실행
+# 탐색 및 추첨 실행
 if spin_triggered and selected_candidates:
     detail_spot.empty()
 
@@ -625,7 +625,7 @@ if spin_triggered and selected_candidates:
             c_lat, c_lng = kakao_get_coordinates(region)
 
     if not c_lat:
-        region_warning_spot.error(f"⚠️️ '{region}' 위치를 찾지 못했습니다. 구체적인 지명이나 동 이름을 입력해 보세요.")
+        region_warning_spot.error(f"⚠️ '{region}' 위치를 찾지 못했습니다. 구체적인 지명이나 동 이름을 입력해 보세요.")
     else:
         final_menu = None
         places = []
@@ -655,8 +655,8 @@ if spin_triggered and selected_candidates:
                     <div style="text-align: center; margin: 25px 0; padding: 20px; 
                                 background: #FFF9E6; border-radius: 20px; border: 4px solid #FF9800;">
                         <div style="font-size: 65px; margin-bottom: 4px;">{temp[1]}</div>
-                        <h2 style="color: #FF5722; margin: 4px 0 6px 0; font-size: 24px; text-align: center;">{temp[0]}</h2>
-                        <p style="color: #888; font-size: 13px; margin: 0; text-align: center;">{radius_display_text} 기준 순수 밥집 찾는 중... 🎲</p>
+                        <div style="color: #FF5722; font-size: 26px; font-weight: 800; margin: 6px 0;">{temp[0]}</div>
+                        <p style="color: #888; font-size: 13px; margin: 0;">{radius_display_text} 기준 순수 밥집 찾는 중... 🎲</p>
                     </div>
                     """,
                     unsafe_allow_html=True
@@ -676,19 +676,24 @@ if spin_triggered and selected_candidates:
         else:
             region_warning_spot.warning(f"⚠️ '{region}' 반경 내에 순수 점심 식사 매장을 찾지 못했습니다. 탐색 반경을 넓혀보세요!")
 
-# 5. 결과 화면 출력 (텍스트 완벽 중앙 정렬 적용)
+# 결과 화면 출력
 res = st.session_state.saved_result
 if res is not None and res.get("places"):
+    # 1. 상단 당첨 카드: h1 대신 flex-center 기반 div로 완벽한 좌우 정렬
     card_spot.markdown(
         f"""
-        <div style="text-align: center; margin: 25px 0; padding: 22px; 
+        <div style="text-align: center; margin: 25px 0; padding: 26px 20px; 
                     background: #FFF9E6; border-radius: 20px; border: 4px solid #E65100; 
                     box-shadow: 0 4px 18px rgba(230, 81, 0, 0.25);">
-            <div style="font-size: 75px; margin-bottom: 4px; text-align: center;">{res['emoji']}</div>
-            <h1 style="color: #E65100; margin: 4px 0 6px 0; font-size: 30px; text-align: center;">🎉 {res['menu']} 당첨! 🎉</h1>
-            <p style="color: #795548; font-size: 14px; font-weight: 500; margin: 0; text-align: center;">
+            <div style="font-size: 75px; line-height: 1; margin-bottom: 8px;">{res['emoji']}</div>
+            <div style="display: flex; justify-content: center; align-items: center; gap: 8px; width: 100%; margin: 8px 0 6px 0;">
+                <span style="font-size: 28px; line-height: 1;">🎉</span>
+                <span style="color: #E65100; font-size: 30px; font-weight: 900; line-height: 1.2;">{res['menu']} 당첨!</span>
+                <span style="font-size: 28px; line-height: 1;">🎉</span>
+            </div>
+            <div style="color: #795548; font-size: 14px; font-weight: 500; margin-top: 6px;">
                 '{res['region']}' 주변 점심 밥집 추천 결과
-            </p>
+            </div>
         </div>
         """,
         unsafe_allow_html=True
@@ -702,26 +707,29 @@ if res is not None and res.get("places"):
         tag_bg = "#C8E6C9" if top_pick.get("is_personal", True) else "#FFE082"
         tag_color = "#1B5E20" if top_pick.get("is_personal", True) else "#E65100"
 
-        # 추천 식당 상호명과 태그들을 시각적으로 정확히 중앙에 배치
+        # 2. 하단 1픽 카드: 상단처럼 전체 둘레를 둥근 초록색 테두리로 감쌈
         st.markdown(
             f"""
-            <div style="margin-bottom: 15px; padding: 16px 18px; 
-                        background-color: #F1F8E9; border-top: 4px solid #2E7D32; border-radius: 8px; text-align: center;">
-                <div style="display: flex; justify-content: center; align-items: center; gap: 6px; margin-bottom: 4px;">
-                    <span style="font-size: 13px; color: #2E7D32; font-weight: bold;">⭐ 오늘의 1픽 추천 점심</span>
-                    <span style="font-size: 11px; background: {tag_bg}; color: {tag_color}; padding: 2px 6px; border-radius: 4px; font-weight: bold;">
+            <div style="margin-bottom: 20px; padding: 22px 18px; 
+                        background: #F1F8E9; border: 3px solid #2E7D32; border-radius: 18px; 
+                        box-shadow: 0 4px 14px rgba(46, 125, 50, 0.15); text-align: center;">
+                <div style="display: flex; justify-content: center; align-items: center; gap: 6px; margin-bottom: 8px;">
+                    <span style="font-size: 13.5px; color: #2E7D32; font-weight: 700;">⭐ 오늘의 1픽 추천 점심</span>
+                    <span style="font-size: 11px; background: {tag_bg}; color: {tag_color}; padding: 2px 7px; border-radius: 6px; font-weight: 700;">
                         {tag_text}
                     </span>
-                    <span style="font-size: 11px; background: #E0E0E0; color: #333; padding: 2px 6px; border-radius: 4px;">
+                    <span style="font-size: 11px; background: #E0E0E0; color: #333; padding: 2px 7px; border-radius: 6px;">
                         {top_pick.get('category', '전문음식점')}
                     </span>
                 </div>
-                <div style="font-size: 20px; color: #1B5E20; font-weight: 800; margin-top: 6px; text-align: center;">
-                    <a href="{top_pick.get('place_url', '#')}" target="_blank" style="text-decoration: none; color: #1B5E20;">
-                        {top_pick['name']} 🔗
+                <div style="margin: 6px 0 4px 0;">
+                    <a href="{top_pick.get('place_url', '#')}" target="_blank" 
+                       style="text-decoration: none; color: #1B5E20; font-size: 24px; font-weight: 900; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+                        <span>{top_pick['name']}</span>
+                        <span style="font-size: 18px;">🔗</span>
                     </a>
                 </div>
-                <div style="font-size: 13px; color: #555; margin-top: 4px; text-align: center;">
+                <div style="font-size: 13.5px; color: #555; margin-top: 4px;">
                     📍 {top_pick['address']} (약 {top_pick['dist']}km)
                 </div>
             </div>
