@@ -7,7 +7,8 @@ import re
 import folium
 from streamlit_folium import st_folium
 
-KAKAO_REST_KEY = "bb9c8bfabfc3d5a4c0dbdb3312d8ca30".strip()
+# API Key 보안 처리: st.secrets 우선 로드, 없을 시 기본값 fallback
+KAKAO_REST_KEY = st.secrets.get("KAKAO_REST_KEY", "bb9c8bfabfc3d5a4c0dbdb3312d8ca30").strip()
 
 st.set_page_config(page_title="오늘 점심 뭐 먹지?", page_icon="🍱", layout="centered")
 
@@ -189,7 +190,7 @@ NON_LUNCH_NAME_KEYWORDS = [
     "치킨", "통닭", "닭강정", "켄터키", "BHC", "BBQ", "교촌", "굽네", "처갓집", "노랑통닭"
 ]
 
-# --- 5. 술 안주 메뉴 키워드 (계란말이 허용) ---
+# --- 5. 술 안주 메뉴 키워드 ---
 DRINK_SNACK_KEYWORDS = [
     "황도", "과일안주", "과일화채", "화채", "마른안주", "먹태", "노가리", "한치", 
     "쥐포", "육포", "골뱅이소면", "골뱅이무침", "두부김치", "어묵탕", "오뎅탕", 
@@ -211,7 +212,7 @@ MULTI_MENU_FRANCHISES = [
     "분식천국", "나드리김밥", "소풍김밥"
 ]
 
-# --- 8. 프랜차이즈 판별용 키워드 (개인 음식점 우대용) ---
+# --- 8. 프랜차이즈 판별용 키워드 ---
 KNOWN_FRANCHISE_BRANDS = [
     "김밥천국", "고봉민", "김가네", "얌샘", "싸다김밥", "종로김밥", "선비꼬마김밥",
     "마녀김밥", "바르다김선생", "밥버거", "토마토김밥", "국수나무", "미소야", "역전우동",
@@ -568,12 +569,12 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
     return []
 
 
-# 브라우저 GPS 수신 처리
+# 브라우저 GPS 수신 처리 (안전하게 clear() 처리)
 qp = st.query_params
-if "action" in qp and qp["action"] == "gps" and "lat" in qp and "lng" in qp:
+if qp.get("action") == "gps" and "lat" in qp and "lng" in qp:
     try:
-        lat_f = float(qp["lat"])
-        lng_f = float(qp["lng"])
+        lat_f = float(qp.get("lat"))
+        lng_f = float(qp.get("lng"))
         if st.session_state.gps_coords != (lat_f, lng_f):
             st.session_state.gps_coords = (lat_f, lng_f)
             detected_name = kakao_reverse_geocode(lat_f, lng_f)
@@ -581,16 +582,14 @@ if "action" in qp and qp["action"] == "gps" and "lat" in qp and "lng" in qp:
             st.toast(f"현재 위치: '{detected_name}' 감지 완료!", icon="✅")
     except Exception:
         pass
-    del st.query_params["action"]
-    del st.query_params["lat"]
-    del st.query_params["lng"]
+    st.query_params.clear()
 
 
 # --- 화면 레이아웃 상단부 ---
 st.markdown("<h1 style='color: #2E1C10; font-size: 28px; font-weight: 800; margin-bottom: 2px;'>🍱 오늘 점심 뭐 먹지?</h1>", unsafe_allow_html=True)
 st.markdown("<div style='color: #8C827A; font-size: 13.5px; margin-bottom: 20px;'>점심에 집중하는 근처 로컬 밥집만 쏙 골라 추천합니다.</div>", unsafe_allow_html=True)
 
-# 1. 위치 입력창 (Placeholder 변경)
+# 1. 위치 입력창
 st.markdown("<div style='margin-bottom: 6px; font-size: 14px; font-weight: 600; color: #4A4036;'>📍 위치</div>", unsafe_allow_html=True)
 
 col_input, col_gps = st.columns([3.5, 1.2], vertical_alignment="center")
@@ -630,11 +629,10 @@ with col_gps:
         unsafe_allow_html=True
     )
 
-# 2. 지명 vs 건물/역 판별 (지명인 경우 반경 선택창 자동 숨김)
+# 2. 지명 vs 건물/역 판별
 clean_region = region.strip()
 is_admin_region = False
 if clean_region:
-    # 구, 동, 읍, 면, 리, 시, 군으로 끝나는 행정 지명 여부 체크
     if any(clean_region.endswith(sfx) for sfx in ["구", "동", "읍", "면", "리", "시", "군", "가"]):
         is_admin_region = True
 
@@ -679,22 +677,20 @@ if not is_admin_region:
         radius_display_text = name_map[selected_preset]
     st.markdown("</div>", unsafe_allow_html=True)
 else:
-    # 지명일 경우 기본 자연 반경으로 자동 처리
     radius_km = 1.8
     radius_display_text = "지역 인근"
 
-# 3. 위치 미입력 시 경고 스팟 (중앙 정렬 및 주변 톤앤매너 완벽 동기화)[cite: 3]
+# 3. 위치 미입력 경고 영역
 region_warning_spot = st.empty()
 st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
 
-# 4. 룰렛 탭 (5:5 반반 균등 분할)[cite: 3]
+# 4. 룰렛 탭
 tab1, tab2 = st.tabs(["🎲 랜덤 룰렛", "✨ 기분 & 상황별 룰렛"])
 
 spin_triggered = False
 selected_candidates = []
 
 def show_location_warning():
-    """위치 미입력 시 상하·좌우 완벽한 중앙 정렬과 따뜻한 파스텔 톤 경고 배너 출력"""
     region_warning_spot.markdown(
         """
         <div style="display: flex; justify-content: center; align-items: center; gap: 8px;
@@ -810,6 +806,8 @@ if spin_triggered and selected_candidates:
                 )
                 time.sleep(0.04 + (i * 0.015))
 
+            # spin_count 1씩 증가시켜 지도 고유 Key 리프레시 보장
+            st.session_state.spin_count += 1
             st.session_state.saved_result = {
                 "menu": final_menu[0],
                 "emoji": final_menu[1],
@@ -940,7 +938,7 @@ if res is not None and res.get("places"):
                 location=[p["lat"], p["lng"]],
                 popup=folium.Popup(f"<b>{idx}. {p['name']}</b><br>{p['address']}<br><a href='{p['place_url']}' target='_blank'>카카오맵 열기</a>", max_width=250),
                 tooltip=f"{idx}. {p['name']}",
-                icon=folium.Icon(color="blue", icon="cutlery", prefix="fa")
+                icon=folium.Icon(color="blue", icon="utensils", prefix="fa")
             ).add_to(m)
 
         unique_map_key = f"map_{res['id']}_{int(top_pick['lat'] * 10000)}"
