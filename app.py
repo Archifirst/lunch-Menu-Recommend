@@ -33,7 +33,7 @@ st.markdown(
         box-shadow: 0 0 0 2px rgba(232, 106, 62, 0.15) !important;
     }
     
-    /* 탭 디자인: 둥글고 모던한 캡슐 세그먼트 스타일 */
+    /* 탭 디자인: 5:5 반반 균등 분할 및 캡슐 세그먼트 */
     div[data-testid="stTabs"] {
         background-color: #F1ECE6;
         padding: 5px;
@@ -41,18 +41,24 @@ st.markdown(
         margin-bottom: 14px;
     }
     div[data-testid="stTabs"] div[role="tablist"] {
-        gap: 6px;
+        display: flex !important;
+        width: 100% !important;
+        gap: 6px !important;
         border-bottom: none !important;
     }
     button[data-baseweb="tab"] {
+        flex: 1 1 0% !important;
+        width: 50% !important;
+        text-align: center !important;
+        justify-content: center !important;
         border-radius: 12px !important;
-        padding: 8px 18px !important;
+        padding: 10px 0 !important;
         font-size: 14.5px !important;
         font-weight: 700 !important;
         color: #7A6F66 !important;
         background-color: transparent !important;
         border: none !important;
-        transition: all 0.2s ease !important;
+        transition: all 0.25s ease !important;
     }
     button[data-baseweb="tab"][aria-selected="true"] {
         background-color: #FFFFFF !important;
@@ -61,6 +67,21 @@ st.markdown(
     }
     div[data-baseweb="tab-highlight"] {
         display: none !important;
+    }
+
+    /* 반경 선택창 부드러운 노출 애니메이션 */
+    @keyframes fadeSlideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-8px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    .radius-wrapper {
+        animation: fadeSlideDown 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
     
     /* 메인 룰렛 돌리기 버튼 커스텀 */
@@ -215,7 +236,7 @@ TONKATSU_NAME_INDICATORS = [
     "돈까스", "돈가스", "카츠", "카쯔", "가츠", "돈카츠", "돈카쯔", "포크커틀릿"
 ]
 
-# --- 9. 전국 점심 대표 메뉴 풀 (특색을 살린 디테일 이모티콘 65종) ---
+# --- 9. 전국 점심 대표 메뉴 풀 (65종) ---
 DEFAULT_FOODS = [
     ("김치찌개", "🥘🔥", "김치찌개 전문점", ["찌개", "한식", "백반"]),
     ("된장찌개", "🍲🫕", "된장찌개 백반", ["찌개", "한식", "백반"]),
@@ -266,7 +287,7 @@ DEFAULT_FOODS = [
     ("회덮밥", "🥗🐟", "활어 회덮밥", ["일식", "한식"]),
     ("카레라이스", "🍛🥄", "일본카레 전문점", ["카레", "일식"]),
     ("짜장면", "🥢🧅", "짜장면", ["중식", "중화요리", "중국집"]),
-    ("짬뽕", "🌶️️🍜", "짬뽕", ["중식", "중화요리", "중국집"]),
+    ("짬뽕", "🌶🍜", "짬뽕", ["중식", "중화요리", "중국집"]),
     ("볶음밥", "🍚🍳", "중화 볶음밥", ["중식", "중국집"]),
     ("마파두부밥", "🍛🌶️", "마파두부", ["중식", "중화요리"]),
     ("마라탕", "🌶️🍲", "마라탕 전문점", ["중식", "마라탕"]),
@@ -285,7 +306,6 @@ DEFAULT_FOODS = [
     ("김밥", "🍙🥢", "김밥 전문점", ["김밥"])
 ]
 
-# 기분/상황별 큐레이션 데이터
 MOOD_DATA = {
     "🥳 기분좋음": (
         "양식·일식·특식", 
@@ -570,7 +590,7 @@ if "action" in qp and qp["action"] == "gps" and "lat" in qp and "lng" in qp:
 st.markdown("<h1 style='color: #2E1C10; font-size: 28px; font-weight: 800; margin-bottom: 2px;'>🍱 오늘 점심 뭐 먹지?</h1>", unsafe_allow_html=True)
 st.markdown("<div style='color: #8C827A; font-size: 13.5px; margin-bottom: 20px;'>점심에 집중하는 근처 로컬 밥집만 쏙 골라 추천합니다.</div>", unsafe_allow_html=True)
 
-# 1. 위치 입력창 & 내 위치 찾기
+# 1. 위치 입력창 (Placeholder 변경)
 st.markdown("<div style='margin-bottom: 6px; font-size: 14px; font-weight: 600; color: #4A4036;'>📍 위치</div>", unsafe_allow_html=True)
 
 col_input, col_gps = st.columns([3.5, 1.2], vertical_alignment="center")
@@ -579,7 +599,7 @@ with col_input:
     region = st.text_input(
         "위치입력",
         value=st.session_state.region_input_val,
-        placeholder="예시) 후평동, 역삼역, 판교",
+        placeholder="예시) 강남구, 서울역, 코엑스 등",
         key="main_region_input",
         label_visibility="collapsed"
     )
@@ -610,58 +630,91 @@ with col_gps:
         unsafe_allow_html=True
     )
 
-# 2. 탐색 반경 선택
-st.markdown("<div style='margin: 18px 0 6px 0; font-size: 14px; font-weight: 600; color: #4A4036;'>📏 탐색 반경</div>", unsafe_allow_html=True)
-c1, c2, c3, c4 = st.columns([1.0, 1.0, 1.0, 1.5], vertical_alignment="center")
+# 2. 지명 vs 건물/역 판별 (지명인 경우 반경 선택창 자동 숨김)
+clean_region = region.strip()
+is_admin_region = False
+if clean_region:
+    # 구, 동, 읍, 면, 리, 시, 군으로 끝나는 행정 지명 여부 체크
+    if any(clean_region.endswith(sfx) for sfx in ["구", "동", "읍", "면", "리", "시", "군", "가"]):
+        is_admin_region = True
 
-with c1:
-    btn_type = "primary" if st.session_state.selected_radius_preset == "🚶" else "secondary"
-    if st.button("🚶", key="rbtn_walk", type=btn_type, use_container_width=True):
-        st.session_state.selected_radius_preset = "🚶"
-        st.rerun()
+# 건물이거나 역, 랜드마크일 때만 탐색반경 노출
+if not is_admin_region:
+    st.markdown("<div class='radius-wrapper'>", unsafe_allow_html=True)
+    st.markdown("<div style='margin: 18px 0 6px 0; font-size: 14px; font-weight: 600; color: #4A4036;'>📏 탐색 반경</div>", unsafe_allow_html=True)
+    c1, c2, c3, c4 = st.columns([1.0, 1.0, 1.0, 1.5], vertical_alignment="center")
 
-with c2:
-    btn_type = "primary" if st.session_state.selected_radius_preset == "🚲" else "secondary"
-    if st.button("🚲", key="rbtn_bike", type=btn_type, use_container_width=True):
-        st.session_state.selected_radius_preset = "🚲"
-        st.rerun()
+    with c1:
+        btn_type = "primary" if st.session_state.selected_radius_preset == "🚶" else "secondary"
+        if st.button("🚶", key="rbtn_walk", type=btn_type, use_container_width=True):
+            st.session_state.selected_radius_preset = "🚶"
+            st.rerun()
 
-with c3:
-    btn_type = "primary" if st.session_state.selected_radius_preset == "🚗" else "secondary"
-    if st.button("🚗", key="rbtn_car", type=btn_type, use_container_width=True):
-        st.session_state.selected_radius_preset = "🚗"
-        st.rerun()
+    with c2:
+        btn_type = "primary" if st.session_state.selected_radius_preset == "🚲" else "secondary"
+        if st.button("🚲", key="rbtn_bike", type=btn_type, use_container_width=True):
+            st.session_state.selected_radius_preset = "🚲"
+            st.rerun()
 
-with c4:
-    btn_type = "primary" if st.session_state.selected_radius_preset == "직접 입력" else "secondary"
-    if st.button("직접 입력", key="rbtn_custom", type=btn_type, use_container_width=True):
-        st.session_state.selected_radius_preset = "직접 입력"
-        st.rerun()
+    with c3:
+        btn_type = "primary" if st.session_state.selected_radius_preset == "🚗" else "secondary"
+        if st.button("🚗", key="rbtn_car", type=btn_type, use_container_width=True):
+            st.session_state.selected_radius_preset = "🚗"
+            st.rerun()
 
-selected_preset = st.session_state.selected_radius_preset
-if selected_preset == "직접 입력":
-    manual_radius = st.number_input("희망 반경 (단위: km)", min_value=0.2, max_value=10.0, value=2.0, step=0.2)
-    radius_km = float(manual_radius)
-    radius_display_text = f"직접 입력 {radius_km:.1f}km"
+    with c4:
+        btn_type = "primary" if st.session_state.selected_radius_preset == "직접 입력" else "secondary"
+        if st.button("직접 입력", key="rbtn_custom", type=btn_type, use_container_width=True):
+            st.session_state.selected_radius_preset = "직접 입력"
+            st.rerun()
+
+    selected_preset = st.session_state.selected_radius_preset
+    if selected_preset == "직접 입력":
+        manual_radius = st.number_input("희망 반경 (단위: km)", min_value=0.2, max_value=10.0, value=2.0, step=0.2)
+        radius_km = float(manual_radius)
+        radius_display_text = f"직접 입력 {radius_km:.1f}km"
+    else:
+        radius_km = PRESET_RADIUS[selected_preset]
+        name_map = {"🚶": "도보 700m", "🚲": "자전거 1.8km", "🚗": "차량 3.5km"}
+        radius_display_text = name_map[selected_preset]
+    st.markdown("</div>", unsafe_allow_html=True)
 else:
-    radius_km = PRESET_RADIUS[selected_preset]
-    name_map = {"🚶": "도보 700m", "🚲": "자전거 1.8km", "🚗": "차량 3.5km"}
-    radius_display_text = name_map[selected_preset]
+    # 지명일 경우 기본 자연 반경으로 자동 처리
+    radius_km = 1.8
+    radius_display_text = "지역 인근"
 
+# 3. 위치 미입력 시 경고 스팟 (중앙 정렬 및 주변 톤앤매너 완벽 동기화)[cite: 3]
 region_warning_spot = st.empty()
 st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
 
-# 3. 룰렛 탭 (개선된 캡슐형 탭 및 깔끔한 무드 버튼)
+# 4. 룰렛 탭 (5:5 반반 균등 분할)[cite: 3]
 tab1, tab2 = st.tabs(["🎲 랜덤 룰렛", "✨ 기분 & 상황별 룰렛"])
 
 spin_triggered = False
 selected_candidates = []
 
+def show_location_warning():
+    """위치 미입력 시 상하·좌우 완벽한 중앙 정렬과 따뜻한 파스텔 톤 경고 배너 출력"""
+    region_warning_spot.markdown(
+        """
+        <div style="display: flex; justify-content: center; align-items: center; gap: 8px;
+                    width: 100%; height: 48px; margin: 8px 0 12px 0;
+                    background-color: #FFFDF7; border: 1.5px solid #F7D488; border-radius: 14px;
+                    box-shadow: 0 3px 10px rgba(247, 212, 136, 0.2);">
+            <span style="font-size: 18px; line-height: 1;">⚠️</span>
+            <span style="color: #6C4D0A; font-size: 14px; font-weight: 700; line-height: 1;">
+                위치를 입력하거나 '내 위치 찾기'를 눌러주세요!
+            </span>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
 with tab1:
     st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
     if st.button("🎲 룰렛 돌리기", use_container_width=True, type="primary", key="btn_random"):
         if not region.strip() and not st.session_state.gps_coords:
-            region_warning_spot.warning("⚠️ 위치를 입력하거나 '내 위치 찾기'를 눌러주세요!")
+            show_location_warning()
         else:
             region_warning_spot.empty()
             selected_candidates = DEFAULT_FOODS.copy()
@@ -696,7 +749,7 @@ with tab2:
 
     if selected_mood:
         if not region.strip() and not st.session_state.gps_coords:
-            region_warning_spot.warning("⚠️️ 위치를 입력하거나 '내 위치 찾기'를 눌러주세요!")
+            show_location_warning()
         else:
             region_warning_spot.empty()
             _, allowed_names = MOOD_DATA[selected_mood]
@@ -707,7 +760,7 @@ with tab2:
 card_spot = st.empty()
 detail_spot = st.empty()
 
-# 4. 탐색 및 추첨 실행
+# 5. 탐색 및 추첨 실행
 if spin_triggered and selected_candidates:
     detail_spot.empty()
 
@@ -770,7 +823,7 @@ if spin_triggered and selected_candidates:
         else:
             region_warning_spot.warning(f"⚠️ '{region}' 반경 내에 순수 점심 식사 매장을 찾지 못했습니다. 탐색 반경을 넓혀보세요!")
 
-# 5. 결과 화면 출력
+# 6. 결과 화면 출력
 res = st.session_state.saved_result
 if res is not None and res.get("places"):
     card_spot.markdown(
@@ -800,7 +853,6 @@ if res is not None and res.get("places"):
         tag_bg = "#FCEFE6" if top_pick.get("is_personal", True) else "#F7E6D2"
         tag_color = "#C85A32" if top_pick.get("is_personal", True) else "#8A532B"
 
-        # 1픽 추천 카드: 메뉴 당첨 카드와 동일한 색상 및 톤 통일, 상호명 링크 아이콘(🔗) 제거
         st.markdown(
             f"""
             <div style="margin-bottom: 22px; padding: 24px 20px; 
@@ -829,7 +881,6 @@ if res is not None and res.get("places"):
             unsafe_allow_html=True
         )
 
-        # 근처 다른 점심 후보 (콜론 제거 적용)
         if len(places) > 1:
             st.markdown(
                 f"<div style='font-size: 14px; font-weight: 700; color: #2E1C10; margin-bottom: 10px;'>"
