@@ -3,6 +3,7 @@ import random
 import time
 import requests
 import urllib.parse
+import re
 import folium
 from streamlit_folium import st_folium
 
@@ -112,9 +113,8 @@ TONKATSU_NAME_INDICATORS = [
     "돈까스", "돈가스", "카츠", "카쯔", "가츠", "돈카츠", "돈카쯔", "포크커틀릿"
 ]
 
-# --- 9. 전국 점심 대표 메뉴 풀 (총 65종) ---
+# --- 9. 전국 점심 대표 메뉴 풀 ---
 DEFAULT_FOODS = [
-    # [한식 찌개 / 국 / 탕 / 뚝배기]
     ("김치찌개", "🥘", "김치찌개 전문점", ["찌개", "한식", "백반"]),
     ("된장찌개", "🥘", "된장찌개 백반", ["찌개", "한식", "백반"]),
     ("순두부찌개", "🥘", "순두부찌개 전문점", ["순두부", "찌개", "한식"]),
@@ -133,8 +133,6 @@ DEFAULT_FOODS = [
     ("황태해장국", "🥣", "황태해장국 전문점", ["해장국", "한식"]),
     ("선지해장국", "🥘", "선지해장국 전문점", ["해장국", "국밥"]),
     ("도가니탕", "🥣", "도가니탕 전문점", ["도가니탕", "곰탕"]),
-
-    # [한식 밥 / 정식 / 볶음 / 찜 / 쌈]
     ("백반", "🍱", "백반 가정식", ["백반", "가정식", "한식", "기사식당"]),
     ("제육볶음", "🥓", "제육볶음 정식", ["한식", "백반", "식당"]),
     ("오징어볶음", "🦑", "오징어볶음 백반", ["한식", "백반"]),
@@ -148,8 +146,6 @@ DEFAULT_FOODS = [
     ("찜닭", "🍗", "찜닭 전문점", ["찜닭", "한식"]),
     ("코다리조림", "🐟", "코다리조림 전문점", ["코다리", "한식"]),
     ("간장게장백반", "🦀", "게장 정식", ["게장", "한식"]),
-
-    # [국수 / 면 / 죽류]
     ("칼국수", "🍜", "칼국수 전문점", ["칼국수", "국수", "한식"]),
     ("수제비", "🥣", "수제비 전문점", ["수제비", "칼국수", "한식"]),
     ("막국수", "🍜", "막국수 전문점", ["막국수", "국수", "한식"]),
@@ -158,8 +154,6 @@ DEFAULT_FOODS = [
     ("비빔국수", "🥢", "비빔국수 전문점", ["국수", "분식"]),
     ("소바", "🥢", "메밀소바 모밀 전문점", ["일식", "소바"]),
     ("전복죽", "🦪", "전복죽 전문점", ["죽", "한식"]),
-
-    # [일식 / 돈까스 / 덮밥]
     ("돈까스", "🍱", "돈까스 카츠 전문점", ["돈가스", "일식", "경양식", "양식"]),
     ("초밥", "🍣", "스시 초밥 전문점", ["일식", "초밥"]),
     ("일본라멘", "🍜", "일본라멘 전문점", ["라멘", "일식"]),
@@ -169,35 +163,26 @@ DEFAULT_FOODS = [
     ("텐동", "🍤", "텐동 전문점", ["텐동", "일식"]),
     ("회덮밥", "🥗", "활어 회덮밥", ["일식", "한식"]),
     ("카레라이스", "🍛", "일본카레 전문점", ["카레", "일식"]),
-
-    # [중식]
     ("짜장면", "🥢", "짜장면", ["중식", "중화요리", "중국집"]),
-    ("짬뽕", "🌶️", "짬뽕", ["중식", "중화요리", "중국집"]),
+    ("짬뽕", "🌶️️", "짬뽕", ["중식", "중화요리", "중국집"]),
     ("볶음밥", "🍚", "중화 볶음밥", ["중식", "중국집"]),
     ("마파두부밥", "🍛", "마파두부", ["중식", "중화요리"]),
     ("마라탕", "🌶️", "마라탕 전문점", ["중식", "마라탕"]),
-
-    # [양식 / 버거]
     ("파스타", "🍝", "파스타 레스토랑", ["양식", "이탈리안", "패밀리레스토랑"]),
     ("피자", "🍕", "화덕피자", ["피자", "양식", "이탈리안"]),
     ("수제버거", "🍔", "수제버거 전문점", ["햄버거", "패스트푸드"]),
     ("스테이크덮밥", "🥩", "스테이크 덮밥", ["양식", "일식"]),
     ("리조또", "🥘", "이탈리안 리조또", ["양식", "이탈리안"]),
-
-    # [아시안 / 이색]
     ("쌀국수", "🍜", "베트남 쌀국수", ["아시아음식", "베트남음식", "쌀국수"]),
     ("팟타이", "🥢", "태국음식 팟타이", ["아시아음식", "태국음식"]),
     ("나시고랭", "🍛", "인도네시아 나시고랭", ["아시아음식"]),
     ("타코", "🌮", "멕시칸 타코", ["남미음식", "멕시칸"]),
     ("포케", "🥗", "하와이안 포케", ["샐러드", "다이어트"]),
     ("샌드위치", "🥪", "수제 샌드위치", ["샌드위치", "샐러드"]),
-
-    # [분식]
     ("떡볶이", "🌶", "떡볶이 전문점", ["분식", "떡볶이"]),
     ("김밥", "🍙", "김밥 전문점", ["김밥"])
 ]
 
-# 기분 / 상황별 큐레이션 (확장된 풀 매핑)
 MOOD_DATA = {
     "🥳 기분좋음": (
         "양식·일식·특식", 
@@ -224,6 +209,58 @@ MOOD_DATA = {
         ["순두부찌개", "콩나물국밥", "황태해장국", "전복죽", "보리밥정식", "된장찌개"]
     )
 }
+
+# --- 점심시간(10:00~14:00) 영업 여부 판정 함수 ---
+def is_open_for_lunch(place_id: str) -> bool:
+    """
+    카카오맵 플레이스 상세 API를 통해 영업시간을 확인합니다.
+    - 영업시간 정보가 없으면: True (통과)
+    - 10:00 ~ 14:00 사이에 운영 중이면: True (통과)
+    - 오픈 시간이 14:00 이후이거나(저녁 전용), 마감이 10:00 이전이면: False (제외)
+    """
+    try:
+        url = f"https://place.map.kakao.com/main/v/{place_id}"
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
+        }
+        res = requests.get(url, headers=headers, timeout=1.8)
+        if res.status_code != 200:
+            return True
+
+        data = res.json()
+        basic_info = data.get("basicInfo", {})
+        open_hour_info = basic_info.get("openHour", {})
+
+        period_list = open_hour_info.get("periodList", [])
+        if not period_list:
+            return True
+
+        # 영업 시간 리스트 파싱
+        for period in period_list:
+            time_list = period.get("timeList", [])
+            for t in time_list:
+                time_se = t.get("timeSE", "")  # 예: "11:00 ~ 21:00"
+                if not time_se:
+                    continue
+                times = re.findall(r"(\d{1,2}):(\d{2})", time_se)
+                if len(times) >= 2:
+                    start_hour = int(times[0][0]) + int(times[0][1]) / 60.0
+                    end_hour = int(times[1][0]) + int(times[1][1]) / 60.0
+
+                    # 익일 새벽 마감인 경우 (예: 17:00 ~ 02:00 -> 26.0)
+                    if end_hour < start_hour:
+                        end_hour += 24.0
+
+                    # 점심시간(10:00 ~ 14:00)과 운영 시간이 겹치면 점심 영업 매장으로 인정
+                    if not (end_hour <= 10.0 or start_hour >= 14.0):
+                        return True
+                    else:
+                        return False
+        return True
+    except Exception:
+        # 통신 장애나 데이터 누락 시 정상 통과
+        return True
+
 
 # --- 점심 전문 식당 판정 엔진 ---
 def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_name: str) -> bool:
@@ -397,10 +434,16 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
             places = []
             
             for d in docs:
+                p_id = d.get("id", "")
                 p_name = d.get("place_name", "")
                 cat_name = d.get("category_name", "")
 
+                # 1. 업종 및 메뉴 전문성 필터링
                 if not is_valid_specialized_restaurant(menu_name, p_name, cat_name):
+                    continue
+
+                # 2. 점심시간(10:00~14:00) 영업 여부 검증 (오픈 시간 없는 곳은 통과)
+                if p_id and not is_open_for_lunch(p_id):
                     continue
 
                 dist_m = float(d.get("distance", 0))
@@ -444,7 +487,7 @@ if "action" in qp and qp["action"] == "gps" and "lat" in qp and "lng" in qp:
 
 # --- 화면 레이아웃 ---
 st.title("🍱 오늘 점심 뭐 먹지?")
-st.caption(f"전국 60여 종의 다양한 점심 메뉴 풀에서 진짜 로컬 전문점만 쏙 골라 추천합니다.")
+st.caption("점심시간(10시~14시)에 영업하는 로컬 식당만 엄선하여 추천합니다. (시간 미등록 식당 포함)")
 st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
 
 # 1. 위치 입력창 & GPS 버튼
@@ -591,7 +634,7 @@ if spin_triggered and selected_candidates:
         shuffled = selected_candidates.copy()
         random.shuffle(shuffled)
 
-        with st.spinner("단품 전문점 위주로 최적의 매장을 선별하는 중입니다..."):
+        with st.spinner("점심시간(10시~14시)에 문을 여는 전문점을 조회 중입니다..."):
             for m_name, m_emoji, m_kw, m_tags in shuffled:
                 found = kakao_search_places(c_lat, c_lng, m_name, m_kw, radius_km=radius_km)
                 if found:
@@ -614,7 +657,7 @@ if spin_triggered and selected_candidates:
                                 background: #FFF9E6; border-radius: 20px; border: 4px solid #FF9800;">
                         <div style="font-size: 65px; margin-bottom: 4px;">{temp[1]}</div>
                         <h2 style="color: #FF5722; margin: 4px 0 6px 0; font-size: 24px;">{temp[0]}</h2>
-                        <p style="color: #888; font-size: 13px; margin: 0;">{radius_display_text} 기준 전문점 찾는 중... 🎲</p>
+                        <p style="color: #888; font-size: 13px; margin: 0;">{radius_display_text} 기준 점심 맛집 찾는 중... 🎲</p>
                     </div>
                     """,
                     unsafe_allow_html=True
@@ -632,7 +675,7 @@ if spin_triggered and selected_candidates:
                 "id": st.session_state.spin_count
             }
         else:
-            region_warning_spot.warning(f"⚠️ '{region}' 반경 내에 등록된 전문 식당을 찾지 못했습니다. 탐색 반경을 넓혀보세요!")
+            region_warning_spot.warning(f"⚠️ '{region}' 반경 내에 점심시간에 운영하는 등록 식당을 찾지 못했습니다. 탐색 반경을 넓혀보세요!")
 
 # 5. 결과 화면 출력
 res = st.session_state.saved_result
@@ -645,7 +688,7 @@ if res is not None and res.get("places"):
             <div style="font-size: 75px; margin-bottom: 4px;">{res['emoji']}</div>
             <h1 style="color: #E65100; margin: 4px 0 6px 0; font-size: 30px;">🎉 {res['menu']} 당첨! 🎉</h1>
             <p style="color: #795548; font-size: 14px; font-weight: bold; margin: 0;">
-                '{res['region']}' ({res['radius_text']}) 반경 전문 식당 추천 결과입니다!
+                '{res['region']}' ({res['radius_text']}) 반경 점심 영업 식당 추천 결과입니다!
             </p>
         </div>
         """,
@@ -665,7 +708,7 @@ if res is not None and res.get("places"):
             <div style="margin-bottom: 15px; padding: 14px 18px; 
                         background-color: #F1F8E9; border-left: 5px solid #2E7D32; border-radius: 6px;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span style="font-size: 13px; color: #2E7D32; font-weight: bold;">⭐ 오늘의 1픽 단품 전문점</span>
+                    <span style="font-size: 13px; color: #2E7D32; font-weight: bold;">⭐ 오늘의 1픽 추천 점심</span>
                     <div>
                         <span style="font-size: 11px; background: {tag_bg}; color: {tag_color}; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-right: 4px;">
                             {tag_text}
@@ -698,7 +741,7 @@ if res is not None and res.get("places"):
                 )
             st.markdown(
                 f"<div style='font-size: 13.5px; color: #444; line-height: 1.9; margin-bottom: 20px;'>"
-                f"<b>근처 다른 전문 후보 ({len(places)-1}곳):</b><br/>"
+                f"<b>근처 다른 점심 후보 ({len(places)-1}곳):</b><br/>"
                 f"{'<br/>'.join(candidate_names)}"
                 f"</div>",
                 unsafe_allow_html=True
