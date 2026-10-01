@@ -652,10 +652,11 @@ if spin_triggered and selected_candidates:
                 temp = random.choice(selected_candidates)
                 card_spot.markdown(
                     f"""
-                    <div style="text-align: center; margin: 25px 0; padding: 20px; 
-                                background: #FFF9E6; border-radius: 20px; border: 4px solid #FF9800;">
+                    <div style="text-align: center; margin: 25px 0; padding: 24px; 
+                                background: #FFF9F0; border-radius: 20px; border: 1.5px solid #F5D5B8;
+                                box-shadow: 0 4px 18px rgba(245, 213, 184, 0.35);">
                         <div style="font-size: 65px; margin-bottom: 4px;">{temp[1]}</div>
-                        <div style="color: #FF5722; font-size: 26px; font-weight: 800; margin: 6px 0;">{temp[0]}</div>
+                        <div style="color: #2E1C10; font-size: 26px; font-weight: 800; margin: 6px 0;">{temp[0]}</div>
                         <p style="color: #888; font-size: 13px; margin: 0;">{radius_display_text} 기준 순수 밥집 찾는 중... 🎲</p>
                     </div>
                     """,
@@ -679,19 +680,19 @@ if spin_triggered and selected_candidates:
 # 결과 화면 출력
 res = st.session_state.saved_result
 if res is not None and res.get("places"):
-    # 1. 상단 당첨 카드: h1 대신 flex-center 기반 div로 완벽한 좌우 정렬
+    # 1. 상단 당첨 카드 (이미지 스타일: 따뜻한 크림/연한 피치 테두리)
     card_spot.markdown(
         f"""
-        <div style="text-align: center; margin: 25px 0; padding: 26px 20px; 
-                    background: #FFF9E6; border-radius: 20px; border: 4px solid #E65100; 
-                    box-shadow: 0 4px 18px rgba(230, 81, 0, 0.25);">
-            <div style="font-size: 75px; line-height: 1; margin-bottom: 8px;">{res['emoji']}</div>
+        <div style="text-align: center; margin: 20px 0 16px 0; padding: 30px 20px; 
+                    background: #FFF9F0; border-radius: 24px; border: 1.5px solid #F5D5B8; 
+                    box-shadow: 0 4px 20px rgba(245, 213, 184, 0.4);">
+            <div style="font-size: 80px; line-height: 1; margin-bottom: 12px;">{res['emoji']}</div>
             <div style="display: flex; justify-content: center; align-items: center; gap: 8px; width: 100%; margin: 8px 0 6px 0;">
-                <span style="font-size: 28px; line-height: 1;">🎉</span>
-                <span style="color: #E65100; font-size: 30px; font-weight: 900; line-height: 1.2;">{res['menu']} 당첨!</span>
-                <span style="font-size: 28px; line-height: 1;">🎉</span>
+                <span style="font-size: 26px; line-height: 1;">🎉</span>
+                <span style="color: #2E1C10; font-size: 30px; font-weight: 800; letter-spacing: -0.5px;">{res['menu']} 당첨!</span>
+                <span style="font-size: 26px; line-height: 1;">🎉</span>
             </div>
-            <div style="color: #795548; font-size: 14px; font-weight: 500; margin-top: 6px;">
+            <div style="color: #6E5D53; font-size: 13.5px; font-weight: 500; margin-top: 6px;">
                 '{res['region']}' 주변 점심 밥집 추천 결과
             </div>
         </div>
@@ -704,32 +705,32 @@ if res is not None and res.get("places"):
         top_pick = places[0]
 
         tag_text = "개인 전문점" if top_pick.get("is_personal", True) else "프랜차이즈"
-        tag_bg = "#C8E6C9" if top_pick.get("is_personal", True) else "#FFE082"
-        tag_color = "#1B5E20" if top_pick.get("is_personal", True) else "#E65100"
+        tag_bg = "#DCEBE6" if top_pick.get("is_personal", True) else "#F7E6D2"
+        tag_color = "#2E5A4E" if top_pick.get("is_personal", True) else "#8A532B"
 
-        # 2. 하단 1픽 카드: 상단처럼 전체 둘레를 둥근 초록색 테두리로 감쌈
+        # 2. 1픽 추천 카드 (이미지 스타일: 화이트 배경 + 세이지 그린 둥근 테두리)
         st.markdown(
             f"""
-            <div style="margin-bottom: 20px; padding: 22px 18px; 
-                        background: #F1F8E9; border: 3px solid #2E7D32; border-radius: 18px; 
-                        box-shadow: 0 4px 14px rgba(46, 125, 50, 0.15); text-align: center;">
+            <div style="margin-bottom: 22px; padding: 22px 20px; 
+                        background: #FFFFFF; border: 2.5px solid #4E8779; border-radius: 20px; 
+                        box-shadow: 0 2px 10px rgba(78, 135, 121, 0.08); text-align: center;">
                 <div style="display: flex; justify-content: center; align-items: center; gap: 6px; margin-bottom: 8px;">
-                    <span style="font-size: 13.5px; color: #2E7D32; font-weight: 700;">⭐ 오늘의 1픽 추천 점심</span>
-                    <span style="font-size: 11px; background: {tag_bg}; color: {tag_color}; padding: 2px 7px; border-radius: 6px; font-weight: 700;">
+                    <span style="font-size: 13px; color: #333; font-weight: 600;">⭐ 오늘의 1픽 추천 점심</span>
+                    <span style="font-size: 11px; background: {tag_bg}; color: {tag_color}; padding: 2px 7px; border-radius: 6px; font-weight: 600;">
                         {tag_text}
                     </span>
-                    <span style="font-size: 11px; background: #E0E0E0; color: #333; padding: 2px 7px; border-radius: 6px;">
+                    <span style="font-size: 11px; background: #EEEEEE; color: #555; padding: 2px 7px; border-radius: 6px;">
                         {top_pick.get('category', '전문음식점')}
                     </span>
                 </div>
                 <div style="margin: 6px 0 4px 0;">
                     <a href="{top_pick.get('place_url', '#')}" target="_blank" 
-                       style="text-decoration: none; color: #1B5E20; font-size: 24px; font-weight: 900; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+                       style="text-decoration: none; color: #111111; font-size: 26px; font-weight: 900; letter-spacing: -0.5px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
                         <span>{top_pick['name']}</span>
-                        <span style="font-size: 18px;">🔗</span>
+                        <span style="font-size: 19px; color: #9E9E9E;">🔗</span>
                     </a>
                 </div>
-                <div style="font-size: 13.5px; color: #555; margin-top: 4px;">
+                <div style="font-size: 13px; color: #555; margin-top: 5px;">
                     📍 {top_pick['address']} (약 {top_pick['dist']}km)
                 </div>
             </div>
@@ -737,22 +738,50 @@ if res is not None and res.get("places"):
             unsafe_allow_html=True
         )
 
+        # 3. 근처 다른 점심 후보 (이미지 스타일: 2열 그리드 카드형 레이아웃)
         if len(places) > 1:
-            candidate_names = []
-            for i, p in enumerate(places[1:10]):
-                p_tag = "개인" if p.get("is_personal", True) else "체인"
-                candidate_names.append(
-                    f"<b>{i+1}.</b> <a href='{p.get('place_url', '#')}' target='_blank' style='color:#333;text-decoration:none;'>{p['name']}</a> "
-                    f"<span style='color:#666;font-size:12px;'>[{p_tag}·{p.get('category', '')}, {p['dist']}km]</span>"
-                )
             st.markdown(
-                f"<div style='font-size: 13.5px; color: #444; line-height: 1.9; margin-bottom: 20px;'>"
-                f"<b>근처 다른 점심 후보 ({len(places)-1}곳):</b><br/>"
-                f"{'<br/>'.join(candidate_names)}"
+                f"<div style='font-size: 14px; font-weight: 700; color: #222; margin-bottom: 10px;'>"
+                f"근처 다른 점심 후보 ({len(places)-1}곳):"
                 f"</div>",
                 unsafe_allow_html=True
             )
 
+            other_candidates = places[1:11]
+            # 2열 카드 배치를 위해 컬럼 분할
+            col_left, col_right = st.columns(2)
+
+            for idx, p in enumerate(other_candidates, start=1):
+                p_tag = "개인" if p.get("is_personal", True) else "체인"
+                short_cat = p.get('category', '식당').split('/')[-1].strip()
+                target_col = col_left if idx % 2 != 0 else col_right
+
+                with target_col:
+                    st.markdown(
+                        f"""
+                        <div style="display: flex; justify-content: space-between; align-items: center; 
+                                    background: #FFFFFF; border: 1px solid #E8E8E8; border-radius: 12px; 
+                                    padding: 10px 14px; margin-bottom: 9px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+                            <div style="display: flex; align-items: center; gap: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                <span style="display: inline-flex; justify-content: center; align-items: center; width: 20px; height: 20px; background: #F0F0F0; color: #444; border-radius: 6px; font-size: 11px; font-weight: 700;">
+                                    {idx}
+                                </span>
+                                <a href="{p.get('place_url', '#')}" target="_blank" style="text-decoration: none; color: #111; font-size: 13.5px; font-weight: 700; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                    {p['name']}
+                                </a>
+                                <span style="font-size: 10.5px; background: #F5F5F5; color: #666; padding: 2px 5px; border-radius: 4px;">
+                                    {p_tag}·{short_cat}
+                                </span>
+                            </div>
+                            <div style="font-size: 12px; color: #555; font-weight: 500; margin-left: 6px; white-space: nowrap;">
+                                {p['dist']}km
+                            </div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+
+        st.markdown("<div style='height: 14px;'></div>", unsafe_allow_html=True)
         st.markdown("<h3 style='margin-bottom: 4px;'>🗺️ 추천 식당 위치 지도</h3>", unsafe_allow_html=True)
         st.caption("🔴 빨간 핀: 1픽 전문점 / 🔵 파란 핀: 주변 후보 (클릭 시 카카오맵 정보)")
 
