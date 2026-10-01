@@ -41,9 +41,9 @@ EXCLUDED_NAME_KEYWORDS = [
     "BEER", "라운지", "BAR", "룸", "노래방", "포장마차", "야시장", "소주"
 ]
 
-# --- 2. 전류 / 주막 / 막걸리집 제외 ---
+# --- 2. 전류 / 주막 / 막걸리집 제외 (육전은 허용으로 제외 해제) ---
 JEON_KEYWORDS = [
-    "파전", "빈대떡", "모듬전", "부침개", "지짐이", "지짐", "육전", "전집", 
+    "파전", "빈대떡", "모듬전", "부침개", "지짐이", "지짐", "전집", 
     "전나라", "전마을", "전선생", "종로전", "원조전", "전골목", "주막", 
     "막걸리", "동동주", "산울림", "탁주"
 ]
@@ -61,24 +61,29 @@ NON_LUNCH_CATEGORIES = [
 ]
 
 NON_LUNCH_NAME_KEYWORDS = [
-    # 닭발류
     "닭발", "불닭발", "국물닭발", "통닭발", "무뼈닭발", "신닭발", "한신포차",
-    # 숯불/구이/고깃집
     "숯불", "연탄", "화로", "짚불", "구이", "삼겹살", "오겹살", "목살", "뒷고기", "생고기",
     "차돌", "대패", "정육식당", "갈비", "갈매기", "소고기", "한우", "곱창", "막창",
     "대창", "특양", "양꼬치", "양갈비", "조개구이", "장어구이",
-    # 꼬치/치킨
     "꼬치", "닭꼬치", "수제꼬치", "야키토리", "쿠시카츠",
     "치킨", "통닭", "닭강정", "켄터키", "BHC", "BBQ", "교촌", "굽네", "처갓집", "노랑통닭"
 ]
 
-# --- 5. 저녁 위주 횟집/수산시장 제외 키워드 ---
+# --- 5. 술 안주 메뉴 키워드 (계란말이는 밥반찬 허용으로 제외 해제) ---
+DRINK_SNACK_KEYWORDS = [
+    "황도", "과일안주", "과일화채", "화채", "마른안주", "먹태", "노가리", "한치", 
+    "쥐포", "육포", "골뱅이소면", "골뱅이무침", "두부김치", "어묵탕", "오뎅탕", 
+    "번데기탕", "모듬소시지", "소세지야채볶음", "견과류", "모둠견과", 
+    "나초", "모듬포", "문어숙회", "오징어숙회", "골뱅이"
+]
+
+# --- 6. 저녁 위주 횟집/수산시장 제외 키워드 ---
 EVENING_RAW_FISH_KEYWORDS = [
     "횟집", "회센타", "회센터", "수산", "회타운", "활어", "선어", "막회", "숙성회",
     "모듬회", "물회마차", "포차회", "바다마차", "해물포차", "해산물포차", "참치정육점"
 ]
 
-# --- 6. 종합 다메뉴 프랜차이즈 ---
+# --- 7. 종합 다메뉴 프랜차이즈 ---
 MULTI_MENU_FRANCHISES = [
     "국수나무", "미소야", "역전우동", "한솥", "도시락",
     "김밥천국", "고봉민", "김가네", "얌샘", "싸다김밥", "종로김밥", 
@@ -86,7 +91,7 @@ MULTI_MENU_FRANCHISES = [
     "분식천국", "나드리김밥", "소풍김밥"
 ]
 
-# --- 7. 프랜차이즈 판별용 키워드 (개인 음식점 우대용) ---
+# --- 8. 프랜차이즈 판별용 키워드 (개인 음식점 우대용) ---
 KNOWN_FRANCHISE_BRANDS = [
     "김밥천국", "고봉민", "김가네", "얌샘", "싸다김밥", "종로김밥", "선비꼬마김밥",
     "마녀김밥", "바르다김선생", "밥버거", "토마토김밥", "국수나무", "미소야", "역전우동",
@@ -98,7 +103,6 @@ KNOWN_FRANCHISE_BRANDS = [
 
 BUNSIK_ALLOW_MENUS = {"김밥", "떡볶이", "라면", "분식"}
 
-# --- 8. 상호명 필수 매칭 규칙 ---
 STRICT_SPECIALTY_NAME_RULES = {
     "칼국수": ["칼국수"],
     "막국수": ["막국수"],
@@ -108,12 +112,11 @@ STRICT_SPECIALTY_NAME_RULES = {
     "김밥": ["김밥"]
 }
 
-# 돈까스 전문 식별 단어
 TONKATSU_NAME_INDICATORS = [
     "돈까스", "돈가스", "카츠", "카쯔", "가츠", "돈카츠", "돈카쯔", "포크커틀릿"
 ]
 
-# --- 9. 전국 점심 대표 메뉴 풀 ---
+# --- 9. 전국 점심 대표 메뉴 풀 (65종) ---
 DEFAULT_FOODS = [
     ("김치찌개", "🥘", "김치찌개 전문점", ["찌개", "한식", "백반"]),
     ("된장찌개", "🥘", "된장찌개 백반", ["찌개", "한식", "백반"]),
@@ -164,7 +167,7 @@ DEFAULT_FOODS = [
     ("회덮밥", "🥗", "활어 회덮밥", ["일식", "한식"]),
     ("카레라이스", "🍛", "일본카레 전문점", ["카레", "일식"]),
     ("짜장면", "🥢", "짜장면", ["중식", "중화요리", "중국집"]),
-    ("짬뽕", "🌶️️", "짬뽕", ["중식", "중화요리", "중국집"]),
+    ("짬뽕", "🌶️", "짬뽕", ["중식", "중화요리", "중국집"]),
     ("볶음밥", "🍚", "중화 볶음밥", ["중식", "중국집"]),
     ("마파두부밥", "🍛", "마파두부", ["중식", "중화요리"]),
     ("마라탕", "🌶️", "마라탕 전문점", ["중식", "마라탕"]),
@@ -210,14 +213,8 @@ MOOD_DATA = {
     )
 }
 
-# --- 점심시간(10:00~14:00) 영업 여부 판정 함수 ---
-def is_open_for_lunch(place_id: str) -> bool:
-    """
-    카카오맵 플레이스 상세 API를 통해 영업시간을 확인합니다.
-    - 영업시간 정보가 없으면: True (통과)
-    - 10:00 ~ 14:00 사이에 운영 중이면: True (통과)
-    - 오픈 시간이 14:00 이후이거나(저녁 전용), 마감이 10:00 이전이면: False (제외)
-    """
+# --- 점심시간(10:00~14:00) 영업 & 술안주 미판매 검증 함수 ---
+def verify_place_details(place_id: str) -> bool:
     try:
         url = f"https://place.map.kakao.com/main/v/{place_id}"
         headers = {
@@ -228,37 +225,39 @@ def is_open_for_lunch(place_id: str) -> bool:
             return True
 
         data = res.json()
+
+        # [검증 1] 메뉴 목록에 전형적인 '술안주'가 포함되어 있는지 검사 (계란말이 제외됨)
+        menu_info = data.get("menuInfo", {})
+        menu_list = menu_info.get("menuList", [])
+        for m in menu_list:
+            m_name = m.get("menu", "").replace(" ", "")
+            if any(snack in m_name for snack in DRINK_SNACK_KEYWORDS):
+                return False
+
+        # [검증 2] 영업시간 점심(10~14시) 포함 여부 검사
         basic_info = data.get("basicInfo", {})
         open_hour_info = basic_info.get("openHour", {})
-
         period_list = open_hour_info.get("periodList", [])
-        if not period_list:
-            return True
+        
+        if period_list:
+            for period in period_list:
+                time_list = period.get("timeList", [])
+                for t in time_list:
+                    time_se = t.get("timeSE", "")
+                    if not time_se:
+                        continue
+                    times = re.findall(r"(\d{1,2}):(\d{2})", time_se)
+                    if len(times) >= 2:
+                        start_h = int(times[0][0]) + int(times[0][1]) / 60.0
+                        end_h = int(times[1][0]) + int(times[1][1]) / 60.0
+                        if end_h < start_h:
+                            end_h += 24.0
+                        
+                        if end_h <= 10.0 or start_h >= 14.0:
+                            return False
 
-        # 영업 시간 리스트 파싱
-        for period in period_list:
-            time_list = period.get("timeList", [])
-            for t in time_list:
-                time_se = t.get("timeSE", "")  # 예: "11:00 ~ 21:00"
-                if not time_se:
-                    continue
-                times = re.findall(r"(\d{1,2}):(\d{2})", time_se)
-                if len(times) >= 2:
-                    start_hour = int(times[0][0]) + int(times[0][1]) / 60.0
-                    end_hour = int(times[1][0]) + int(times[1][1]) / 60.0
-
-                    # 익일 새벽 마감인 경우 (예: 17:00 ~ 02:00 -> 26.0)
-                    if end_hour < start_hour:
-                        end_hour += 24.0
-
-                    # 점심시간(10:00 ~ 14:00)과 운영 시간이 겹치면 점심 영업 매장으로 인정
-                    if not (end_hour <= 10.0 or start_hour >= 14.0):
-                        return True
-                    else:
-                        return False
         return True
     except Exception:
-        # 통신 장애나 데이터 누락 시 정상 통과
         return True
 
 
@@ -272,7 +271,7 @@ def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_na
     if any(bad in clean_name for bad in [k.upper() for k in EXCLUDED_NAME_KEYWORDS]):
         return False
 
-    # [2] 전류/전집/빈대떡/막걸리 주점 제외
+    # [2] 전류/전집/빈대떡/막걸리 주점 제외 (육전은 허용)
     if any(jeon in clean_name for jeon in JEON_KEYWORDS):
         return False
     if any(c in category_name for c in ["전,빈대떡", "빈대떡", "민속주점"]):
@@ -442,8 +441,8 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
                 if not is_valid_specialized_restaurant(menu_name, p_name, cat_name):
                     continue
 
-                # 2. 점심시간(10:00~14:00) 영업 여부 검증 (오픈 시간 없는 곳은 통과)
-                if p_id and not is_open_for_lunch(p_id):
+                # 2. 술안주 판매 여부 및 점심 영업시간 검증 (육전, 계란말이는 허용)
+                if p_id and not verify_place_details(p_id):
                     continue
 
                 dist_m = float(d.get("distance", 0))
@@ -487,7 +486,7 @@ if "action" in qp and qp["action"] == "gps" and "lat" in qp and "lng" in qp:
 
 # --- 화면 레이아웃 ---
 st.title("🍱 오늘 점심 뭐 먹지?")
-st.caption("점심시간(10시~14시)에 영업하는 로컬 식당만 엄선하여 추천합니다. (시간 미등록 식당 포함)")
+st.caption("육전·계란말이 등의 반찬 메뉴는 허용하며, 순수 주점 안주(황도·먹태 등) 매장은 엄격히 배제합니다.")
 st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
 
 # 1. 위치 입력창 & GPS 버튼
@@ -634,7 +633,7 @@ if spin_triggered and selected_candidates:
         shuffled = selected_candidates.copy()
         random.shuffle(shuffled)
 
-        with st.spinner("점심시간(10시~14시)에 문을 여는 전문점을 조회 중입니다..."):
+        with st.spinner("점심 전문 식당을 엄선 중입니다..."):
             for m_name, m_emoji, m_kw, m_tags in shuffled:
                 found = kakao_search_places(c_lat, c_lng, m_name, m_kw, radius_km=radius_km)
                 if found:
@@ -657,7 +656,7 @@ if spin_triggered and selected_candidates:
                                 background: #FFF9E6; border-radius: 20px; border: 4px solid #FF9800;">
                         <div style="font-size: 65px; margin-bottom: 4px;">{temp[1]}</div>
                         <h2 style="color: #FF5722; margin: 4px 0 6px 0; font-size: 24px;">{temp[0]}</h2>
-                        <p style="color: #888; font-size: 13px; margin: 0;">{radius_display_text} 기준 점심 맛집 찾는 중... 🎲</p>
+                        <p style="color: #888; font-size: 13px; margin: 0;">{radius_display_text} 기준 순수 밥집 찾는 중... 🎲</p>
                     </div>
                     """,
                     unsafe_allow_html=True
@@ -675,7 +674,7 @@ if spin_triggered and selected_candidates:
                 "id": st.session_state.spin_count
             }
         else:
-            region_warning_spot.warning(f"⚠️ '{region}' 반경 내에 점심시간에 운영하는 등록 식당을 찾지 못했습니다. 탐색 반경을 넓혀보세요!")
+            region_warning_spot.warning(f"⚠️ '{region}' 반경 내에 순수 점심 식사 매장을 찾지 못했습니다. 탐색 반경을 넓혀보세요!")
 
 # 5. 결과 화면 출력
 res = st.session_state.saved_result
@@ -688,7 +687,7 @@ if res is not None and res.get("places"):
             <div style="font-size: 75px; margin-bottom: 4px;">{res['emoji']}</div>
             <h1 style="color: #E65100; margin: 4px 0 6px 0; font-size: 30px;">🎉 {res['menu']} 당첨! 🎉</h1>
             <p style="color: #795548; font-size: 14px; font-weight: bold; margin: 0;">
-                '{res['region']}' ({res['radius_text']}) 반경 점심 영업 식당 추천 결과입니다!
+                '{res['region']}' ({res['radius_text']}) 반경 순수 점심 밥집 추천 결과입니다!
             </p>
         </div>
         """,
