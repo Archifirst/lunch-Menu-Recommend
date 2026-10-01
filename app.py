@@ -41,7 +41,7 @@ EXCLUDED_NAME_KEYWORDS = [
     "BEER", "라운지", "BAR", "룸", "노래방", "포장마차", "야시장", "소주"
 ]
 
-# --- 2. 전류 / 주막 / 막걸리집 제외 (육전은 허용으로 제외 해제) ---
+# --- 2. 전류 / 주막 / 막걸리집 제외 (육전은 허용) ---
 JEON_KEYWORDS = [
     "파전", "빈대떡", "모듬전", "부침개", "지짐이", "지짐", "전집", 
     "전나라", "전마을", "전선생", "종로전", "원조전", "전골목", "주막", 
@@ -69,7 +69,7 @@ NON_LUNCH_NAME_KEYWORDS = [
     "치킨", "통닭", "닭강정", "켄터키", "BHC", "BBQ", "교촌", "굽네", "처갓집", "노랑통닭"
 ]
 
-# --- 5. 술 안주 메뉴 키워드 (계란말이는 밥반찬 허용으로 제외 해제) ---
+# --- 5. 술 안주 메뉴 키워드 (계란말이는 허용) ---
 DRINK_SNACK_KEYWORDS = [
     "황도", "과일안주", "과일화채", "화채", "마른안주", "먹태", "노가리", "한치", 
     "쥐포", "육포", "골뱅이소면", "골뱅이무침", "두부김치", "어묵탕", "오뎅탕", 
@@ -226,7 +226,7 @@ def verify_place_details(place_id: str) -> bool:
 
         data = res.json()
 
-        # [검증 1] 메뉴 목록에 전형적인 '술안주'가 포함되어 있는지 검사 (계란말이 제외됨)
+        # [검증 1] 메뉴 목록에 전형적인 '술안주'가 포함되어 있는지 검사
         menu_info = data.get("menuInfo", {})
         menu_list = menu_info.get("menuList", [])
         for m in menu_list:
@@ -271,7 +271,7 @@ def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_na
     if any(bad in clean_name for bad in [k.upper() for k in EXCLUDED_NAME_KEYWORDS]):
         return False
 
-    # [2] 전류/전집/빈대떡/막걸리 주점 제외 (육전은 허용)
+    # [2] 전류/전집/빈대떡/막걸리 주점 제외
     if any(jeon in clean_name for jeon in JEON_KEYWORDS):
         return False
     if any(c in category_name for c in ["전,빈대떡", "빈대떡", "민속주점"]):
@@ -441,7 +441,7 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
                 if not is_valid_specialized_restaurant(menu_name, p_name, cat_name):
                     continue
 
-                # 2. 술안주 판매 여부 및 점심 영업시간 검증 (육전, 계란말이는 허용)
+                # 2. 술안주 판매 여부 및 점심 영업시간 검증
                 if p_id and not verify_place_details(p_id):
                     continue
 
@@ -486,15 +486,15 @@ if "action" in qp and qp["action"] == "gps" and "lat" in qp and "lng" in qp:
 
 # --- 화면 레이아웃 ---
 st.title("🍱 오늘 점심 뭐 먹지?")
-st.caption("육전·계란말이 등의 반찬 메뉴는 허용하며, 순수 주점 안주(황도·먹태 등) 매장은 엄격히 배제합니다.")
+st.caption("주변 로컬 식당 중 점심 식사에 최적화된 진짜 맛집만 엄선하여 추천합니다.")
 st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
 
-# 1. 위치 입력창 & GPS 버튼
+# 0. 위치 입력창 & GPS 버튼
 col_input, col_gps = st.columns([3.3, 1.2])
 
 with col_input:
     region = st.text_input(
-        "📍 기준 지역, 동 이름 또는 건물명",
+        "📍 위치",
         value=st.session_state.region_input_val,
         placeholder="예시) 후평동, 역삼역, 판교유스페이스",
         key="main_region_input"
@@ -529,25 +529,25 @@ with col_gps:
         unsafe_allow_html=True
     )
 
-# 2. 반경 선택
-st.markdown("<h5 style='margin: 12px 0 6px 0; font-size: 15px;'>📏 카카오 탐색 반경</h5>", unsafe_allow_html=True)
+# 1. & 2. 탐색 반경 및 이모티콘만 남김
+st.markdown("<h5 style='margin: 12px 0 6px 0; font-size: 15px;'>📏 탐색 반경</h5>", unsafe_allow_html=True)
 c1, c2, c3, c4 = st.columns([1.0, 1.0, 1.0, 1.6], vertical_alignment="center")
 
 with c1:
     btn_type = "primary" if st.session_state.selected_radius_preset == "🚶" else "secondary"
-    if st.button("🚶 700m", key="rbtn_walk", type=btn_type, use_container_width=True):
+    if st.button("🚶", key="rbtn_walk", type=btn_type, use_container_width=True):
         st.session_state.selected_radius_preset = "🚶"
         st.rerun()
 
 with c2:
     btn_type = "primary" if st.session_state.selected_radius_preset == "🚲" else "secondary"
-    if st.button("🚲 1.8km", key="rbtn_bike", type=btn_type, use_container_width=True):
+    if st.button("🚲", key="rbtn_bike", type=btn_type, use_container_width=True):
         st.session_state.selected_radius_preset = "🚲"
         st.rerun()
 
 with c3:
     btn_type = "primary" if st.session_state.selected_radius_preset == "🚗" else "secondary"
-    if st.button("🚗 3.5km", key="rbtn_car", type=btn_type, use_container_width=True):
+    if st.button("🚗", key="rbtn_car", type=btn_type, use_container_width=True):
         st.session_state.selected_radius_preset = "🚗"
         st.rerun()
 
@@ -570,17 +570,18 @@ else:
 region_warning_spot = st.empty()
 st.write("---")
 
-# 3. 룰렛 탭
-tab1, tab2 = st.tabs(["🎲 완전 랜덤 룰렛 (전국 60+ 메뉴)", "😊 기분 & 상황별 룰렛"])
+# 3. 룰렛 탭 (이름 간소화: 랜덤 룰렛)
+tab1, tab2 = st.tabs(["🎲 랜덤 룰렛", "😊 기분 & 상황별 룰렛"])
 
 spin_triggered = False
 selected_candidates = []
 
 with tab1:
     st.markdown("<div style='height: 6px;'></div>", unsafe_allow_html=True)
-    if st.button("🎲 전국 메뉴 룰렛 돌리기", use_container_width=True, type="primary", key="btn_random"):
+    # 4. 버튼 텍스트: 룰렛 돌리기
+    if st.button("🎲 룰렛 돌리기", use_container_width=True, type="primary", key="btn_random"):
         if not region.strip() and not st.session_state.gps_coords:
-            region_warning_spot.warning("⚠️ 지역명을 입력하거나 '내 위치 찾기'를 눌러주세요!")
+            region_warning_spot.warning("⚠️ 위치를 입력하거나 '내 위치 찾기'를 눌러주세요!")
         else:
             region_warning_spot.empty()
             selected_candidates = DEFAULT_FOODS.copy()
@@ -603,7 +604,7 @@ with tab2:
 
     if selected_mood:
         if not region.strip() and not st.session_state.gps_coords:
-            region_warning_spot.warning("⚠️ 지역명을 입력하거나 '내 위치 찾기'를 눌러주세요!")
+            region_warning_spot.warning("⚠️ 위치를 입력하거나 '내 위치 찾기'를 눌러주세요!")
         else:
             region_warning_spot.empty()
             _, allowed_names = MOOD_DATA[selected_mood]
@@ -676,7 +677,7 @@ if spin_triggered and selected_candidates:
         else:
             region_warning_spot.warning(f"⚠️ '{region}' 반경 내에 순수 점심 식사 매장을 찾지 못했습니다. 탐색 반경을 넓혀보세요!")
 
-# 5. 결과 화면 출력
+# 5. 결과 화면 출력 (문구 정리)
 res = st.session_state.saved_result
 if res is not None and res.get("places"):
     card_spot.markdown(
@@ -687,7 +688,7 @@ if res is not None and res.get("places"):
             <div style="font-size: 75px; margin-bottom: 4px;">{res['emoji']}</div>
             <h1 style="color: #E65100; margin: 4px 0 6px 0; font-size: 30px;">🎉 {res['menu']} 당첨! 🎉</h1>
             <p style="color: #795548; font-size: 14px; font-weight: bold; margin: 0;">
-                '{res['region']}' ({res['radius_text']}) 반경 순수 점심 밥집 추천 결과입니다!
+                '{res['region']}' 주변 점심 밥집 추천 결과
             </p>
         </div>
         """,
@@ -717,7 +718,7 @@ if res is not None and res.get("places"):
                         </span>
                     </div>
                 </div>
-                <div style="font-size: 18px; color: #1B5E20; font-weight: 800; margin-top: 6px;">
+                <div style="font-size: 18px; color: #1B5E20; font-weight: 800; margin-top: 4px;">
                     <a href="{top_pick.get('place_url', '#')}" target="_blank" style="text-decoration: none; color: #1B5E20;">
                         {top_pick['name']} 🔗
                     </a>
@@ -746,7 +747,8 @@ if res is not None and res.get("places"):
                 unsafe_allow_html=True
             )
 
-        st.markdown("<h3 style='margin-bottom: 4px;'>🗺 추천 식당 카카오맵 위치 지도</h3>", unsafe_allow_html=True)
+        # 6. 지도 타이틀 및 귀여운 지도 이모티콘(🗺️) 적용
+        st.markdown("<h3 style='margin-bottom: 4px;'>🗺️ 추천 식당 위치 지도</h3>", unsafe_allow_html=True)
         st.caption("🔴 빨간 핀: 1픽 전문점 / 🔵 파란 핀: 주변 후보 (클릭 시 카카오맵 정보)")
 
         m = folium.Map(location=[top_pick["lat"], top_pick["lng"]], zoom_start=15, control_scale=True)
@@ -771,4 +773,5 @@ if res is not None and res.get("places"):
 
         st.markdown("<div style='height: 16px;'></div>", unsafe_allow_html=True)
         kakao_map_url = f"https://map.kakao.com/link/search/{urllib.parse.quote(res['region'] + ' ' + res['menu'])}"
-        st.link_button("🟡 카카오맵 길찾기 바로가기", kakao_map_url, use_container_width=True)
+        # 7. 네비게이션 이모티콘(🧭)으로 교체
+        st.link_button("🧭 카카오맵 길찾기 바로가기", kakao_map_url, use_container_width=True)
