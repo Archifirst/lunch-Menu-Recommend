@@ -92,11 +92,12 @@ st.markdown(
         border: 1.2px solid #EDE4DC !important;
         background-color: #FFFFFF !important;
         color: #3E3228 !important;
-        font-size: 13.5px !important;
+        font-size: 13px !important;
         font-weight: 600 !important;
         padding: 8px 10px !important;
         box-shadow: 0 2px 5px rgba(0,0,0,0.02) !important;
         transition: all 0.2s ease !important;
+        white-space: nowrap !important;
     }
     div.stButton > button[kind="secondary"]:hover {
         border-color: #E86A3E !important;
@@ -136,7 +137,7 @@ PRESET_RADIUS = {
     "직접 입력": None
 }
 
-# --- 1. 제외/필터링 사전 규칙 정의 ---
+# --- 제외/필터링 사전 규칙 정의 ---
 EXCLUDED_CATEGORIES = [
     "술집", "주점", "호프", "포차", "이자카야", "바(BAR)", "요리주점", "와인바",
     "칵테일바", "민속주점", "맥주", "룸살롱", "단란주점", "유흥주점", "라이브카페", "나이트클럽"
@@ -285,7 +286,9 @@ DEFAULT_FOODS = [
     ("김밥", "🍙", "김밥 전문점", ["김밥"])
 ]
 
+# --- 기분, 날씨, 컨디션 데이터 (날씨 좋음, 해장 추가) ---
 MOOD_DATA = {
+    # [기분 라인]
     "🥳 기분좋음": (
         "양식·일식·특식", 
         ["파스타", "피자", "수제버거", "초밥", "돈까스", "텐동", "스테이크덮밥", "타코"]
@@ -294,23 +297,45 @@ MOOD_DATA = {
         "화끈·얼큰·매콤", 
         ["짬뽕", "마라탕", "떡볶이", "낙지볶음", "쭈꾸미볶음", "제육볶음", "닭갈비", "육개장"]
     ),
-    "😴 피곤·보양": (
-        "든든한 국밥·보양 뚝배기", 
-        ["순대국", "뼈해장국", "설렁탕", "갈비탕", "삼계탕", "추어탕", "백반", "곰탕"]
+    
+    # [날씨 라인]
+    "☀️ 날씨좋음": (
+        "산뜻·야외·테라스", 
+        ["샌드위치", "포케", "수제버거", "초밥", "파스타", "피자", "타코", "회덮밥"]
     ),
     "☔ 흐림·비": (
         "따끈한 국물과 면 요리", 
         ["칼국수", "수제비", "김치찌개", "부대찌개", "일본라멘", "우동", "쌀국수", "짬뽕"]
     ),
+
+    # [컨디션 라인 1]
+    "😴 피곤·보양": (
+        "든든한 국밥·보양 뚝배기", 
+        ["순대국", "뼈해장국", "설렁탕", "갈비탕", "삼계탕", "추어탕", "백반", "곰탕"]
+    ),
     "🫠 입맛없음": (
         "산뜻·시원한 별미", 
         ["막국수", "냉면", "소바", "포케", "비빔국수", "회덮밥", "돌솥비빔밥", "샌드위치"]
     ),
+
+    # [컨디션 라인 2]
     "🤢 속편한식사": (
         "부드럽고 순한 국·죽", 
         ["순두부찌개", "콩나물국밥", "황태해장국", "전복죽", "보리밥정식", "된장찌개"]
+    ),
+    "🍻 시원한 해장": (
+        "얼큰·시원 속풀이 국물", 
+        ["콩나물국밥", "황태해장국", "뼈해장국", "선지해장국", "순대국", "동태탕", "짬뽕", "쌀국수"]
     )
 }
+
+# 1열과 2열 매핑용 순서 정의 (기분끼리, 날씨끼리, 컨디션끼리 각 행에 배치)
+ROW_PAIRS = [
+    ("🥳 기분좋음", "🤯 스트레스"),      # 기분 라인
+    ("☀️ 날씨좋음", "☔ 흐림·비"),         # 날씨 라인
+    ("😴 피곤·보양", "🫠 입맛없음"),      # 컨디션 라인 1
+    ("🤢 속편한식사", "🍻 시원한 해장")    # 컨디션 라인 2
+]
 
 # --- 점심시간 및 술안주 필터 ---
 def verify_place_details(place_id: str) -> bool:
@@ -680,7 +705,7 @@ def show_location_warning():
 # --- 3. 룰렛 방식 선택 (각각의 박스로 묶인 독립 카드 컨테이너) ---
 st.markdown("<div style='margin-bottom: 6px; font-size: 14px; font-weight: 700; color: #3E3228;'>🎯 룰렛 방식 선택</div>", unsafe_allow_html=True)
 
-# 박스 1: 완전 랜덤 룰렛 (설명 + 버튼이 하나의 둥근 박스에 완벽하게 묶임)
+# 박스 1: 완전 랜덤 룰렛
 with st.container(border=True):
     st.markdown(
         """
@@ -705,7 +730,7 @@ with st.container(border=True):
 
 st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
 
-# 박스 2: 기분 & 상황별 룰렛 (설명 + 6개 그리드 버튼이 하나의 둥근 박스에 완벽하게 묶임)
+# 박스 2: 기분 & 상황별 룰렛 (별도 라벨 없이 기분/날씨/컨디션별로 한 행씩 깔끔 배치)
 with st.container(border=True):
     st.markdown(
         """
@@ -720,25 +745,25 @@ with st.container(border=True):
         unsafe_allow_html=True
     )
     
-    col_m1, col_m2 = st.columns(2)
-    mood_keys = list(MOOD_DATA.keys())
     selected_mood = None
 
-    with col_m1:
-        for k in mood_keys[:3]:
-            desc, _ = MOOD_DATA[k]
-            btn_label = f"{k} ({desc})"
-            if st.button(btn_label, use_container_width=True, key=f"btn_{k}"):
+    # 기분끼리, 날씨끼리, 컨디션끼리 1:1 대칭 배치 (라벨 구분 없이 직관적 배열)
+    for left_k, right_k in ROW_PAIRS:
+        col_left, col_right = st.columns(2)
+        
+        with col_left:
+            desc_l, _ = MOOD_DATA[left_k]
+            btn_label_l = f"{left_k} ({desc_l})"
+            if st.button(btn_label_l, use_container_width=True, key=f"btn_{left_k}"):
                 st.session_state.active_mode = "mood"
-                selected_mood = k
+                selected_mood = left_k
 
-    with col_m2:
-        for k in mood_keys[3:]:
-            desc, _ = MOOD_DATA[k]
-            btn_label = f"{k} ({desc})"
-            if st.button(btn_label, use_container_width=True, key=f"btn_{k}"):
+        with col_right:
+            desc_r, _ = MOOD_DATA[right_k]
+            btn_label_r = f"{right_k} ({desc_r})"
+            if st.button(btn_label_r, use_container_width=True, key=f"btn_{right_k}"):
                 st.session_state.active_mode = "mood"
-                selected_mood = k
+                selected_mood = right_k
 
     if selected_mood:
         if not region.strip() and not st.session_state.gps_coords:
