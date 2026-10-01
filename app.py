@@ -34,39 +34,53 @@ st.markdown(
         box-shadow: 0 0 0 2px rgba(232, 106, 62, 0.15) !important;
     }
     
-    /* 탭 디자인: 5:5 반반 균등 분할 및 캡슐 세그먼트 */
+    /* [개선] 탭 디자인: 중앙 정렬 & 세련된 플로팅 세그먼트 스타일 */
     div[data-testid="stTabs"] {
-        background-color: #F1ECE6;
-        padding: 5px;
-        border-radius: 16px;
-        margin-bottom: 14px;
+        width: 100% !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
     }
     div[data-testid="stTabs"] div[role="tablist"] {
         display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
         width: 100% !important;
-        gap: 6px !important;
+        max-width: 480px !important;
+        margin: 0 auto 16px auto !important;
+        background-color: #EFE9E2 !important;
+        padding: 5px !important;
+        border-radius: 18px !important;
         border-bottom: none !important;
+        gap: 6px !important;
+        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05) !important;
     }
     button[data-baseweb="tab"] {
         flex: 1 1 0% !important;
-        width: 50% !important;
         text-align: center !important;
         justify-content: center !important;
-        border-radius: 12px !important;
-        padding: 10px 0 !important;
+        border-radius: 14px !important;
+        padding: 9px 0 !important;
         font-size: 14.5px !important;
         font-weight: 700 !important;
-        color: #7A6F66 !important;
+        color: #8C8075 !important;
         background-color: transparent !important;
         border: none !important;
-        transition: all 0.25s ease !important;
+        transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+    button[data-baseweb="tab"]:hover {
+        color: #4A3E36 !important;
     }
     button[data-baseweb="tab"][aria-selected="true"] {
         background-color: #FFFFFF !important;
         color: #2E1C10 !important;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.06) !important;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08) !important;
+        transform: scale(1.01) !important;
     }
     div[data-baseweb="tab-highlight"] {
+        display: none !important;
+    }
+    div[data-baseweb="tab-border"] {
         display: none !important;
     }
 
@@ -643,7 +657,6 @@ if clean_region:
     if any(clean_region.endswith(sfx) for sfx in ["구", "동", "읍", "면", "리", "시", "군", "가"]):
         is_admin_region = True
 
-# 입력값이 존재하고, 행정 지명이 아닌 '건물/역/랜드마크'일 때만 모션과 함께 노출
 should_show_radius = bool(clean_region and not is_admin_region)
 
 if should_show_radius:
@@ -693,7 +706,7 @@ else:
 region_warning_spot = st.empty()
 st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
 
-# 4. 룰렛 탭
+# 4. 룰렛 탭 (중앙 정렬 세그먼트)
 tab1, tab2 = st.tabs(["🎲 랜덤 룰렛", "✨ 기분 & 상황별 룰렛"])
 
 spin_triggered = False
