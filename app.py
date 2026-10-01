@@ -34,71 +34,39 @@ st.markdown(
         box-shadow: 0 0 0 2px rgba(232, 106, 62, 0.15) !important;
     }
     
-    /* 탭 전체 컨테이너: 박스형 캡슐 세그먼트 */
+    /* 탭 디자인: 5:5 반반 균등 분할 및 캡슐 세그먼트 */
     div[data-testid="stTabs"] {
-        background: transparent !important;
-        margin-top: 10px;
-        margin-bottom: 16px;
+        background-color: #F1ECE6;
+        padding: 5px;
+        border-radius: 16px;
+        margin-bottom: 14px;
     }
-    
-    /* 탭 헤더 박스: 회색 베이지 박스 컨테이너 */
     div[data-testid="stTabs"] div[role="tablist"] {
         display: flex !important;
         width: 100% !important;
-        background-color: #EDE7DE !important;
-        border-radius: 14px !important;
-        padding: 5px !important;
         gap: 6px !important;
         border-bottom: none !important;
-        box-sizing: border-box !important;
-        justify-content: center !important;
-        align-items: center !important;
     }
-    
-    /* 개별 탭: 5:5 꽉 찬 박스형 버튼 */
     button[data-baseweb="tab"] {
         flex: 1 1 0% !important;
         width: 50% !important;
-        height: 42px !important;
         text-align: center !important;
-        display: inline-flex !important;
-        align-items: center !important;
         justify-content: center !important;
-        border-radius: 10px !important;
-        padding: 0 !important;
-        margin: 0 !important;
+        border-radius: 12px !important;
+        padding: 10px 0 !important;
         font-size: 14.5px !important;
         font-weight: 700 !important;
-        color: #7D7267 !important;
+        color: #7A6F66 !important;
         background-color: transparent !important;
         border: none !important;
-        transition: all 0.22s ease-in-out !important;
-        box-sizing: border-box !important;
+        transition: all 0.25s ease !important;
     }
-    
-    /* 탭 텍스트 여백 보정 */
-    button[data-baseweb="tab"] div {
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        width: 100% !important;
-    }
-    
-    /* 활성화된 탭: 도드라지는 화이트 카드 버튼 */
     button[data-baseweb="tab"][aria-selected="true"] {
         background-color: #FFFFFF !important;
         color: #2E1C10 !important;
-        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08) !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06) !important;
     }
-    
-    /* 비활성 탭 마우스 오버 */
-    button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
-        color: #4A3E35 !important;
-        background-color: rgba(255, 255, 255, 0.35) !important;
-    }
-    
-    /* 하단 기본 스트림릿 인디케이터 라인 제거 */
-    div[data-baseweb="tab-highlight"], div[data-baseweb="tab-border"] {
+    div[data-baseweb="tab-highlight"] {
         display: none !important;
     }
 
@@ -297,7 +265,7 @@ DEFAULT_FOODS = [
     ("도가니탕", "🥣🦴", "도가니탕 전문점", ["도가니탕", "곰탕"]),
     ("백반", "🍱🥢", "백반 가정식", ["백반", "가정식", "한식", "기사식당"]),
     ("제육볶음", "🔥🥩", "제육볶음 정식", ["한식", "백반", "식당"]),
-    ("오징어볶음", "🦑🌶️️", "오징어볶음 백반", ["한식", "백반"]),
+    ("오징어볶음", "🦑🌶️", "오징어볶음 백반", ["한식", "백반"]),
     ("낙지볶음", "🐙🔥", "낙지볶음 전문점", ["낙지", "한식"]),
     ("쭈꾸미볶음", "🐙🌶️", "쭈꾸미 전문점", ["쭈꾸미", "한식"]),
     ("돌솥비빔밥", "🍳🥘", "비빔밥 전문점", ["비빔밥", "한식"]),
@@ -723,8 +691,9 @@ else:
 
 # 3. 위치 미입력 경고 영역
 region_warning_spot = st.empty()
+st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
 
-# 4. 룰렛 탭 (완벽한 중앙 정렬 5:5 캡슐 세그먼트 박스)
+# 4. 룰렛 탭
 tab1, tab2 = st.tabs(["🎲 랜덤 룰렛", "✨ 기분 & 상황별 룰렛"])
 
 spin_triggered = False
@@ -737,7 +706,7 @@ def show_location_warning():
                     width: 100%; height: 48px; margin: 8px 0 12px 0;
                     background-color: #FFFDF7; border: 1.5px solid #F7D488; border-radius: 14px;
                     box-shadow: 0 3px 10px rgba(247, 212, 136, 0.2);">
-            <span style="font-size: 18px; line-height: 1;">⚠️️</span>
+            <span style="font-size: 18px; line-height: 1;">⚠️</span>
             <span style="color: #6C4D0A; font-size: 14px; font-weight: 700; line-height: 1;">
                 위치를 입력하거나 '내 위치 찾기'를 눌러주세요!
             </span>
@@ -858,7 +827,7 @@ if spin_triggered and selected_candidates:
                 "id": st.session_state.spin_count
             }
         else:
-            region_warning_spot.warning(f"⚠️ '{region}' 반경 내에 순수 점심 식사 매장을 찾지 못했습니다. 탐색 반경을 넓혀보세요!")
+            region_warning_spot.warning(f"⚠️️ '{region}' 반경 내에 순수 점심 식사 매장을 찾지 못했습니다. 탐색 반경을 넓혀보세요!")
 
 # 6. 결과 화면 출력
 res = st.session_state.saved_result
@@ -960,7 +929,7 @@ if res is not None and res.get("places"):
                     )
 
         st.markdown("<div style='height: 18px;'></div>", unsafe_allow_html=True)
-        st.markdown("<h3 style='margin-bottom: 4px; font-size: 18px; font-weight: 800; color: #2E1C10;'>🗺️️ 추천 식당 위치 지도</h3>", unsafe_allow_html=True)
+        st.markdown("<h3 style='margin-bottom: 4px; font-size: 18px; font-weight: 800; color: #2E1C10;'>🗺️ 추천 식당 위치 지도</h3>", unsafe_allow_html=True)
         st.caption("🔴 빨간 핀: 1픽 전문점 / 🔵 파란 핀: 주변 후보 (클릭 시 카카오맵 정보)")
 
         m = folium.Map(location=[top_pick["lat"], top_pick["lng"]], zoom_start=15, control_scale=True)
