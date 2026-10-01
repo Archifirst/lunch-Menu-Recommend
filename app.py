@@ -16,26 +16,26 @@ st.set_page_config(page_title="오늘 점심 뭐 먹지?", page_icon="🍱", lay
 st.markdown(
     """
     <style>
-    /* 전체 배경 및 폰트 렌더링 + 상단 여백 자연스럽게 확장 */
+    /* 전체 배경 및 폰트 렌더링 + 상단 적정 여백 확보 */
     .stApp {
         background-color: #FAF8F5;
         font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo", sans-serif;
     }
     .block-container {
-        padding-top: 3.2rem !important;
+        padding-top: 2.6rem !important;
         padding-bottom: 2.5rem !important;
     }
-
-    /* 최상단 상태바 연동 그라데이션 오버레이 (화면 가장 위에 떠 있는 효과) */
+    
+    /* 최상단 헤더 아래 부드러운 오버레이 그라데이션 (가장 위에 위치하여 자연스럽게 연결) */
     .top-gradient-overlay {
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
-        height: 60px;
-        background: linear-gradient(180deg, #FAF8F5 0%, rgba(250, 248, 245, 0.85) 40%, rgba(250, 248, 245, 0) 100%);
+        height: 48px;
+        background: linear-gradient(180deg, #FAF8F5 0%, rgba(250, 248, 245, 0.8) 40%, rgba(250, 248, 245, 0) 100%);
+        z-index: 99999;
         pointer-events: none;
-        z-index: 999999;
     }
     
     /* 입력창 디자인 */
@@ -124,8 +124,7 @@ st.markdown(
         height: 40px !important;
     }
     </style>
-    
-    <!-- 최상단 오버레이 그라데이션 레이어 -->
+    <!-- 최상단 상태바 아래를 덮는 투명 그라데이션 오버레이 -->
     <div class="top-gradient-overlay"></div>
     """,
     unsafe_allow_html=True
@@ -246,7 +245,7 @@ DEFAULT_FOODS = [
     ("갈비탕", "🍖", "갈비탕 전문점", ["갈비탕", "한식"]),
     ("삼계탕", "🍗", "삼계탕 전문점", ["삼계탕", "한식"]),
     ("추어탕", "🍲", "추어탕 전문점", ["추어탕", "한식"]),
-    ("육개장", "🌶️️", "육개장 전문점", ["육개장", "국밥", "한식"]),
+    ("육개장", "🌶️", "육개장 전문점", ["육개장", "국밥", "한식"]),
     ("콩나물국밥", "🍲", "콩나물국밥 전문점", ["콩나물국밥", "국밥"]),
     ("황태해장국", "🥣", "황태해장국 전문점", ["해장국", "한식"]),
     ("선지해장국", "🥘", "선지해장국 전문점", ["해장국", "국밥"]),
@@ -590,9 +589,9 @@ if qp.get("action") == "gps" and "lat" in qp and "lng" in qp:
     st.query_params.clear()
 
 
-# --- 상단 타이틀 (여백 넉넉하게 확장) ---
-st.markdown("<h1 style='color: #2E1C10; font-size: 27px; font-weight: 800; margin: 10px 0 3px 0;'>🍱 오늘 점심 뭐 먹지?</h1>", unsafe_allow_html=True)
-st.markdown("<div style='color: #8C827A; font-size: 13.5px; margin-bottom: 16px;'>점심에 집중하는 근처 로컬 밥집만 쏙 골라 추천합니다.</div>", unsafe_allow_html=True)
+# --- 상단 타이틀 (여백 확장 및 정돈) ---
+st.markdown("<h1 style='color: #2E1C10; font-size: 26px; font-weight: 800; margin: 14px 0 4px 0;'>🍱 오늘 점심 뭐 먹지?</h1>", unsafe_allow_html=True)
+st.markdown("<div style='color: #8C827A; font-size: 13px; margin-bottom: 16px;'>점심에 집중하는 근처 로컬 밥집만 쏙 골라 추천합니다.</div>", unsafe_allow_html=True)
 
 # 1. 위치 입력창
 st.markdown("<div style='margin-bottom: 4px; font-size: 13.5px; font-weight: 600; color: #4A4036;'>📍 위치</div>", unsafe_allow_html=True)
@@ -700,7 +699,7 @@ def show_location_warning():
                     width: 100%; height: 44px; margin: 4px 0 10px 0;
                     background-color: #FFFDF7; border: 1.5px solid #F7D488; border-radius: 12px;
                     box-shadow: 0 3px 10px rgba(247, 212, 136, 0.2);">
-            <span style="font-size: 16px; line-height: 1;">⚠️️</span>
+            <span style="font-size: 16px; line-height: 1;">⚠️</span>
             <span style="color: #6C4D0A; font-size: 13.5px; font-weight: 700; line-height: 1;">
                 위치를 입력하거나 '내 위치 찾기'를 눌러주세요!
             </span>
@@ -737,7 +736,7 @@ with st.container(border=True):
 
 st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
 
-# 박스 2: 기분 & 상황별 룰렛 (2열 나란히 정렬)
+# 박스 2: 기분 & 상황별 룰렛
 with st.container(border=True):
     st.markdown(
         """
@@ -846,7 +845,7 @@ if spin_triggered and selected_candidates:
                 "id": st.session_state.spin_count
             }
         else:
-            region_warning_spot.warning(f"⚠️ '{region}' 반경 내에 순수 점심 식사 매장을 찾지 못했습니다. 탐색 반경을 넓혀보세요!")
+            region_warning_spot.warning(f"⚠️️ '{region}' 반경 내에 순수 점심 식사 매장을 찾지 못했습니다. 탐색 반경을 넓혀보세요!")
 
 # --- 5. 결과 화면 출력 ---
 res = st.session_state.saved_result
@@ -948,7 +947,7 @@ if res is not None and res.get("places"):
                     )
 
         st.markdown("<div style='height: 14px;'></div>", unsafe_allow_html=True)
-        st.markdown("<h3 style='margin-bottom: 2px; font-size: 17px; font-weight: 800; color: #2E1C10;'>🗺️ 추천 식당 위치 지도</h3>", unsafe_allow_html=True)
+        st.markdown("<h3 style='margin-bottom: 2px; font-size: 17px; font-weight: 800; color: #2E1C10;'>🗺️️ 추천 식당 위치 지도</h3>", unsafe_allow_html=True)
         st.caption("🔴 빨간 핀: 1픽 전문점 / 🔵 파란 핀: 주변 후보 (클릭 시 카카오맵 정보)")
 
         m = folium.Map(location=[top_pick["lat"], top_pick["lng"]], zoom_start=15, control_scale=True)
