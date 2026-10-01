@@ -97,7 +97,7 @@ KNOWN_FRANCHISE_BRANDS = [
 
 BUNSIK_ALLOW_MENUS = {"김밥", "떡볶이", "라면", "분식"}
 
-# --- 8. 상호명 필수 매칭 규칙 (칼국수, 막국수는 엄격 적용) ---
+# --- 8. 상호명 필수 매칭 규칙 ---
 STRICT_SPECIALTY_NAME_RULES = {
     "칼국수": ["칼국수"],
     "막국수": ["막국수"],
@@ -107,7 +107,12 @@ STRICT_SPECIALTY_NAME_RULES = {
     "김밥": ["김밥"]
 }
 
-# 중국집 상호 식별 단어 (짜장/짬뽕 상호 부재 대비)
+# 돈까스 전문 식별 단어 (상호명 필수 키워드)
+TONKATSU_NAME_INDICATORS = [
+    "돈까스", "돈가스", "카츠", "카쯔", "가츠", "돈카츠", "돈카쯔", "포크커틀릿"
+]
+
+# 중국집 상호 식별 단어
 CHINESE_RESTAURANT_NAME_INDICATORS = [
     "반점", "각", "루", "원", "관", "성", "중화", "중국집", "차이나", "짬뽕", "짜장", "대반점"
 ]
@@ -118,7 +123,7 @@ DEFAULT_FOODS = [
     ("김치찌개", "🥘", "김치찌개 전문점", ["찌개", "한식", "백반"]),
     ("순대국", "🍲", "순대국 전문점", ["순대", "국밥", "한식"]),
     ("뼈해장국", "🍖", "뼈해장국", ["감자탕", "해장국", "국밥"]),
-    ("돈까스", "🍱", "돈까스 전문점", ["돈가스", "일식", "경양식", "양식"]),
+    ("돈까스", "🍱", "돈까스 카츠 전문점", ["돈가스", "일식", "경양식", "양식"]),
     ("초밥", "🍣", "스시 초밥 전문점", ["일식", "초밥"]),
     ("짜장면", "🥢", "중국집 짜장면", ["중식", "중화요리", "중국집"]),
     ("짬뽕", "🌶️", "중국집 짬뽕", ["중식", "중화요리", "중국집"]),
@@ -135,7 +140,7 @@ DEFAULT_FOODS = [
 ]
 
 MOOD_DATA = {
-    "🥳 기분좋음": ("양식·스시 전문", ["파스타", "피자", "햄버거", "초밥", "돈까스"]),
+    "🥳 기분좋음": ("양식·카츠 전문", ["파스타", "피자", "햄버거", "초밥", "돈까스"]),
     "🤯 스트레스": ("화끈·전문 매콤", ["짬뽕", "떡볶이", "제육볶음", "닭갈비"]),
     "😴 피곤·보양": ("든든한 뚝배기", ["순대국", "뼈해장국", "백반", "김치찌개"]),
     "☔ 흐림·비": ("따끈한 전문 국물", ["칼국수", "김치찌개", "순대국", "짬뽕", "막국수"])
@@ -187,16 +192,24 @@ def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_na
         if "해물,생선 > 회" in category_name and not any(k in clean_name for k in ["스시", "초밥"]):
             return False
 
-    # [8] 짜장면, 짬뽕 예외 처리: 상호명에 메뉴명이 없어도 '중식' 카테고리가 확실하면 통과
+    # [8] 돈까스 전문 식당 엄격 판정
+    if menu_name == "돈까스":
+        is_tonkatsu_name = any(k in clean_name for k in TONKATSU_NAME_INDICATORS)
+        is_tonkatsu_category = any(c in category_name for c in ["돈가스", "돈까스"])
+        # 상호명에 카츠/돈까스가 있거나 카카오 카테고리가 돈가스 전문인 경우만 인정
+        if not (is_tonkatsu_name or is_tonkatsu_category):
+            return False
+        return True
+
+    # [9] 짜장면, 짬뽕 예외 처리 (중식 카테고리/상호 확인)
     if menu_name in ["짜장면", "짬뽕"]:
         is_chinese_category = any(c in category_name for c in ["중식", "중국집", "중화요리"])
         is_chinese_name = any(ind in clean_name for ind in CHINESE_RESTAURANT_NAME_INDICATORS)
-        # 카테고리가 중식이거나 상호명에 중국집 표기가 있으면 통과
         if not (is_chinese_category or is_chinese_name):
             return False
         return True
 
-    # [9] 칼국수, 막국수 등 엄격 상호명 매칭
+    # [10] 칼국수, 막국수 등 엄격 상호명 매칭
     if menu_name in STRICT_SPECIALTY_NAME_RULES:
         required_words = STRICT_SPECIALTY_NAME_RULES[menu_name]
         if not any(req in clean_name for req in required_words):
@@ -223,6 +236,11 @@ def calculate_restaurant_priority(place: dict, menu_name: str) -> float:
     else:
         score -= 0.5
         place["is_personal"] = True
+
+    # 돈까스 규칙: 상호명에 카츠/돈까스 직접 명시 매장 최우선 가산점
+    if menu_name == "돈까스":
+        if any(k in p_name for k in TONKATSU_NAME_INDICATORS):
+            score -= 2.5
 
     # 김밥 규칙
     if menu_name == "김밥":
@@ -317,7 +335,7 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
                 p_name = d.get("place_name", "")
                 cat_name = d.get("category_name", "")
 
-                # 업종 및 전문성 판정
+                # 돈까스 전문 판정 등 유효성 검증
                 if not is_valid_specialized_restaurant(menu_name, p_name, cat_name):
                     continue
 
@@ -362,7 +380,7 @@ if "action" in qp and qp["action"] == "gps" and "lat" in qp and "lng" in qp:
 
 # --- 화면 레이아웃 ---
 st.title("🍱 오늘 점심 뭐 먹지?")
-st.caption("칼국수·막국수는 상호명 필수 매칭, 짜장·짬뽕은 중식 전문점 기반으로 엄선합니다.")
+st.caption("돈까스·카츠 전문점과 로컬 맛집 위주로 확실한 점심 전문 식당만 추천합니다.")
 st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
 
 # 1. 위치 입력창 & GPS 버튼
