@@ -54,8 +54,7 @@ NON_LUNCH_NAME_KEYWORDS = [
     "치킨", "통닭", "닭강정", "켄터키", "BHC", "BBQ", "교촌", "굽네", "처갓집", "노랑통닭"
 ]
 
-# --- 3. 종합 다메뉴 프랜차이즈 (국수나무, 미소야, 김밥천국 등) ---
-# 돈까스, 찌개, 파스타, 짬뽕 등의 전문 요리가 당첨되었을 때 차단하고 '분식'에서만 허용
+# --- 3. 종합 다메뉴 프랜차이즈 (비분식 메뉴 시 완전 차단) ---
 MULTI_MENU_FRANCHISES = [
     "국수나무", "미소야", "역전우동", "한솥", "도시락",
     "김밥천국", "고봉민", "김가네", "얌샘", "싸다김밥", "종로김밥", 
@@ -63,10 +62,18 @@ MULTI_MENU_FRANCHISES = [
     "분식천국", "나드리김밥", "소풍김밥"
 ]
 
-# 위 다메뉴 프랜차이즈가 허용되는 메뉴군
+# --- 4. 프랜차이즈 판별용 키워드 (개인 음식점 우선 노출용 감점 리스트) ---
+KNOWN_FRANCHISE_BRANDS = [
+    "김밥천국", "고봉민", "김가네", "얌샘", "싸다김밥", "종로김밥", "선비꼬마김밥",
+    "마녀김밥", "바르다김선생", "밥버거", "토마토김밥", "국수나무", "미소야", "역전우동",
+    "한솥", "본죽", "신전떡볶이", "동대문엽기", "죠스떡볶이", "청년다방", "두끼",
+    "홍콩반점", "교동짬뽕", "백소정", "카츠젠", "봉구스", "롤링파스타", "서브웨이",
+    "맥도날드", "롯데리아", "버거킹", "노브랜드버거", "맘스터치", "KFC"
+]
+
 BUNSIK_ALLOW_MENUS = {"김밥", "떡볶이", "라면", "분식"}
 
-# --- 4. 메뉴 목록 ---
+# --- 5. 메뉴 목록 ---
 DEFAULT_FOODS = [
     ("제육볶음", "🥓", "제육볶음 정식", ["한식", "백반", "식당"]),
     ("김치찌개", "🥘", "김치찌개 전문점", ["찌개", "한식", "백반"]),
@@ -81,8 +88,8 @@ DEFAULT_FOODS = [
     ("피자", "🍕", "화덕피자", ["피자", "양식", "이탈리안"]),
     ("햄버거", "🍔", "수제버거", ["햄버거", "패스트푸드"]),
     ("쌀국수", "🍜", "베트남 쌀국수", ["아시아음식", "베트남음식", "쌀국수"]),
-    ("떡볶이", "🌶", "떡볶이 맛집", ["분식", "떡볶이"]),
-    ("김밥", "🍙", "김밥 맛집", ["분식", "김밥"]),
+    ("떡볶이", "🌶", "떡볶이 전문점", ["분식", "떡볶이"]),
+    ("김밥", "🍙", "김밥 전문점", ["김밥"]),
     ("닭갈비", "🥘", "닭갈비 전문점", ["닭갈비", "한식"]),
     ("백반", "🍱", "백반 가정식", ["백반", "가정식", "한식", "기사식당"])
 ]
@@ -114,16 +121,50 @@ def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_na
     if any(bad in clean_name for bad in [k.upper() for k in NON_LUNCH_NAME_KEYWORDS]):
         return False
 
-    # [4] 종합 다메뉴 프랜차이즈(국수나무, 미소야, 김밥천국 등) 필터링
-    # 김밥, 떡볶이, 라면 등 분식 메뉴가 아닐 때는 무조건 배제
+    # [4] 종합 다메뉴 프랜차이즈 필터링 (김밥/분식이 아닐 때)
     if menu_name not in BUNSIK_ALLOW_MENUS:
         if any(brand in clean_name for brand in MULTI_MENU_FRANCHISES):
             return False
-        # 카카오 카테고리가 '분식' 단독인 곳에서 돈까스/파스타/찌개 등 전문 요리 검색 시 제외
         if "분식" in category_name and not any(k in category_name for k in ["일식", "양식", "한식", "중식"]):
             return False
 
     return True
+
+
+def calculate_restaurant_priority(place: dict, menu_name: str) -> float:
+    """
+    개인 음식점 우선 + 김밥은 김밥 전문점 최우선 스코어링 (점수가 낮을수록 1순위)
+    """
+    p_name = place["name"]
+    category = place["category"]
+    dist = place["dist"]
+
+    score = dist  # 기본은 거리 기준(km)
+
+    # 1. 프랜차이즈 vs 개인 음식점 판별
+    is_franchise = any(f_name in p_name for f_name in KNOWN_FRANCHISE_BRANDS)
+    # 상호명 뒤에 'XX점', '1호점', '본점' 등의 체인점 표기가 있으면 프랜차이즈 가능성 부여
+    if any(p_name.strip().endswith(sfx) for sfx in ["점", "호점", "직영점"]):
+        is_franchise = True
+
+    if is_franchise:
+        score += 3.0  # 프랜차이즈는 3km 뒤로 밀어냄 (개인 음식점 우선)
+        place["is_personal"] = False
+    else:
+        score -= 0.5  # 개인 음식점은 가산점
+        place["is_personal"] = True
+
+    # 2. 김밥 메뉴 특별 규칙: 전문 김밥집 최우선, 일반 분식집 최후순위
+    if menu_name == "김밥":
+        is_gimbap_specialist = ("김밥" in p_name) or ("김밥" in category)
+        is_bunsik_general = ("분식" in category) and not is_gimbap_specialist
+
+        if is_gimbap_specialist:
+            score -= 2.0  # 김밥 전문점 최우선 배치
+        elif is_bunsik_general:
+            score += 4.0  # 일반 분식집은 최후순위로 격하
+
+    return score
 
 
 # --- 카카오 공식 API 연동 함수 ---
@@ -167,7 +208,7 @@ def kakao_reverse_geocode(lat: float, lng: float) -> str:
 
 def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: str, radius_km: float = 1.8):
     """
-    반경 내 음식점 중 술집, 고깃집, 치킨집, 다메뉴 프랜차이즈(국수나무 등)를 제외한 단품 전문점 수집
+    반경 내 음식점 수집 후 [개인 음식점 우선 + 김밥 전문점 최우선] 정렬 적용
     """
     url = "https://dapi.kakao.com/v2/local/search/keyword.json"
     headers = {"Authorization": f"KakaoAK {KAKAO_REST_KEY}"}
@@ -193,12 +234,12 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
                 p_name = d.get("place_name", "")
                 cat_name = d.get("category_name", "")
 
-                # 다메뉴 프랜차이즈 및 점심 부적합 업종 검증
+                # 점심 부적합 업종 검증
                 if not is_valid_specialized_restaurant(menu_name, p_name, cat_name):
                     continue
 
                 dist_m = float(d.get("distance", 0))
-                places.append({
+                place_dict = {
                     "name": p_name,
                     "category": cat_name.split(">")[-1].strip() if ">" in cat_name else cat_name,
                     "lat": float(d.get("y")),
@@ -206,7 +247,14 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
                     "dist": round(dist_m / 1000, 2) if dist_m > 0 else 0.1,
                     "address": d.get("road_address_name") or d.get("address_name", ""),
                     "place_url": d.get("place_url", "")
-                })
+                }
+
+                # 우선순위 스코어 계산
+                place_dict["priority_score"] = calculate_restaurant_priority(place_dict, menu_name)
+                places.append(place_dict)
+
+            # 계산된 우선순위 점수(낮을수록 최우선)로 정렬
+            places.sort(key=lambda x: x["priority_score"])
             return places
     except Exception:
         pass
@@ -233,7 +281,7 @@ if "action" in qp and qp["action"] == "gps" and "lat" in qp and "lng" in qp:
 
 # --- 화면 레이아웃 ---
 st.title("🍱 오늘 점심 뭐 먹지?")
-st.caption("국수나무·김밥천국 같은 다메뉴 매장은 제외하고, 해당 요리 '전문점'만 엄선합니다.")
+st.caption("개인 로컬 맛집을 우선 추천하며, 김밥은 전문 김밥집을 1순위로 선별합니다.")
 st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
 
 # 1. 위치 입력창 & GPS 버튼
@@ -350,7 +398,7 @@ with tab2:
 
     if selected_mood:
         if not region.strip() and not st.session_state.gps_coords:
-            region_warning_spot.warning("⚠️️ 지역명을 입력하거나 '내 위치 찾기'를 눌러주세요!")
+            region_warning_spot.warning("⚠️ 지역명을 입력하거나 '내 위치 찾기'를 눌러주세요!")
         else:
             region_warning_spot.empty()
             _, allowed_names = MOOD_DATA[selected_mood]
@@ -380,7 +428,7 @@ if spin_triggered and selected_candidates:
         shuffled = selected_candidates.copy()
         random.shuffle(shuffled)
 
-        with st.spinner("국수나무·김밥천국을 제외하고 전문 식당을 찾는 중입니다..."):
+        with st.spinner("개인 음식점 및 전문점 위주로 최적의 매장을 선별하는 중입니다..."):
             for m_name, m_emoji, m_kw, m_tags in shuffled:
                 found = kakao_search_places(c_lat, c_lng, m_name, m_kw, radius_km=radius_km)
                 if found:
@@ -403,7 +451,7 @@ if spin_triggered and selected_candidates:
                                 background: #FFF9E6; border-radius: 20px; border: 4px solid #FF9800;">
                         <div style="font-size: 65px; margin-bottom: 4px;">{temp[1]}</div>
                         <h2 style="color: #FF5722; margin: 4px 0 6px 0; font-size: 24px;">{temp[0]}</h2>
-                        <p style="color: #888; font-size: 13px; margin: 0;">{radius_display_text} 기준 전문점 찾는 중... 🎲</p>
+                        <p style="color: #888; font-size: 13px; margin: 0;">{radius_display_text} 기준 로컬 전문점 찾는 중... 🎲</p>
                     </div>
                     """,
                     unsafe_allow_html=True
@@ -434,7 +482,7 @@ if res is not None and res.get("places"):
             <div style="font-size: 75px; margin-bottom: 4px;">{res['emoji']}</div>
             <h1 style="color: #E65100; margin: 4px 0 6px 0; font-size: 30px;">🎉 {res['menu']} 당첨! 🎉</h1>
             <p style="color: #795548; font-size: 14px; font-weight: bold; margin: 0;">
-                '{res['region']}' ({res['radius_text']}) 반경 전문 식당 추천 결과입니다!
+                '{res['region']}' ({res['radius_text']}) 반경 개인/전문 식당 우선 추천 결과입니다!
             </p>
         </div>
         """,
@@ -445,17 +493,26 @@ if res is not None and res.get("places"):
         places = res["places"]
         top_pick = places[0]
 
+        tag_text = "개인 전문점" if top_pick.get("is_personal", True) else "프랜차이즈"
+        tag_bg = "#C8E6C9" if top_pick.get("is_personal", True) else "#FFE082"
+        tag_color = "#1B5E20" if top_pick.get("is_personal", True) else "#E65100"
+
         st.markdown(
             f"""
             <div style="margin-bottom: 15px; padding: 14px 18px; 
                         background-color: #F1F8E9; border-left: 5px solid #2E7D32; border-radius: 6px;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span style="font-size: 13px; color: #2E7D32; font-weight: bold;">⭐ 오늘의 1픽 단품 전문점</span>
-                    <span style="font-size: 12px; background: #C8E6C9; color: #1B5E20; padding: 2px 6px; border-radius: 4px; font-weight: bold;">
-                        {top_pick.get('category', '전문음식점')}
-                    </span>
+                    <span style="font-size: 13px; color: #2E7D32; font-weight: bold;">⭐ 오늘의 1픽 추천 매장</span>
+                    <div>
+                        <span style="font-size: 11px; background: {tag_bg}; color: {tag_color}; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-right: 4px;">
+                            {tag_text}
+                        </span>
+                        <span style="font-size: 11px; background: #E0E0E0; color: #333; padding: 2px 6px; border-radius: 4px;">
+                            {top_pick.get('category', '전문음식점')}
+                        </span>
+                    </div>
                 </div>
-                <div style="font-size: 18px; color: #1B5E20; font-weight: 800; margin-top: 4px;">
+                <div style="font-size: 18px; color: #1B5E20; font-weight: 800; margin-top: 6px;">
                     <a href="{top_pick.get('place_url', '#')}" target="_blank" style="text-decoration: none; color: #1B5E20;">
                         {top_pick['name']} 🔗
                     </a>
@@ -469,10 +526,13 @@ if res is not None and res.get("places"):
         )
 
         if len(places) > 1:
-            candidate_names = [
-                f"<b>{i+1}.</b> <a href='{p.get('place_url', '#')}' target='_blank' style='color:#333;text-decoration:none;'>{p['name']}</a> <span style='color:#666;font-size:12px;'>({p.get('category', '')}, {p['dist']}km)</span>"
-                for i, p in enumerate(places[1:10])
-            ]
+            candidate_names = []
+            for i, p in enumerate(places[1:10]):
+                p_tag = "개인" if p.get("is_personal", True) else "체인"
+                candidate_names.append(
+                    f"<b>{i+1}.</b> <a href='{p.get('place_url', '#')}' target='_blank' style='color:#333;text-decoration:none;'>{p['name']}</a> "
+                    f"<span style='color:#666;font-size:12px;'>[{p_tag}·{p.get('category', '')}, {p['dist']}km]</span>"
+                )
             st.markdown(
                 f"<div style='font-size: 13.5px; color: #444; line-height: 1.9; margin-bottom: 20px;'>"
                 f"<b>근처 다른 전문 후보 ({len(places)-1}곳):</b><br/>"
