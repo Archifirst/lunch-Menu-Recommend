@@ -16,26 +16,14 @@ st.set_page_config(page_title="오늘 점심 뭐 먹지?", page_icon="🍱", lay
 st.markdown(
     """
     <style>
-    /* 전체 배경 및 폰트 렌더링 + 상단 적정 여백 확보 */
+    /* 전체 배경 및 폰트 렌더링 + 상단 여유 간격 부여 */
     .stApp {
         background-color: #FAF8F5;
         font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo", sans-serif;
     }
     .block-container {
-        padding-top: 2.6rem !important;
-        padding-bottom: 2.5rem !important;
-    }
-    
-    /* 최상단 헤더 아래 부드러운 오버레이 그라데이션 (가장 위에 위치하여 자연스럽게 연결) */
-    .top-gradient-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 48px;
-        background: linear-gradient(180deg, #FAF8F5 0%, rgba(250, 248, 245, 0.8) 40%, rgba(250, 248, 245, 0) 100%);
-        z-index: 99999;
-        pointer-events: none;
+        padding-top: 3.2rem !important;
+        padding-bottom: 2.8rem !important;
     }
     
     /* 입력창 디자인 */
@@ -124,8 +112,6 @@ st.markdown(
         height: 40px !important;
     }
     </style>
-    <!-- 최상단 상태바 아래를 덮는 투명 그라데이션 오버레이 -->
-    <div class="top-gradient-overlay"></div>
     """,
     unsafe_allow_html=True
 )
@@ -296,7 +282,7 @@ DEFAULT_FOODS = [
     ("타코", "🌮", "멕시칸 타코", ["남미음식", "멕시칸"]),
     ("포케", "🥗", "하와이안 포케", ["샐러드", "다이어트"]),
     ("샌드위치", "🥪", "수제 샌드위치", ["샌드위치", "샐러드"]),
-    ("떡볶이", "🌶️", "떡볶이 전문점", ["분식", "떡볶이"]),
+    ("떡볶이", "🌶️️🍢", "떡볶이 전문점", ["분식", "떡볶이"]),
     ("김밥", "🍙", "김밥 전문점", ["김밥"])
 ]
 
@@ -554,6 +540,7 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
 
                 dist_m = float(d.get("distance", 0))
                 place_dict = {
+                    "id": p_id,
                     "name": p_name,
                     "category": cat_name.split(">")[-1].strip() if ">" in cat_name else cat_name,
                     "lat": float(d.get("y")),
@@ -566,7 +553,16 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
                 place_dict["priority_score"] = calculate_restaurant_priority(place_dict, menu_name)
                 places.append(place_dict)
 
+            # 1. 점수순 정렬
             places.sort(key=lambda x: x["priority_score"])
+            
+            # 2. 다양성 확보: 상위 10개 매장을 선별한 뒤 무작위로 섞어 추천
+            if places:
+                top_candidates = places[:10]
+                remaining_candidates = places[10:]
+                random.shuffle(top_candidates)
+                places = top_candidates + remaining_candidates
+
             return places
     except Exception:
         pass
@@ -589,9 +585,9 @@ if qp.get("action") == "gps" and "lat" in qp and "lng" in qp:
     st.query_params.clear()
 
 
-# --- 상단 타이틀 (여백 확장 및 정돈) ---
-st.markdown("<h1 style='color: #2E1C10; font-size: 26px; font-weight: 800; margin: 14px 0 4px 0;'>🍱 오늘 점심 뭐 먹지?</h1>", unsafe_allow_html=True)
-st.markdown("<div style='color: #8C827A; font-size: 13px; margin-bottom: 16px;'>점심에 집중하는 근처 로컬 밥집만 쏙 골라 추천합니다.</div>", unsafe_allow_html=True)
+# --- 상단 타이틀 ---
+st.markdown("<h1 style='color: #2E1C10; font-size: 26px; font-weight: 800; margin: 0 0 4px 0;'>🍱 오늘 점심 뭐 먹지?</h1>", unsafe_allow_html=True)
+st.markdown("<div style='color: #8C827A; font-size: 13px; margin-bottom: 16px;'>점심 메뉴를 고르기 어려우신 분들을 위해 랜덤으로 메뉴와 맛집을 찾아드립니다.</div>", unsafe_allow_html=True)
 
 # 1. 위치 입력창
 st.markdown("<div style='margin-bottom: 4px; font-size: 13.5px; font-weight: 600; color: #4A4036;'>📍 위치</div>", unsafe_allow_html=True)
@@ -708,7 +704,7 @@ def show_location_warning():
         unsafe_allow_html=True
     )
 
-# --- 3. 룰렛 방식 선택 (각각의 박스로 묶인 독립 카드 컨테이너) ---
+# --- 3. 룰렛 방식 선택 (독립 카드 컨테이너) ---
 st.markdown("<div style='margin-bottom: 6px; font-size: 14px; font-weight: 700; color: #3E3228;'>🎯 룰렛 방식 선택</div>", unsafe_allow_html=True)
 
 # 박스 1: 완전 랜덤 룰렛
@@ -718,7 +714,7 @@ with st.container(border=True):
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
             <div>
                 <div style="font-size: 15.5px; font-weight: 800; color: #2E1C10;">🎲 완전 랜덤 룰렛</div>
-                <div style="font-size: 12.5px; color: #8C827A; margin-top: 2px;">호불호 없는 전국 점심 65종 중에서 즉시 무작위 추첨!</div>
+                <div style="font-size: 12.5px; color: #8C827A; margin-top: 2px;">65종의 다양한 점심 메뉴 중에서 무작위로 추첨!</div>
             </div>
             <span style="font-size: 22px;">🎰</span>
         </div>
@@ -743,7 +739,7 @@ with st.container(border=True):
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
             <div>
                 <div style="font-size: 15.5px; font-weight: 800; color: #2E1C10;">✨ 기분 & 상황별 맞춤 룰렛</div>
-                <div style="font-size: 12.5px; color: #8C827A; margin-top: 2px;">오늘의 컨디션이나 날씨에 딱 어울리는 메뉴군에서 룰렛 회전!</div>
+                <div style="font-size: 12.5px; color: #8C827A; margin-top: 2px;">오늘의 상태를 선택하고 그에 맞는 메뉴를 골라봐요!</div>
             </div>
             <span style="font-size: 22px;">🔮</span>
         </div>
@@ -845,7 +841,7 @@ if spin_triggered and selected_candidates:
                 "id": st.session_state.spin_count
             }
         else:
-            region_warning_spot.warning(f"⚠️️ '{region}' 반경 내에 순수 점심 식사 매장을 찾지 못했습니다. 탐색 반경을 넓혀보세요!")
+            region_warning_spot.warning(f"⚠️ '{region}' 반경 내에 순수 점심 식사 매장을 찾지 못했습니다. 탐색 반경을 넓혀보세요!")
 
 # --- 5. 결과 화면 출력 ---
 res = st.session_state.saved_result
@@ -862,7 +858,7 @@ if res is not None and res.get("places"):
                 <span style="font-size: 24px; line-height: 1;">🎉</span>
             </div>
             <div style="color: #7A6F66; font-size: 13px; font-weight: 500; margin-top: 6px;">
-                '{res['region']}' 주변 점심 밥집 추천 결과
+                '{res['region']}' 점심 메뉴 랜덤 추첨 결과
             </div>
         </div>
         """,
@@ -971,5 +967,5 @@ if res is not None and res.get("places"):
         st_folium(m, width="100%", height=400, key=unique_map_key, returned_objects=[])
 
         st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
-        kakao_map_url = f"https://map.kakao.com/link/search/{urllib.parse.quote(res['region'] + ' ' + res['menu'])}"
-        st.link_button("🧭 카카오맵 길찾기 바로가기", kakao_map_url, use_container_width=True)
+        kakao_directions_url = f"https://map.kakao.com/link/to/{urllib.parse.quote(top_pick['name'])},{top_pick['lat']},{top_pick['lng']}"
+        st.link_button(f"🧭 '{top_pick['name']}' 길찾기 바로가기", kakao_directions_url, use_container_width=True)
