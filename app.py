@@ -55,21 +55,17 @@ st.markdown(
         margin-bottom: 6px;
     }
 
-    /* 룰렛 선택 모드 박스 스타일 */
-    .roulette-mode-box {
-        width: 100%;
-        background-color: #FFFFFF;
-        border-radius: 16px;
-        padding: 16px 18px;
-        margin-bottom: 12px;
-        border: 2px solid #EAE3DB;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
-        transition: all 0.25s ease;
+    /* 룰렛 방식 전체 묶음 박스 (st.container border 디자인 강화) */
+    div[data-testid="stVerticalBlockBorderWrapper"] {
+        border-radius: 18px !important;
+        border: 1.8px solid #EAE3DB !important;
+        background-color: #FFFFFF !important;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02) !important;
+        margin-bottom: 14px !important;
+        transition: all 0.2s ease !important;
     }
-    .roulette-mode-box.active {
-        border-color: #E86A3E;
-        background-color: #FFFDF9;
-        box-shadow: 0 4px 14px rgba(232, 106, 62, 0.15);
+    div[data-testid="stVerticalBlockBorderWrapper"]:hover {
+        border-color: #F0A284 !important;
     }
     
     /* 메인 룰렛 돌리기 버튼 커스텀 */
@@ -77,28 +73,28 @@ st.markdown(
         background-color: #E86A3E !important;
         color: white !important;
         border: none !important;
-        border-radius: 14px !important;
-        height: 46px !important;
-        font-size: 15.5px !important;
+        border-radius: 12px !important;
+        height: 44px !important;
+        font-size: 15px !important;
         font-weight: 700 !important;
-        box-shadow: 0 4px 12px rgba(232, 106, 62, 0.22) !important;
+        box-shadow: 0 3px 10px rgba(232, 106, 62, 0.22) !important;
         transition: all 0.2s ease !important;
     }
     div.stButton > button[kind="primary"]:hover {
         background-color: #D65A2F !important;
-        box-shadow: 0 6px 16px rgba(232, 106, 62, 0.32) !important;
+        box-shadow: 0 5px 14px rgba(232, 106, 62, 0.32) !important;
         transform: translateY(-1px);
     }
     
     /* 일반 보조 버튼 디자인 */
     div.stButton > button[kind="secondary"] {
         border-radius: 12px !important;
-        border: 1.5px solid #EDE4DC !important;
+        border: 1.2px solid #EDE4DC !important;
         background-color: #FFFFFF !important;
         color: #3E3228 !important;
         font-size: 13.5px !important;
         font-weight: 600 !important;
-        padding: 8px 12px !important;
+        padding: 8px 10px !important;
         box-shadow: 0 2px 5px rgba(0,0,0,0.02) !important;
         transition: all 0.2s ease !important;
     }
@@ -131,7 +127,7 @@ if "gps_coords" not in st.session_state:
 if "region_input_val" not in st.session_state:
     st.session_state.region_input_val = ""
 if "active_mode" not in st.session_state:
-    st.session_state.active_mode = "random"  # 'random' 또는 'mood'
+    st.session_state.active_mode = "random"
 
 PRESET_RADIUS = {
     "🚶": 0.7,
@@ -672,7 +668,7 @@ def show_location_warning():
                     width: 100%; height: 44px; margin: 4px 0 10px 0;
                     background-color: #FFFDF7; border: 1.5px solid #F7D488; border-radius: 12px;
                     box-shadow: 0 3px 10px rgba(247, 212, 136, 0.2);">
-            <span style="font-size: 16px; line-height: 1;">⚠️️</span>
+            <span style="font-size: 16px; line-height: 1;">⚠️</span>
             <span style="color: #6C4D0A; font-size: 13.5px; font-weight: 700; line-height: 1;">
                 위치를 입력하거나 '내 위치 찾기'를 눌러주세요!
             </span>
@@ -681,84 +677,78 @@ def show_location_warning():
         unsafe_allow_html=True
     )
 
-# --- 3. 룰렛 방식 선택 박스 (100% 폭, 독립된 2개의 선택 박스) ---
+# --- 3. 룰렛 방식 선택 (각각의 박스로 묶인 독립 카드 컨테이너) ---
 st.markdown("<div style='margin-bottom: 6px; font-size: 14px; font-weight: 700; color: #3E3228;'>🎯 룰렛 방식 선택</div>", unsafe_allow_html=True)
 
-# 박스 1: 완전 랜덤 룰렛 (폭 꽉 차게)
-is_random_active = "active" if st.session_state.active_mode == "random" else ""
-st.markdown(
-    f"""
-    <div class="roulette-mode-box {is_random_active}">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+# 박스 1: 완전 랜덤 룰렛 (설명 + 버튼이 하나의 둥근 박스에 완벽하게 묶임)
+with st.container(border=True):
+    st.markdown(
+        """
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
             <div>
-                <span style="font-size: 16px; font-weight: 800; color: #2E1C10;">🎲 완전 랜덤 룰렛</span>
+                <div style="font-size: 15.5px; font-weight: 800; color: #2E1C10;">🎲 완전 랜덤 룰렛</div>
                 <div style="font-size: 12.5px; color: #8C827A; margin-top: 2px;">호불호 없는 전국 점심 65종 중에서 즉시 무작위 추첨!</div>
             </div>
             <span style="font-size: 22px;">🎰</span>
         </div>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+        """,
+        unsafe_allow_html=True
+    )
+    if st.button("🎲 랜덤 룰렛 돌리기", use_container_width=True, type="primary", key="btn_trigger_random"):
+        st.session_state.active_mode = "random"
+        if not region.strip() and not st.session_state.gps_coords:
+            show_location_warning()
+        else:
+            region_warning_spot.empty()
+            selected_candidates = DEFAULT_FOODS.copy()
+            spin_triggered = True
 
-if st.button("🎲 랜덤 룰렛 돌리기", use_container_width=True, type="primary" if st.session_state.active_mode == "random" else "secondary", key="btn_trigger_random"):
-    st.session_state.active_mode = "random"
-    if not region.strip() and not st.session_state.gps_coords:
-        show_location_warning()
-    else:
-        region_warning_spot.empty()
-        selected_candidates = DEFAULT_FOODS.copy()
-        spin_triggered = True
+st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
 
-st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
-
-# 박스 2: 기분 & 상황별 룰렛 (폭 꽉 차게)
-is_mood_active = "active" if st.session_state.active_mode == "mood" else ""
-st.markdown(
-    f"""
-    <div class="roulette-mode-box {is_mood_active}">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+# 박스 2: 기분 & 상황별 룰렛 (설명 + 6개 그리드 버튼이 하나의 둥근 박스에 완벽하게 묶임)
+with st.container(border=True):
+    st.markdown(
+        """
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
             <div>
-                <span style="font-size: 16px; font-weight: 800; color: #2E1C10;">✨ 기분 & 상황별 맞춤 룰렛</span>
+                <div style="font-size: 15.5px; font-weight: 800; color: #2E1C10;">✨ 기분 & 상황별 맞춤 룰렛</div>
                 <div style="font-size: 12.5px; color: #8C827A; margin-top: 2px;">오늘의 컨디션이나 날씨에 딱 어울리는 메뉴군에서 룰렛 회전!</div>
             </div>
             <span style="font-size: 22px;">🔮</span>
         </div>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+        """,
+        unsafe_allow_html=True
+    )
+    
+    col_m1, col_m2 = st.columns(2)
+    mood_keys = list(MOOD_DATA.keys())
+    selected_mood = None
 
-# 상황별 룰렛 세부 선택 버튼 그리드 (선택 시 즉시 해당 테마로 룰렛 작동)
-col_m1, col_m2 = st.columns(2)
-mood_keys = list(MOOD_DATA.keys())
-selected_mood = None
+    with col_m1:
+        for k in mood_keys[:3]:
+            desc, _ = MOOD_DATA[k]
+            btn_label = f"{k} ({desc})"
+            if st.button(btn_label, use_container_width=True, key=f"btn_{k}"):
+                st.session_state.active_mode = "mood"
+                selected_mood = k
 
-with col_m1:
-    for k in mood_keys[:3]:
-        desc, _ = MOOD_DATA[k]
-        btn_label = f"{k}\n({desc})"
-        if st.button(btn_label, use_container_width=True, key=f"btn_{k}"):
-            st.session_state.active_mode = "mood"
-            selected_mood = k
+    with col_m2:
+        for k in mood_keys[3:]:
+            desc, _ = MOOD_DATA[k]
+            btn_label = f"{k} ({desc})"
+            if st.button(btn_label, use_container_width=True, key=f"btn_{k}"):
+                st.session_state.active_mode = "mood"
+                selected_mood = k
 
-with col_m2:
-    for k in mood_keys[3:]:
-        desc, _ = MOOD_DATA[k]
-        btn_label = f"{k}\n({desc})"
-        if st.button(btn_label, use_container_width=True, key=f"btn_{k}"):
-            st.session_state.active_mode = "mood"
-            selected_mood = k
-
-if selected_mood:
-    if not region.strip() and not st.session_state.gps_coords:
-        show_location_warning()
-    else:
-        region_warning_spot.empty()
-        _, allowed_names = MOOD_DATA[selected_mood]
-        filtered = [f for f in DEFAULT_FOODS if f[0] in allowed_names]
-        selected_candidates = filtered if filtered else DEFAULT_FOODS
-        spin_triggered = True
+    if selected_mood:
+        if not region.strip() and not st.session_state.gps_coords:
+            show_location_warning()
+        else:
+            region_warning_spot.empty()
+            _, allowed_names = MOOD_DATA[selected_mood]
+            filtered = [f for f in DEFAULT_FOODS if f[0] in allowed_names]
+            selected_candidates = filtered if filtered else DEFAULT_FOODS
+            spin_triggered = True
 
 card_spot = st.empty()
 detail_spot = st.empty()
