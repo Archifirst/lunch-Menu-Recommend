@@ -107,14 +107,9 @@ STRICT_SPECIALTY_NAME_RULES = {
     "김밥": ["김밥"]
 }
 
-# 돈까스 전문 식별 단어 (상호명 필수 키워드)
+# 돈까스 전문 식별 단어
 TONKATSU_NAME_INDICATORS = [
     "돈까스", "돈가스", "카츠", "카쯔", "가츠", "돈카츠", "돈카쯔", "포크커틀릿"
-]
-
-# 중국집 상호 식별 단어
-CHINESE_RESTAURANT_NAME_INDICATORS = [
-    "반점", "각", "루", "원", "관", "성", "중화", "중국집", "차이나", "짬뽕", "짜장", "대반점"
 ]
 
 # --- 9. 메뉴 목록 ---
@@ -125,8 +120,8 @@ DEFAULT_FOODS = [
     ("뼈해장국", "🍖", "뼈해장국", ["감자탕", "해장국", "국밥"]),
     ("돈까스", "🍱", "돈까스 카츠 전문점", ["돈가스", "일식", "경양식", "양식"]),
     ("초밥", "🍣", "스시 초밥 전문점", ["일식", "초밥"]),
-    ("짜장면", "🥢", "중국집 짜장면", ["중식", "중화요리", "중국집"]),
-    ("짬뽕", "🌶️", "중국집 짬뽕", ["중식", "중화요리", "중국집"]),
+    ("짜장면", "🥢", "짜장면", ["중식", "중화요리", "중국집"]),
+    ("짬뽕", "🌶️", "짬뽕", ["중식", "중화요리", "중국집"]),
     ("칼국수", "🍜", "칼국수 전문점", ["칼국수", "국수", "한식"]),
     ("막국수", "🍜", "막국수 전문점", ["막국수", "국수", "한식"]),
     ("파스타", "🍝", "파스타 레스토랑", ["양식", "이탈리안", "패밀리레스토랑"]),
@@ -192,24 +187,15 @@ def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_na
         if "해물,생선 > 회" in category_name and not any(k in clean_name for k in ["스시", "초밥"]):
             return False
 
-    # [8] 돈까스 전문 식당 엄격 판정
+    # [8] 돈까스 전문 식당 판정
     if menu_name == "돈까스":
         is_tonkatsu_name = any(k in clean_name for k in TONKATSU_NAME_INDICATORS)
         is_tonkatsu_category = any(c in category_name for c in ["돈가스", "돈까스"])
-        # 상호명에 카츠/돈까스가 있거나 카카오 카테고리가 돈가스 전문인 경우만 인정
         if not (is_tonkatsu_name or is_tonkatsu_category):
             return False
         return True
 
-    # [9] 짜장면, 짬뽕 예외 처리 (중식 카테고리/상호 확인)
-    if menu_name in ["짜장면", "짬뽕"]:
-        is_chinese_category = any(c in category_name for c in ["중식", "중국집", "중화요리"])
-        is_chinese_name = any(ind in clean_name for ind in CHINESE_RESTAURANT_NAME_INDICATORS)
-        if not (is_chinese_category or is_chinese_name):
-            return False
-        return True
-
-    # [10] 칼국수, 막국수 등 엄격 상호명 매칭
+    # [9] 칼국수, 막국수 등 엄격 상호명 매칭
     if menu_name in STRICT_SPECIALTY_NAME_RULES:
         required_words = STRICT_SPECIALTY_NAME_RULES[menu_name]
         if not any(req in clean_name for req in required_words):
@@ -237,7 +223,7 @@ def calculate_restaurant_priority(place: dict, menu_name: str) -> float:
         score -= 0.5
         place["is_personal"] = True
 
-    # 돈까스 규칙: 상호명에 카츠/돈까스 직접 명시 매장 최우선 가산점
+    # 돈까스 규칙
     if menu_name == "돈까스":
         if any(k in p_name for k in TONKATSU_NAME_INDICATORS):
             score -= 2.5
@@ -260,15 +246,10 @@ def calculate_restaurant_priority(place: dict, menu_name: str) -> float:
         elif is_raw_fish:
             score += 3.0
 
-    # 칼국수 / 막국수 상호명 일치 가산점
+    # 칼국수 / 막국수 규칙
     if menu_name in ["칼국수", "막국수"]:
         if menu_name in p_name:
             score -= 2.5
-
-    # 짜장면 / 짬뽕 중식 전문 가산점
-    if menu_name in ["짜장면", "짬뽕"]:
-        if "중식" in category or "중화요리" in category:
-            score -= 2.0
 
     return score
 
@@ -335,7 +316,6 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
                 p_name = d.get("place_name", "")
                 cat_name = d.get("category_name", "")
 
-                # 돈까스 전문 판정 등 유효성 검증
                 if not is_valid_specialized_restaurant(menu_name, p_name, cat_name):
                     continue
 
@@ -380,7 +360,7 @@ if "action" in qp and qp["action"] == "gps" and "lat" in qp and "lng" in qp:
 
 # --- 화면 레이아웃 ---
 st.title("🍱 오늘 점심 뭐 먹지?")
-st.caption("돈까스·카츠 전문점과 로컬 맛집 위주로 확실한 점심 전문 식당만 추천합니다.")
+st.caption("개인 전문 식당 위주로 깔끔한 점심 식사 매장만 추천합니다.")
 st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
 
 # 1. 위치 입력창 & GPS 버튼
@@ -527,7 +507,7 @@ if spin_triggered and selected_candidates:
         shuffled = selected_candidates.copy()
         random.shuffle(shuffled)
 
-        with st.spinner("단품 전문점 위주로 최적의 매장을 선별하는 중입니다..."):
+        with st.spinner("전문 식당 위주로 최적의 매장을 선별하는 중입니다..."):
             for m_name, m_emoji, m_kw, m_tags in shuffled:
                 found = kakao_search_places(c_lat, c_lng, m_name, m_kw, radius_km=radius_km)
                 if found:
@@ -568,7 +548,7 @@ if spin_triggered and selected_candidates:
                 "id": st.session_state.spin_count
             }
         else:
-            region_warning_spot.warning(f"⚠️ '{region}' 반경 내에 등록된 전문 식당을 찾지 못했습니다. 탐색 반경을 넓혀보세요!")
+            region_warning_spot.warning(f"⚠️️ '{region}' 반경 내에 등록된 전문 식당을 찾지 못했습니다. 탐색 반경을 넓혀보세요!")
 
 # 5. 결과 화면 출력
 res = st.session_state.saved_result
