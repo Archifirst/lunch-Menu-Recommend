@@ -271,7 +271,7 @@ def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_na
     if any(bad in clean_name for bad in [k.upper() for k in EXCLUDED_NAME_KEYWORDS]):
         return False
 
-    # [2] 전류/전집/빈대떡/막걸리 주점 제외
+    # [2] 전류/전집/빈대떡/막걸리 주점 제외 (육전은 허용)
     if any(jeon in clean_name for jeon in JEON_KEYWORDS):
         return False
     if any(c in category_name for c in ["전,빈대떡", "빈대떡", "민속주점"]):
@@ -529,8 +529,13 @@ with col_gps:
         unsafe_allow_html=True
     )
 
-# 1. & 2. 탐색 반경 및 이모티콘만 남김
-st.markdown("<h5 style='margin: 12px 0 6px 0; font-size: 15px;'>📏 탐색 반경</h5>", unsafe_allow_html=True)
+# 1. 탐색 반경: 볼드 해제 및 위치 라벨과 동일한 기본 폰트 사이즈(14px) 적용
+st.markdown(
+    "<div style='font-size: 14px; color: inherit; margin: 10px 0 6px 0; font-weight: normal;'>"
+    "📏 탐색 반경"
+    "</div>", 
+    unsafe_allow_html=True
+)
 c1, c2, c3, c4 = st.columns([1.0, 1.0, 1.0, 1.6], vertical_alignment="center")
 
 with c1:
@@ -570,7 +575,7 @@ else:
 region_warning_spot = st.empty()
 st.write("---")
 
-# 3. 룰렛 탭 (이름 간소화: 랜덤 룰렛)
+# 3. 룰렛 탭
 tab1, tab2 = st.tabs(["🎲 랜덤 룰렛", "😊 기분 & 상황별 룰렛"])
 
 spin_triggered = False
@@ -578,10 +583,9 @@ selected_candidates = []
 
 with tab1:
     st.markdown("<div style='height: 6px;'></div>", unsafe_allow_html=True)
-    # 4. 버튼 텍스트: 룰렛 돌리기
     if st.button("🎲 룰렛 돌리기", use_container_width=True, type="primary", key="btn_random"):
         if not region.strip() and not st.session_state.gps_coords:
-            region_warning_spot.warning("⚠️ 위치를 입력하거나 '내 위치 찾기'를 눌러주세요!")
+            region_warning_spot.warning("⚠️️ 위치를 입력하거나 '내 위치 찾기'를 눌러주세요!")
         else:
             region_warning_spot.empty()
             selected_candidates = DEFAULT_FOODS.copy()
@@ -677,7 +681,7 @@ if spin_triggered and selected_candidates:
         else:
             region_warning_spot.warning(f"⚠️ '{region}' 반경 내에 순수 점심 식사 매장을 찾지 못했습니다. 탐색 반경을 넓혀보세요!")
 
-# 5. 결과 화면 출력 (문구 정리)
+# 5. 결과 화면 출력
 res = st.session_state.saved_result
 if res is not None and res.get("places"):
     card_spot.markdown(
@@ -703,22 +707,22 @@ if res is not None and res.get("places"):
         tag_bg = "#C8E6C9" if top_pick.get("is_personal", True) else "#FFE082"
         tag_color = "#1B5E20" if top_pick.get("is_personal", True) else "#E65100"
 
+        # 2. 텍스트 기준 완벽한 중앙 정렬 적용 (식당 상호명 및 링크 센터 정렬)
         st.markdown(
             f"""
-            <div style="margin-bottom: 15px; padding: 14px 18px; 
-                        background-color: #F1F8E9; border-left: 5px solid #2E7D32; border-radius: 6px;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span style="font-size: 13px; color: #2E7D32; font-weight: bold;">⭐ 오늘의 1픽 추천 점심</span>
-                    <div>
-                        <span style="font-size: 11px; background: {tag_bg}; color: {tag_color}; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-right: 4px;">
-                            {tag_text}
-                        </span>
-                        <span style="font-size: 11px; background: #E0E0E0; color: #333; padding: 2px 6px; border-radius: 4px;">
-                            {top_pick.get('category', '전문음식점')}
-                        </span>
-                    </div>
+            <div style="margin-bottom: 15px; padding: 18px; text-align: center;
+                        background-color: #F1F8E9; border-top: 4px solid #2E7D32; border-radius: 10px;
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                <div style="margin-bottom: 8px;">
+                    <span style="font-size: 11px; background: {tag_bg}; color: {tag_color}; padding: 2px 7px; border-radius: 4px; font-weight: bold; margin-right: 4px;">
+                        {tag_text}
+                    </span>
+                    <span style="font-size: 11px; background: #E0E0E0; color: #333; padding: 2px 7px; border-radius: 4px;">
+                        {top_pick.get('category', '전문음식점')}
+                    </span>
                 </div>
-                <div style="font-size: 18px; color: #1B5E20; font-weight: 800; margin-top: 4px;">
+                <div style="font-size: 13px; color: #2E7D32; font-weight: bold; margin-bottom: 2px;">⭐ 오늘의 1픽 추천 점심</div>
+                <div style="font-size: 21px; color: #1B5E20; font-weight: 800; margin: 4px 0;">
                     <a href="{top_pick.get('place_url', '#')}" target="_blank" style="text-decoration: none; color: #1B5E20;">
                         {top_pick['name']} 🔗
                     </a>
@@ -747,7 +751,6 @@ if res is not None and res.get("places"):
                 unsafe_allow_html=True
             )
 
-        # 6. 지도 타이틀 및 귀여운 지도 이모티콘(🗺️) 적용
         st.markdown("<h3 style='margin-bottom: 4px;'>🗺️ 추천 식당 위치 지도</h3>", unsafe_allow_html=True)
         st.caption("🔴 빨간 핀: 1픽 전문점 / 🔵 파란 핀: 주변 후보 (클릭 시 카카오맵 정보)")
 
@@ -773,5 +776,4 @@ if res is not None and res.get("places"):
 
         st.markdown("<div style='height: 16px;'></div>", unsafe_allow_html=True)
         kakao_map_url = f"https://map.kakao.com/link/search/{urllib.parse.quote(res['region'] + ' ' + res['menu'])}"
-        # 7. 네비게이션 이모티콘(🧭)으로 교체
         st.link_button("🧭 카카오맵 길찾기 바로가기", kakao_map_url, use_container_width=True)
