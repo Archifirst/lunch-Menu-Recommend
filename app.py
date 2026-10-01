@@ -70,19 +70,25 @@ st.markdown(
         display: none !important;
     }
 
-    /* 반경 선택창 부드러운 노출 애니메이션 */
-    @keyframes fadeSlideDown {
-        from {
+    /* 반경 선택창 부드럽게 위에서 내려오는 드롭다운 모션 */
+    @keyframes smoothSlideDown {
+        0% {
             opacity: 0;
-            transform: translateY(-8px);
+            transform: translateY(-16px) scale(0.98);
         }
-        to {
+        60% {
+            opacity: 0.85;
+            transform: translateY(2px) scale(1.002);
+        }
+        100% {
             opacity: 1;
-            transform: translateY(0);
+            transform: translateY(0) scale(1);
         }
     }
     .radius-wrapper {
-        animation: fadeSlideDown 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        animation: smoothSlideDown 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        transform-origin: top center;
+        margin-bottom: 8px;
     }
     
     /* 메인 룰렛 돌리기 버튼 커스텀 */
@@ -569,7 +575,7 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
     return []
 
 
-# 브라우저 GPS 수신 처리 (안전하게 clear() 처리)
+# 브라우저 GPS 수신 처리
 qp = st.query_params
 if qp.get("action") == "gps" and "lat" in qp and "lng" in qp:
     try:
@@ -629,17 +635,20 @@ with col_gps:
         unsafe_allow_html=True
     )
 
-# 2. 지명 vs 건물/역 판별
+# 2. 반경 노출 조건 판별 (빈 값이거나 행정지명이면 숨김, 특정 건물/역/장소 입력 시에만 노출)
 clean_region = region.strip()
 is_admin_region = False
+
 if clean_region:
     if any(clean_region.endswith(sfx) for sfx in ["구", "동", "읍", "면", "리", "시", "군", "가"]):
         is_admin_region = True
 
-# 건물이거나 역, 랜드마크일 때만 탐색반경 노출
-if not is_admin_region:
+# 입력값이 존재하고, 행정 지명이 아닌 '건물/역/랜드마크'일 때만 모션과 함께 노출
+should_show_radius = bool(clean_region and not is_admin_region)
+
+if should_show_radius:
     st.markdown("<div class='radius-wrapper'>", unsafe_allow_html=True)
-    st.markdown("<div style='margin: 18px 0 6px 0; font-size: 14px; font-weight: 600; color: #4A4036;'>📏 탐색 반경</div>", unsafe_allow_html=True)
+    st.markdown("<div style='margin: 16px 0 6px 0; font-size: 14px; font-weight: 600; color: #4A4036;'>📏 탐색 반경</div>", unsafe_allow_html=True)
     c1, c2, c3, c4 = st.columns([1.0, 1.0, 1.0, 1.5], vertical_alignment="center")
 
     with c1:
@@ -806,7 +815,6 @@ if spin_triggered and selected_candidates:
                 )
                 time.sleep(0.04 + (i * 0.015))
 
-            # spin_count 1씩 증가시켜 지도 고유 Key 리프레시 보장
             st.session_state.spin_count += 1
             st.session_state.saved_result = {
                 "menu": final_menu[0],
@@ -819,7 +827,7 @@ if spin_triggered and selected_candidates:
                 "id": st.session_state.spin_count
             }
         else:
-            region_warning_spot.warning(f"⚠️ '{region}' 반경 내에 순수 점심 식사 매장을 찾지 못했습니다. 탐색 반경을 넓혀보세요!")
+            region_warning_spot.warning(f"⚠️️ '{region}' 반경 내에 순수 점심 식사 매장을 찾지 못했습니다. 탐색 반경을 넓혀보세요!")
 
 # 6. 결과 화면 출력
 res = st.session_state.saved_result
