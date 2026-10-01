@@ -38,40 +38,46 @@ st.markdown(
         box-shadow: 0 0 0 2px rgba(232, 106, 62, 0.15) !important;
     }
     
-    /* 탭 디자인: 중앙 정렬 캡슐형 세그먼트 */
+    /* 탭 디자인: 룰렛 버튼과 동일한 전체 너비(100%) + 5:5 분할 개별 카드 박스 */
     div[data-testid="stTabs"] {
+        width: 100% !important;
         background: transparent !important;
-        margin-bottom: 8px !important;
+        margin-bottom: 10px !important;
     }
     div[data-testid="stTabs"] div[role="tablist"] {
         display: flex !important;
-        justify-content: center !important;
-        align-items: center !important;
-        gap: 8px !important;
+        width: 100% !important;
+        gap: 10px !important;
         border-bottom: none !important;
-        background-color: #EFE9E2 !important;
-        padding: 4px !important;
-        border-radius: 30px !important;
-        width: fit-content !important;
-        margin: 0 auto !important;
+        background: transparent !important;
+        padding: 0 !important;
     }
     button[data-baseweb="tab"] {
-        flex: 0 1 auto !important;
+        flex: 1 1 0% !important;
+        width: 50% !important;
         text-align: center !important;
         justify-content: center !important;
-        border-radius: 24px !important;
-        padding: 8px 20px !important;
-        font-size: 14px !important;
+        align-items: center !important;
+        border-radius: 14px !important;
+        padding: 12px 0 !important;
+        font-size: 14.5px !important;
         font-weight: 700 !important;
         color: #7A6F66 !important;
-        background-color: transparent !important;
-        border: none !important;
+        background-color: #FFFFFF !important;
+        border: 1.5px solid #EBE4DC !important;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.02) !important;
         transition: all 0.2s ease !important;
     }
-    button[data-baseweb="tab"][aria-selected="true"] {
-        background-color: #FFFFFF !important;
+    button[data-baseweb="tab"]:hover {
+        border-color: #F0A080 !important;
         color: #E86A3E !important;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
+        background-color: #FFFDF9 !important;
+    }
+    button[data-baseweb="tab"][aria-selected="true"] {
+        background-color: #FFF5EE !important;
+        color: #E86A3E !important;
+        border: 2px solid #E86A3E !important;
+        box-shadow: 0 3px 10px rgba(232, 106, 62, 0.12) !important;
     }
     div[data-baseweb="tab-highlight"] {
         display: none !important;
@@ -100,15 +106,15 @@ st.markdown(
         color: white !important;
         border: none !important;
         border-radius: 14px !important;
-        height: 46px !important;
-        font-size: 15.5px !important;
+        height: 48px !important;
+        font-size: 16px !important;
         font-weight: 700 !important;
-        box-shadow: 0 4px 12px rgba(232, 106, 62, 0.22) !important;
+        box-shadow: 0 4px 12px rgba(232, 106, 62, 0.25) !important;
         transition: all 0.2s ease !important;
     }
     div.stButton > button[kind="primary"]:hover {
         background-color: #D65A2F !important;
-        box-shadow: 0 6px 16px rgba(232, 106, 62, 0.32) !important;
+        box-shadow: 0 6px 16px rgba(232, 106, 62, 0.35) !important;
         transform: translateY(-1px);
     }
     
@@ -171,7 +177,7 @@ EXCLUDED_NAME_KEYWORDS = [
     "BEER", "라운지", "BAR", "룸", "노래방", "포장마차", "야시장", "소주"
 ]
 
-# --- 2. 전류 / 주막 / 막걸리집 제외 (육전 허용) ---
+# --- 2. 전류 / 주막 / 막걸리집 제외 ---
 JEON_KEYWORDS = [
     "파전", "빈대떡", "모듬전", "부침개", "지짐이", "지짐", "전집", 
     "전나라", "전마을", "전선생", "종로전", "원조전", "전골목", "주막", 
@@ -184,7 +190,7 @@ LATE_NIGHT_KEYWORDS = [
     "밤식당", "야포", "야한", "불밤", "야시장", "심야식당"
 ]
 
-# --- 4. 점심 부적합 업종 (구이류, 고깃집, 치킨, 꼬치, 닭발 등) 제외 ---
+# --- 4. 점심 부적합 업종 제외 ---
 NON_LUNCH_CATEGORIES = [
     "삼겹살", "갈비", "육류,고기구이", "곱창,막창", "양꼬치", "조개구이",
     "치킨", "닭요리 > 치킨", "닭꼬치", "꼬치구이", "전,빈대떡", "닭발"
@@ -297,7 +303,7 @@ DEFAULT_FOODS = [
     ("회덮밥", "🥗", "활어 회덮밥", ["일식", "한식"]),
     ("카레라이스", "🍛", "일본카레 전문점", ["카레", "일식"]),
     ("짜장면", "🥢", "짜장면", ["중식", "중화요리", "중국집"]),
-    ("짬뽕", "🌶️️", "짬뽕", ["중식", "중화요리", "중국집"]),
+    ("짬뽕", "🌶", "짬뽕", ["중식", "중화요리", "중국집"]),
     ("볶음밥", "🍚", "중화 볶음밥", ["중식", "중국집"]),
     ("마파두부밥", "🍛", "마파두부", ["중식", "중화요리"]),
     ("마라탕", "🌶️", "마라탕 전문점", ["중식", "마라탕"]),
@@ -594,7 +600,7 @@ if qp.get("action") == "gps" and "lat" in qp and "lng" in qp:
     st.query_params.clear()
 
 
-# --- 화면 레이아웃 상단부 (상단 빈 여백 압축) ---
+# --- 화면 레이아웃 상단부 ---
 st.markdown("<h1 style='color: #2E1C10; font-size: 26px; font-weight: 800; margin: 0 0 2px 0;'>🍱 오늘 점심 뭐 먹지?</h1>", unsafe_allow_html=True)
 st.markdown("<div style='color: #8C827A; font-size: 13px; margin-bottom: 14px;'>점심에 집중하는 근처 로컬 밥집만 쏙 골라 추천합니다.</div>", unsafe_allow_html=True)
 
@@ -691,11 +697,11 @@ else:
     radius_km = 1.8
     radius_display_text = "지역 인근"
 
-# 3. 위치 미입력 경고 영역 (간격 축소)
+# 3. 위치 미입력 경고 영역
 region_warning_spot = st.empty()
 st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
 
-# 4. 룰렛 탭 (중앙 정렬 캡슐형 스타일)
+# 4. 룰렛 탭 (전체 폭 100% 균등 5:5 분할 개별 카드 박스 형태)
 tab1, tab2 = st.tabs(["🎲 랜덤 룰렛", "✨ 기분 & 상황별 룰렛"])
 
 spin_triggered = False
@@ -718,7 +724,7 @@ def show_location_warning():
     )
 
 with tab1:
-    st.markdown("<div style='height: 6px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
     if st.button("🎲 룰렛 돌리기", use_container_width=True, type="primary", key="btn_random"):
         if not region.strip() and not st.session_state.gps_coords:
             show_location_warning()
@@ -731,7 +737,7 @@ with tab2:
     selected_mood = None
     st.markdown(
         """
-        <div style='text-align: center; color: #7A6F66; font-size: 12.5px; font-weight: 500; margin: 6px 0 10px 0;'>
+        <div style='text-align: center; color: #7A6F66; font-size: 12.5px; font-weight: 500; margin: 4px 0 10px 0;'>
             지금 기분이나 컨디션에 딱 맞는 한 끼를 골라보세요
         </div>
         """,
@@ -831,7 +837,7 @@ if spin_triggered and selected_candidates:
         else:
             region_warning_spot.warning(f"⚠️ '{region}' 반경 내에 순수 점심 식사 매장을 찾지 못했습니다. 탐색 반경을 넓혀보세요!")
 
-# 6. 결과 화면 출력 (단일 이모티콘 및 압축 패딩)
+# 6. 결과 화면 출력
 res = st.session_state.saved_result
 if res is not None and res.get("places"):
     card_spot.markdown(
@@ -898,7 +904,7 @@ if res is not None and res.get("places"):
             )
 
             other_candidates = places[1:11]
-            col_left, col_right = col_left, col_right = st.columns(2)
+            col_left, col_right = st.columns(2)
 
             for idx, p in enumerate(other_candidates, start=1):
                 p_tag = "개인" if p.get("is_personal", True) else "체인"
