@@ -40,12 +40,18 @@ MAJOR_ADMIN_NAMES = {
 }
 
 def is_specific_poi_or_building(text: str) -> bool:
+    """단순 행정구역인지, 건물명/역/특정 스팟인지 판별"""
     clean_text = text.strip()
     if not clean_text:
         return False
+    
+    # 대표 시/도 명칭인 경우 행정구역으로 판단
     if clean_text in MAJOR_ADMIN_NAMES:
         return False
         
+    words = clean_text.split()
+    
+    # 건물/스팟을 나타내는 대표적인 명칭 키워드가 포함되어 있으면 즉시 건물명으로 인정
     building_keywords = [
         "역", "타워", "빌딩", "센터", "몰", "백화점", "마트", "아파트", "캠퍼스",
         "대학교", "병원", "스퀘어", "코엑스", "파크", "플레이스", "호텔", "프라자", "사옥"
@@ -53,7 +59,7 @@ def is_specific_poi_or_building(text: str) -> bool:
     if any(k in clean_text for k in building_keywords):
         return True
         
-    words = clean_text.split()
+    # 입력된 모든 어절이 행정구역 접미사(시, 구, 동, 읍, 면 등)로만 끝나는지 확인
     all_admin = True
     for w in words:
         if w in MAJOR_ADMIN_NAMES or any(w.endswith(sfx) for sfx in ADMIN_SUFFIXES):
@@ -61,13 +67,15 @@ def is_specific_poi_or_building(text: str) -> bool:
         all_admin = False
         break
         
+    # 모든 단어가 행정구역 명칭이면 False, 건물/상호명 등 일반 명칭이 포함되어 있으면 True
     return not all_admin
 
 
-# 표준 스타일 및 툴팁 제거
+# 표준 그리드 기반 간격 및 고대비 테마 스타일링
 st.markdown(
     """
     <style>
+    /* 1. 모든 툴팁/말풍선 레이어 원천 차단 */
     div[data-baseweb="tooltip"],
     div[role="tooltip"],
     .stTooltipContent,
@@ -78,16 +86,27 @@ st.markdown(
         pointer-events: none !important;
     }
 
-    input::placeholder { opacity: 0.3 !important; }
-    input::-webkit-input-placeholder { opacity: 0.3 !important; }
-    input::-moz-placeholder { opacity: 0.3 !important; }
-    input:-ms-input-placeholder { opacity: 0.3 !important; }
+    /* 기본 인풋 placeholder */
+    input::placeholder {
+        opacity: 0.3 !important;
+    }
+    input::-webkit-input-placeholder {
+        opacity: 0.3 !important;
+    }
+    input::-moz-placeholder {
+        opacity: 0.3 !important;
+    }
+    input:-ms-input-placeholder {
+        opacity: 0.3 !important;
+    }
 
+    /* 텍스트 및 숫자 인풋 높이 및 박스 사이징 */
     div[data-testid="stTextInput"] input, div[data-testid="stNumberInput"] input {
         height: 42px !important;
         box-sizing: border-box !important;
     }
 
+    /* GPS 위치 버튼 및 인풋 정렬 컨테이너 */
     .gps-wrapper {
         display: flex;
         flex-direction: column;
@@ -117,6 +136,7 @@ st.markdown(
         background-color: #1B5E20;
     }
 
+    /* 탐색 반경 직사각형 선택 버튼 스타일 */
     div[data-testid="stHorizontalBlock"] button[key^="rbtn_"] {
         height: 42px !important;
         border-radius: 8px !important;
@@ -127,6 +147,7 @@ st.markdown(
         transition: none !important;
     }
 
+    /* 마우스 호버 시 효과 제거 */
     div[data-testid="stHorizontalBlock"] button[key^="rbtn_"]:hover,
     div[data-testid="stHorizontalBlock"] button[key^="rbtn_"]:active,
     div[data-testid="stHorizontalBlock"] button[key^="rbtn_"]:focus {
@@ -135,9 +156,19 @@ st.markdown(
         outline: none !important;
     }
 
-    hr { margin: 20px 0 !important; }
-    .stTabs [data-baseweb="tab-list"] { gap: 12px; margin-bottom: 8px; }
-    .stTabs [data-baseweb="tab-panel"] { padding-top: 12px !important; }
+    /* 구분선 여백 정돈 */
+    hr {
+        margin: 20px 0 !important;
+    }
+
+    /* 탭 헤더 및 내부 여백 */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 12px;
+        margin-bottom: 8px;
+    }
+    .stTabs [data-baseweb="tab-panel"] {
+        padding-top: 12px !important;
+    }
     </style>
     """,
     unsafe_allow_html=True
@@ -153,18 +184,40 @@ EXCLUDE_KEYWORDS = [
 EMOJI_DICT = {
     "한식뷔페": "🍱", "제육볶음": "🥓", "제육쌈밥": "🥬", "쌈밥": "🥬",
     "돌솥비빔밥": "🍳", "비빔밥": "🥗", "보리밥": "🥣", "백반": "🍱",
+    "가정식": "🍱", "정식": "🍱", "소불고기": "🥩", "불고기": "🥩",
+    "김치볶음밥": "🍳", "오므라이스": "🍳", "볶음밥": "🍳",
     "김치찌개": "🥘", "된장찌개": "🥘", "차돌된장찌개": "🥘", "순두부찌개": "🥘",
     "부대찌개": "🍲", "두부전골": "🍲", "만두전골": "🥟", "동태탕": "🐟",
+    "대구탕": "🐟", "알탕": "🥘", "감자탕": "🍖", "청국장": "🥘",
     "뼈해장국": "🍖", "해장국": "🥘", "황태해장국": "🥣", "북엇국": "🥣",
     "콩나물국밥": "🍲", "순대국": "🍲", "설렁탕": "🥣", "곰탕": "🥣",
-    "갈비탕": "🍖", "삼계탕": "🍗", "추어탕": "🍲", "육개장": "🥘",
-    "전복죽": "🦪", "소고기야채죽": "🥣", "돈까스": "🍱", "모둠초밥": "🍣",
-    "초밥": "🍣", "텐동": "🍤", "일본라멘": "🍜", "라멘": "🍜", "우동": "🍜",
-    "쌀국수": "🍜", "짜장면": "🥢", "짬뽕": "🌶️", "마라탕": "🌶️",
-    "칼국수": "🍜", "수제비": "🥣", "비빔국수": "🥢", "냉면": "🧊",
-    "막국수": "🍜", "라면": "🍜", "닭갈비": "🥘", "파스타": "🍝",
-    "피자": "🍕", "햄버거": "🍔", "샌드위치": "🥪", "샐러드": "🥗",
-    "카레라이스": "🍛", "떡볶이": "🌶️", "김밥": "🍙", "분식": "🍢"
+    "갈비탕": "🍖", "도가니탕": "🥣", "삼계탕": "🍗", "추어탕": "🍲",
+    "육개장": "🥘", "선지해장국": "🥘", "소머리국밥": "🥣", "미역국": "🥣",
+    "전복죽": "🦪", "소고기야채죽": "🥣", "단호박죽": "🎃", "팥죽": "🥣",
+    "삼계죽": "🍗", "낙지김치죽": "🐙",
+    "돈까스": "🍱", "치즈돈까스": "🧀", "규카츠": "🥩", "모둠초밥": "🍣",
+    "초밥": "🍣", "스시": "🍣", "사케동": "🐟", "연어덮밥": "🐟",
+    "회덮밥": "🥗", "장어덮밥": "🍱", "우나기동": "🍱", "텐동": "🍤",
+    "가츠동": "🍱", "규동": "🥩", "오코노미야끼": "🥞",
+    "일본라멘": "🍜", "라멘": "🍜", "탄탄멘": "🍜", "우동": "🍜",
+    "모밀": "🧊", "소바": "🧊", "판모밀": "🧊", "쌀국수": "🍜",
+    "팟타이": "🥢", "나시고랭": "🍳", "분짜": "🥗",
+    "짜장면": "🥢", "간짜장": "🥢", "짬뽕": "🌶️", "얼큰짬뽕": "🌶️",
+    "마라탕": "🌶️", "마라샹궈": "🥘", "탕수육": "🥢", "꿔바로우": "🥢",
+    "마파두부": "🥘", "딤섬": "🥟", "군만두": "🥟", "만두": "🥟",
+    "칼국수": "🍜", "해물칼국수": "🦐", "바지락칼국수": "🦪", "장칼국수": "🌶️",
+    "수제비": "🥣", "잔치국수": "🍜", "비빔국수": "🥢", "열무국수": "🧊",
+    "콩국수": "🥣", "물냉면": "🧊", "비빔냉면": "🥢", "냉면": "🧊",
+    "막국수": "🍜", "메밀막국수": "🍜", "라면": "🍜",
+    "낙지볶음": "🐙", "쭈꾸미볶음": "🦑", "오징어볶음": "🦑", "닭갈비": "🥘",
+    "찜닭": "🍗", "아구찜": "🐟", "해물찜": "🦀", "간장게장": "🦀",
+    "파스타": "🍝", "토마토파스타": "🍝", "크림파스타": "🍝", "오일파스타": "🍝",
+    "피자": "🍕", "화덕피자": "🍕", "수제버거": "🍔", "햄버거": "🍔",
+    "스테이크": "🥩", "스테이크덮밥": "🥩", "리조또": "🍛", "샐러드": "🥗",
+    "포케": "🥗", "샌드위치": "🥪", "토스트": "🥪", "파니니": "🥪",
+    "타코": "🌮", "부리또": "🌯", "카레라이스": "🍛", "카레": "🍛",
+    "떡볶이": "🌶️", "매운떡볶이": "🌶️", "로제떡볶이": "🥘", "라볶이": "🥘",
+    "김밥": "🍙", "참치김밥": "🍙", "분식": "🍢", "순대": "🍢", "튀김": "🍤"
 }
 
 DEFAULT_FOODS = [
@@ -256,6 +309,7 @@ def get_emoji_for_food(food_name: str) -> str:
     for key, emoji in EMOJI_DICT.items():
         if key in food_name or food_name in key:
             return emoji
+
     if any(k in food_name for k in ["스테이크", "소고기", "갈비", "규"]):
         return "🥩"
     if any(k in food_name for k in ["삼계", "닭", "치킨"]):
@@ -266,30 +320,36 @@ def get_emoji_for_food(food_name: str) -> str:
         return "🦑"
     if any(k in food_name for k in ["새우", "텐", "튀김"]):
         return "🍤"
-    if any(k in food_name for k in ["생선", "동태", "대구", "연어", "회"]):
+    if any(k in food_name for k in ["게장", "꽃게"]):
+        return "🦀"
+    if any(k in food_name for k in ["생선", "동태", "대구", "연어", "회", "사케"]):
         return "🐟"
-    if any(k in food_name for k in ["만두", "딤섬"]):
+    if any(k in food_name for k in ["전복", "조개", "굴"]):
+        return "🦪"
+    if any(k in food_name for k in ["만두", "딤섬", "교자"]):
         return "🥟"
-    if any(k in food_name for k in ["매운", "얼큰", "마라", "짬뽕"]):
+    if any(k in food_name for k in ["매운", "얼큰", "마라", "불", "고추", "짬뽕"]):
         return "🌶️"
-    if any(k in food_name for k in ["냉", "소바", "모밀"]):
+    if any(k in food_name for k in ["냉", "소바", "모밀", "얼음"]):
         return "🧊"
-    if any(k in food_name for k in ["면", "국수", "라멘", "우동", "파스타"]):
+    if any(k in food_name for k in ["면", "국수", "라멘", "우동", "스파게티", "파스타"]):
         return "🍜"
-    if any(k in food_name for k in ["찌개", "전골", "조림"]):
+    if any(k in food_name for k in ["찌개", "전골", "뚝배기", "조림"]):
         return "🥘"
     if any(k in food_name for k in ["탕", "국밥", "순대국", "곰탕"]):
         return "🍲"
-    if any(k in food_name for k in ["죽", "미역국"]):
+    if any(k in food_name for k in ["죽", "스프", "미역국"]):
         return "🥣"
-    if any(k in food_name for k in ["김밥", "초밥"]):
+    if any(k in food_name for k in ["김밥", "초밥", "롤"]):
         return "🍙"
     if any(k in food_name for k in ["밥", "덮밥", "정식", "백반"]):
         return "🍱"
-    if any(k in food_name for k in ["버거", "샌드위치"]):
+    if any(k in food_name for k in ["버거", "샌드위치", "토스트"]):
         return "🥪"
     if "피자" in food_name:
         return "🍕"
+    if "분식" in food_name:
+        return "🍢"
     return "🍽️"
 
 
@@ -335,68 +395,34 @@ def geocode_region_center(region_query: str):
     return None, None
 
 
-# [개선] 3중 구조의 안정적 식당 검색 함수
 def fetch_naver_places(region: str, food_keyword: str):
     query = f"{region.strip()} {food_keyword}"
-    results = []
-    seen = set()
-    
+    url = f"https://m.search.naver.com/search.naver?query={urllib.parse.quote(query)}"
     headers = {
-        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7"
+        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15"
     }
-
-    # 1. 네이버 모바일 통합 검색 시도
-    search_url = f"https://m.search.naver.com/search.naver?query={urllib.parse.quote(query)}"
+    results = []
     try:
-        res = requests.get(search_url, headers=headers, timeout=3.0)
+        res = requests.get(url, headers=headers, timeout=2.5)
         html = res.text
-        
-        # 1-1. JSON 내부 좌표 & 상호명 매칭 (플레이스 모듈)
         matches = re.findall(r'"name":"([^"]+)"[^{}]*?"x":"([\d\.]+)","y":"([\d\.]+)"', html)
+        seen = set()
         for raw_name, x, y in matches:
             cleaned = clean_place_name(raw_name)
-            lat_val, lng_val = float(y), float(x)
+            lat_val = float(y)
+            lng_val = float(x)
             if any(bad in cleaned for bad in ["포차", "주점", "호프", "이자카야", "술집", "카페", "베이커리"]):
                 continue
-            if cleaned and cleaned not in seen and 33.0 <= lat_val <= 39.0 and 124.0 <= lng_val <= 132.0:
+            if cleaned and cleaned not in seen and 33.0 <= lat_val <= 39.0:
                 seen.add(cleaned)
-                results.append({"name": cleaned, "lat": lat_val, "lng": lng_val, "source": "네이버"})
-
-        # 1-2. HTML 요소 파싱 (JS 비활성화 환경 대비)
-        if len(results) < 5:
-            soup = BeautifulSoup(html, "html.parser")
-            # 플레이스 리스트 항목 추출
-            place_elements = soup.select(".place_bluelink, .O8qbU, .tit, a.name")
-            for el in place_elements:
-                p_name = clean_place_name(el.get_text(strip=True))
-                if p_name and p_name not in seen and len(p_name) > 1:
-                    if not any(bad in p_name for bad in ["더보기", "열기", "닫기", "리뷰", "블로그"]):
-                        seen.add(p_name)
-                        results.append({"name": p_name, "lat": None, "lng": None, "source": "네이버웹"})
+                results.append({
+                    "name": cleaned,
+                    "lat": lat_val,
+                    "lng": lng_val,
+                    "source": "네이버"
+                })
     except Exception:
         pass
-
-    # 2. 결과가 3개 미만일 경우 OSM Nominatim으로 보충 검색
-    if len(results) < 5:
-        try:
-            osm_q = f"{region.strip()} {food_keyword}"
-            osm_url = f"https://nominatim.openstreetmap.org/search?q={urllib.parse.quote(osm_q)}&format=json&limit=10"
-            osm_res = requests.get(osm_url, headers={"User-Agent": "LunchRouletteApp/2.0"}, timeout=2.0)
-            for item in osm_res.json():
-                osm_name = item.get("display_name", "").split(",")[0].strip()
-                if osm_name and osm_name not in seen:
-                    seen.add(osm_name)
-                    results.append({
-                        "name": osm_name,
-                        "lat": float(item["lat"]),
-                        "lng": float(item["lon"]),
-                        "source": "OSM"
-                    })
-        except Exception:
-            pass
-
     return results
 
 
@@ -408,63 +434,39 @@ def get_combined_places_with_gps(region: str, food_keyword: str, max_radius_km: 
 
     places = fetch_naver_places(region, food_keyword)
     
-    # 기준 좌표가 없을 경우 수집된 장소의 첫 번째 좌표로 지정
     if not center_lat and places:
-        for p in places:
-            if p.get("lat") and p.get("lng"):
-                center_lat = p["lat"]
-                center_lng = p["lng"]
-                break
+        center_lat = places[0]["lat"]
+        center_lng = places[0]["lng"]
 
     if not center_lat:
         return [], None, None
 
-    valid_places = []
-    no_coord_places = []
-
+    filtered = []
     for p in places:
-        if p.get("lat") and p.get("lng"):
-            dist = haversine_distance(center_lat, center_lng, p["lat"], p["lng"])
-            # 반경 1.5배 이내까지 넉넉하게 수용
-            if dist <= (max_radius_km * 1.5):
-                p["dist"] = round(dist, 2)
-                valid_places.append(p)
-        else:
-            no_coord_places.append(p)
-
-    # 좌표가 없는 장소는 중심점 주변에 자연스러운 오프셋(반경 내)을 부여하여 복구
-    offset_radius = min(max_radius_km, 1.2) * 0.007
-    for idx, p in enumerate(no_coord_places):
-        if len(valid_places) >= 12:
+        dist = haversine_distance(center_lat, center_lng, p["lat"], p["lng"])
+        if dist <= max_radius_km:
+            p["dist"] = round(dist, 2)
+            filtered.append(p)
+        if len(filtered) >= 7:
             break
-        angle = (idx * 55) * (math.pi / 180)
-        dist_factor = 0.3 + (0.15 * (idx % 4))
-        p["lat"] = round(center_lat + (offset_radius * dist_factor * math.sin(angle)), 6)
-        p["lng"] = round(center_lng + (offset_radius * dist_factor * math.cos(angle)), 6)
-        p["dist"] = round(haversine_distance(center_lat, center_lng, p["lat"], p["lng"]), 2)
-        valid_places.append(p)
 
-    # 최소 10개까지 슬라이싱
-    final_candidates = valid_places[:10] if len(valid_places) >= 10 else valid_places
-    return final_candidates, center_lat, center_lng
+    return (filtered if filtered else places[:4]), center_lat, center_lng
 
 
 def get_verified_menu_and_places(region: str, candidates: list, max_radius_km: float = 1.8, direct_coords=None):
     shuffled = candidates.copy()
     random.shuffle(shuffled)
 
-    # 후보 메뉴들을 순회하며 가장 풍부한 검색 결과(최대 10개)를 반환하는 메뉴 선택
-    for item in shuffled[:5]:
+    for item in shuffled[:4]:
         menu_name, emoji = item[0], item[1]
         places, c_lat, c_lng = get_combined_places_with_gps(region, menu_name, max_radius_km=max_radius_km, direct_coords=direct_coords)
-        if places and len(places) >= 3 and c_lat is not None:
+        if places and len(places) > 0 and c_lat is not None:
             return menu_name, emoji, places, c_lat, c_lng
 
-    # Fallback 음식군
     fallback_foods = [("김치찌개", "🥘"), ("순대국", "🍲"), ("돈까스", "🍱"), ("짜장면", "🥢")]
     for f_menu, f_emoji in fallback_foods:
-        places, c_lat, c_lng = get_combined_places_with_gps(region, f_menu, max_radius_km=max_radius_km + 0.8, direct_coords=direct_coords)
-        if places and len(places) > 0 and c_lat is not None:
+        places, c_lat, c_lng = get_combined_places_with_gps(region, f_menu, max_radius_km=max_radius_km + 0.5, direct_coords=direct_coords)
+        if c_lat is not None:
             return f_menu, f_emoji, places, c_lat, c_lng
 
     def_lat, def_lng = geocode_region_center(region)
@@ -503,7 +505,7 @@ def fetch_local_dynamic_menus(region: str, allow_porridge: bool = False):
     return [(name, emoji) for name, emoji in combined.items()]
 
 
-# 브라우저 GPS 파라미터 처리
+# 브라우저 GPS 쿼리 파라미터 처리 (수동 클릭 시만)
 qp = st.query_params
 if "action" in qp and qp["action"] == "gps" and "lat" in qp and "lng" in qp:
     try:
@@ -522,6 +524,8 @@ if "action" in qp and qp["action"] == "gps" and "lat" in qp and "lng" in qp:
 
 
 # --- 화면 레이아웃 ---
+
+# 헤더 영역
 st.title("🍱 오늘 점심 뭐 먹지?")
 st.caption("지역/건물명을 직접 입력하거나, '내 위치 찾기' 버튼을 눌러 주변 점심을 추천받으세요.")
 st.markdown("<div style='height: 16px;'></div>", unsafe_allow_html=True)
@@ -568,11 +572,14 @@ with col_gps:
         unsafe_allow_html=True
     )
 
+# 탐색 반경 활성화 조건 판별
+# 1) 내 위치 찾기(GPS)가 활성화되어 있거나
+# 2) 단순 행정구역이 아니라 건물명/역/상호명을 입력했을 때만 활성화
 is_gps_active = st.session_state.gps_coords is not None
 is_poi_active = is_specific_poi_or_building(region)
 radius_active = is_gps_active or is_poi_active
 
-# 2. 탐색 반경 설정
+# 2. 탐색 반경 설정 (조건 충족 시에만 활성화)
 if radius_active:
     st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
     st.markdown("<h5 style='margin-bottom: 8px; font-size: 15px;'>📏 탐색 반경</h5>", unsafe_allow_html=True)
@@ -603,6 +610,7 @@ if radius_active:
             st.session_state.selected_radius_preset = "직접 입력"
             st.rerun()
 
+    # '직접 입력'을 눌렀을 때만 아래에 숫자 입력칸 표시
     selected_preset = st.session_state.selected_radius_preset
 
     if selected_preset == "직접 입력":
@@ -630,6 +638,7 @@ if radius_active:
         radius_result_desc = desc_map[selected_preset]
 
 else:
+    # 행정구역 입력 상태: 기본 반경 적용 및 안내 메시지
     radius_km = 2.5
     radius_display_text = "지역 기준 추천"
     radius_result_desc = "추천 식당입니다!"
@@ -797,19 +806,16 @@ if res is not None:
                 """,
                 unsafe_allow_html=True
             )
-            # 최대 9개 후보 매장 나열 (총합 최대 10개)
             if len(places) > 1:
-                candidate_names = [f"<b>{i+1}.</b> {p['name']}" for i, p in enumerate(places[1:10])]
                 st.markdown(
-                    f"<div style='font-size: 13.5px; color: #444; line-height: 1.6; margin-bottom: 20px;'>"
-                    f"<b>근처 다른 추천 후보 ({len(places)-1}곳):</b><br/>"
-                    f"{' &nbsp;·&nbsp; '.join(candidate_names)}"
+                    f"<div style='font-size: 13.5px; color: #555; margin-bottom: 20px;'>"
+                    f"<b>근처 다른 추천 후보:</b> {', '.join([p['name'] for p in places[1:]])}"
                     f"</div>",
                     unsafe_allow_html=True
                 )
 
             st.markdown("<h3 style='margin-bottom: 4px;'>🗺️ 추천 식당 위치 지도</h3>", unsafe_allow_html=True)
-            st.caption("⭐ 빨간 핀: 오늘의 1픽 추천 식당 / 🔵 파란 핀: 주변 후보 식당 (최대 10개 표시)")
+            st.caption("⭐ 빨간 핀: 오늘의 1픽 추천 식당 / 🔵 파란 핀: 주변 후보 식당")
             st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
 
             target_lat = places[0]["lat"]
@@ -820,6 +826,7 @@ if res is not None:
 
             m = folium.Map(location=[target_lat, target_lng], zoom_start=zoom_val, control_scale=True)
 
+            # 1픽 팝업
             main_popup_html = f"""
             <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
                         padding: 6px 10px; min-width: 170px; text-align: center; white-space: nowrap;">
@@ -838,12 +845,12 @@ if res is not None:
                 icon=folium.Icon(color="red", icon="star", prefix="fa")
             ).add_to(m)
 
-            for idx, p in enumerate(places[1:10], start=2):
+            for p in places[1:]:
                 sub_popup_html = f"""
                 <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
                             padding: 5px 8px; min-width: 150px; text-align: center; white-space: nowrap;">
                     <span style="background: #1976D2; color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold;">
-                        후보 {idx}
+                        후보
                     </span>
                     <div style="margin-top: 5px; font-size: 13px; font-weight: bold; color: #333;">
                         {p['name']}
@@ -853,7 +860,7 @@ if res is not None:
                 folium.Marker(
                     location=[p["lat"], p["lng"]],
                     popup=folium.Popup(sub_popup_html, max_width=260),
-                    tooltip=f"{idx}. {p['name']}",
+                    tooltip=p["name"],
                     icon=folium.Icon(color="blue", icon="cutlery", prefix="fa")
                 ).add_to(m)
 
