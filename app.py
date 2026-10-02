@@ -55,7 +55,7 @@ st.markdown(
         margin-bottom: 6px;
     }
 
-    /* 룰렛 방식 전체 묶음 박스 (st.container border 디자인 강화) */
+    /* 룰렛 방식 전체 묶음 박스 */
     div[data-testid="stVerticalBlockBorderWrapper"] {
         border-radius: 18px !important;
         border: 1.8px solid #EAE3DB !important;
@@ -156,19 +156,19 @@ JEON_KEYWORDS = [
     "전나라", "전마을", "전선생", "종로전", "원조전", "전골목", "주막", "탁주"
 ]
 
-# 점심 부적합 업종
+# 카카오 실제 카테고리 기준 고깃집/구이 업종 강력 차단
 NON_LUNCH_CATEGORIES = [
-    "삼겹살", "육류,고기구이", "곱창,막창", "양꼬치", "조개구이",
+    "육류,고기", "육류,고기구이", "삼겹살", "곱창,막창", "양꼬치", "조개구이",
     "치킨", "닭요리 > 치킨", "닭꼬치", "꼬치구이", "전,빈대떡", "닭발"
 ]
 
-# 기본 구이/안주 제외 키워드 ('굽자'는 제외되지 않도록 분리 처리)
-NON_LUNCH_NAME_KEYWORDS = [
-    "닭발", "불닭발", "국물닭발", "통닭발", "무뼈닭발", "신닭발", "한신포차",
-    "숯불", "연탄", "화로", "짚불", "삼겹살", "오겹살", "목살", "뒷고기", "생고기",
-    "차돌", "대패", "정육식당", "곱창", "막창", "대창", "특양", "양꼬치", "양갈비", 
-    "조개구이", "장어구이", "꼬치", "닭꼬치", "수제꼬치", "야키토리", "쿠시카츠",
-    "치킨", "닭강정", "BHC", "BBQ", "교촌", "굽네", "처갓집", "노랑통닭"
+# 고깃집 상호 단골 키워드 (축산, 정육, 식육, 마장, 가든 등 전면 차단)
+MEAT_SHOP_KEYWORDS = [
+    "축산", "정육", "식육", "마장", "가든", "화로", "연탄", "숯불", "솥뚜껑",
+    "뒷고기", "주먹고기", "생고기", "생삼겹", "대패", "차돌", "삼겹", "오겹", "목살",
+    "곱창", "막창", "대창", "특양", "양꼬치", "양갈비", "갈매기", "뽈살", "부속",
+    "야키니쿠", "우삼겹", "냉삼", "생갈비", "소갈비", "돼지갈비", "닭발", "통닭발",
+    "불닭발", "조개구이", "장어구이", "야키토리", "쿠시카츠", "치킨", "닭강정"
 ]
 
 DRINK_SNACK_KEYWORDS = [
@@ -349,15 +349,21 @@ ROW_PAIRS = [
     ("🤢 속편한식사", "🍻 시원한 해장")
 ]
 
-# --- 2. 점심시간(10:00~14:00) 영업 & 15/17시 오픈 철저 배제 함수 ---
+# --- 2. 점심시간(10:00~14:00) 영업 & 고깃집/주점 엄격 배제 엔진 ---
 def verify_place_details(place_id: str, place_name: str, category_name: str) -> bool:
     clean_pname = place_name.replace(" ", "").upper()
     
-    # 1차: 상호명에 주류/유흥/늦은밤 단어 포함 시 즉시 탈락
-    if any(k in clean_pname for k in ["포차", "주점", "호프", "이자카야", "술집", "맥주", "와인", "펍", "PUB", "비어", "라운지", "BAR", "야시장", "심야", "야식", "오뎅바", "선술집"]):
+    # 1. 1차 상호명/카테고리 텍스트 기반 강력 배제
+    if any(k in clean_pname for k in EXCLUDED_NAME_KEYWORDS):
         return False
-    if any(k in category_name for k in ["술집", "주점", "호프", "이자카야", "바(BAR)", "와인바", "포차"]):
+    if any(k in category_name for k in EXCLUDED_CATEGORIES):
         return False
+
+    # 고깃집 상호 키워드 검사 ('굽자'는 허용)
+    is_guip_exception = ("굽자" in place_name)
+    if not is_guip_exception:
+        if any(k in clean_pname for k in MEAT_SHOP_KEYWORDS):
+            return False
 
     try:
         url = f"https://place.map.kakao.com/main/v/{place_id}"
@@ -366,8 +372,14 @@ def verify_place_details(place_id: str, place_name: str, category_name: str) -> 
             "Accept": "application/json, text/plain, */*",
             "Referer": "https://map.kakao.com/"
         }
-        res = requests.get(url, headers=headers, timeout=2.0)
+        res = requests.get(url, headers=headers, timeout=1.8)
+        
+        # 카카오 내부 API 조회 실패(403 차단 등) 시 Fallback 처리:
+        # 고기, 숯불, 주류 관련 의심 키워드가 있으면 안전하게 탈락!
         if res.status_code != 200:
+            suspicious_words = ["고기", "돈", "육", "포크", "미트", "갈비", "삼겹", "구이", "포차", "주점", "식육", "정육"]
+            if not is_guip_exception and any(w in clean_pname for w in suspicious_words):
+                return False
             return True
 
         data = res.json()
@@ -403,20 +415,23 @@ def verify_place_details(place_id: str, place_name: str, category_name: str) -> 
                         if end_h < start_h:
                             end_h += 24.0
                         
-                        # 14:00 이후 오픈 매장 (15시, 17시 오픈 등) 즉시 제외
-                        # 점심 식사 가능 구간(오픈 13:30 이전 AND 마감 12:00 이후)
+                        # 오픈이 14:00 이후(15시, 17시 등)인 곳은 무조건 탈락!
+                        # 11:30 ~ 14:00 사이에 정상 영업 중이어야 점심 합격
                         if start_h <= 13.5 and end_h >= 12.0:
                             is_lunch_available = True
                             break
                 if is_lunch_available:
                     break
 
-        # 영업시간 데이터가 명시되어 있는데 점심 미운영 식당이면 차단
+        # 영업시간이 등록되어 있는데 점심 미운영 식당이면 차단
         if has_time_data and not is_lunch_available:
             return False
 
         return True
     except Exception:
+        # 예외 발생 시에도 의심되는 매장은 배제
+        if not is_guip_exception and any(w in clean_pname for w in ["고기", "갈비", "돈", "육", "구이", "정육"]):
+            return False
         return True
 
 
@@ -439,18 +454,19 @@ def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_na
     if any(c in category_name for c in ["카페", "디저트", "제과,베이커리"]):
         return False
 
-    # 4. 점심 부적합 업종
+    # 4. 고깃집 카테고리 완전 배제 ('육류,고기' 카카오 공식 표기 반영)
+    # 제육볶음이나 닭갈비 메뉴일지라도 저녁 전용 삼겹살 구이 매장이면 배제
     if any(non in category_name for non in NON_LUNCH_CATEGORIES):
-        return False
-    
-    # 5. 구이 키워드 예외: '굽자'가 들어가 있는 상호는 허용
+        if not (menu_name == "닭갈비" and "닭요리" in category_name):
+            return False
+
+    # 5. 고깃집 상호 키워드 검사 ('굽자'는 허용)
     is_guip_exception = ("굽자" in place_name)
     if not is_guip_exception:
         if "구이" in clean_name:
             return False
-
-    if any(bad in clean_name for bad in [k.upper() for k in NON_LUNCH_NAME_KEYWORDS]):
-        return False
+        if any(bad in clean_name for bad in [k.upper() for k in MEAT_SHOP_KEYWORDS]):
+            return False
 
     # 6. 분식 및 프랜차이즈 필터링
     if menu_name not in BUNSIK_ALLOW_MENUS:
@@ -589,10 +605,11 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
                 p_name = d.get("place_name", "")
                 cat_name = d.get("category_name", "")
 
+                # 1차 카테고리/상호명 검증
                 if not is_valid_specialized_restaurant(menu_name, p_name, cat_name):
                     continue
 
-                # 점심시간 운영 및 저녁 식당 필터링
+                # 2차 영업시간 및 점심 운영 여부 정밀 검증
                 if p_id and not verify_place_details(p_id, p_name, cat_name):
                     continue
 
@@ -613,7 +630,7 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
 
             places.sort(key=lambda x: x["priority_score"])
             
-            # 상위 10개 매장 내 무작위 셔플
+            # 상위 10개 매장 내 무작위 셔플로 추천 다양성 확보
             if places:
                 top_candidates = places[:10]
                 remaining_candidates = places[10:]
@@ -642,7 +659,7 @@ if qp.get("action") == "gps" and "lat" in qp and "lng" in qp:
     st.query_params.clear()
 
 
-# --- 상단 타이틀 ---
+# --- 화면 레이아웃 상단부 ---
 st.markdown("<h1 style='color: #2E1C10; font-size: 26px; font-weight: 800; margin: 0 0 4px 0;'>🍱 오늘 점심 뭐 먹지?</h1>", unsafe_allow_html=True)
 st.markdown("<div style='color: #8C827A; font-size: 13px; margin-bottom: 16px;'>점심 메뉴를 고르기 어려우신 분들을 위해 랜덤으로 메뉴와 맛집을 찾아드립니다.</div>", unsafe_allow_html=True)
 
@@ -761,7 +778,7 @@ def show_location_warning():
         unsafe_allow_html=True
     )
 
-# --- 3. 룰렛 방식 선택 (독립 카드 컨테이너) ---
+# --- 3. 룰렛 방식 선택 ---
 st.markdown("<div style='margin-bottom: 6px; font-size: 14px; font-weight: 700; color: #3E3228;'>🎯 룰렛 방식 선택</div>", unsafe_allow_html=True)
 
 # 박스 1: 완전 랜덤 룰렛
