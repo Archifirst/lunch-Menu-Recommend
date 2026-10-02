@@ -137,40 +137,38 @@ PRESET_RADIUS = {
     "직접 입력": None
 }
 
-# --- 제외/필터링 사전 규칙 정의 ---
+# --- 1. 유흥/주점/술집 업종 강력 제외 ---
 EXCLUDED_CATEGORIES = [
     "술집", "주점", "호프", "포차", "이자카야", "바(BAR)", "요리주점", "와인바",
-    "칵테일바", "민속주점", "맥주", "룸살롱", "단란주점", "유흥주점", "라이브카페", "나이트클럽"
+    "칵테일바", "민속주점", "맥주", "룸살롱", "단란주점", "유흥주점", "라이브카페", 
+    "나이트클럽", "오뎅바", "꼬치구이전문점", "선술집", "선술", "해물주점"
 ]
 
 EXCLUDED_NAME_KEYWORDS = [
     "포차", "주점", "호프", "이자카야", "술집", "맥주", "와인", "펍", "PUB", "비어",
-    "BEER", "라운지", "BAR", "룸", "노래방", "포장마차", "야시장", "소주"
+    "BEER", "라운지", "BAR", "룸", "노래방", "포장마차", "야시장", "소주", "오뎅바",
+    "막걸리", "동동주", "생맥주", "달빛", "심야", "야식", "새벽", "올나잇", "통닭"
 ]
 
+# 전류 / 주막류
 JEON_KEYWORDS = [
     "파전", "빈대떡", "모듬전", "부침개", "지짐이", "지짐", "전집", 
-    "전나라", "전마을", "전선생", "종로전", "원조전", "전골목", "주막", 
-    "막걸리", "동동주", "산울림", "탁주"
+    "전나라", "전마을", "전선생", "종로전", "원조전", "전골목", "주막", "탁주"
 ]
 
-LATE_NIGHT_KEYWORDS = [
-    "심야", "야식", "야간", "새벽", "올나잇", "달빛", "24시", "24시간", 
-    "밤식당", "야포", "야한", "불밤", "야시장", "심야식당"
-]
-
+# 점심 부적합 업종
 NON_LUNCH_CATEGORIES = [
-    "삼겹살", "갈비", "육류,고기구이", "곱창,막창", "양꼬치", "조개구이",
+    "삼겹살", "육류,고기구이", "곱창,막창", "양꼬치", "조개구이",
     "치킨", "닭요리 > 치킨", "닭꼬치", "꼬치구이", "전,빈대떡", "닭발"
 ]
 
+# 기본 구이/안주 제외 키워드 ('굽자'는 제외되지 않도록 분리 처리)
 NON_LUNCH_NAME_KEYWORDS = [
     "닭발", "불닭발", "국물닭발", "통닭발", "무뼈닭발", "신닭발", "한신포차",
-    "숯불", "연탄", "화로", "짚불", "구이", "삼겹살", "오겹살", "목살", "뒷고기", "생고기",
-    "차돌", "대패", "정육식당", "갈비", "갈매기", "소고기", "한우", "곱창", "막창",
-    "대창", "특양", "양꼬치", "양갈비", "조개구이", "장어구이",
-    "꼬치", "닭꼬치", "수제꼬치", "야키토리", "쿠시카츠",
-    "치킨", "통닭", "닭강정", "켄터키", "BHC", "BBQ", "교촌", "굽네", "처갓집", "노랑통닭"
+    "숯불", "연탄", "화로", "짚불", "삼겹살", "오겹살", "목살", "뒷고기", "생고기",
+    "차돌", "대패", "정육식당", "곱창", "막창", "대창", "특양", "양꼬치", "양갈비", 
+    "조개구이", "장어구이", "꼬치", "닭꼬치", "수제꼬치", "야키토리", "쿠시카츠",
+    "치킨", "닭강정", "BHC", "BBQ", "교촌", "굽네", "처갓집", "노랑통닭"
 ]
 
 DRINK_SNACK_KEYWORDS = [
@@ -216,7 +214,6 @@ TONKATSU_NAME_INDICATORS = [
     "돈까스", "돈가스", "카츠", "카쯔", "가츠", "돈카츠", "돈카쯔", "포크커틀릿"
 ]
 
-# --- 1. 호환성 높은 표준 이모티콘 65종 (깨짐 방지 완료) ---
 DEFAULT_FOODS = [
     ("김치찌개", "🥘", "김치찌개 전문점", ["찌개", "한식", "백반"]),
     ("된장찌개", "🍲", "된장찌개 백반", ["찌개", "한식", "백반"]),
@@ -286,7 +283,6 @@ DEFAULT_FOODS = [
     ("김밥", "🍙", "김밥 전문점", ["김밥"])
 ]
 
-# --- 기분, 날씨, 컨디션 데이터 ---
 MOOD_DATA = {
     "🥳 기분좋음": (
         "양식·일식·특식", 
@@ -353,12 +349,12 @@ ROW_PAIRS = [
     ("🤢 속편한식사", "🍻 시원한 해장")
 ]
 
-# --- 2. 점심시간(10:00~14:00) 영업 & 술안주 미판매 엄격 검증 함수 ---
+# --- 2. 점심시간(10:00~14:00) 영업 & 15/17시 오픈 철저 배제 함수 ---
 def verify_place_details(place_id: str, place_name: str, category_name: str) -> bool:
     clean_pname = place_name.replace(" ", "").upper()
     
-    # 1차: 이름/카테고리에 저녁/심야 키워드가 있으면 즉시 차단
-    if any(k in clean_pname for k in ["포차", "주점", "호프", "이자카야", "술집", "맥주", "와인", "펍", "PUB", "비어", "라운지", "BAR", "야시장", "심야", "야식"]):
+    # 1차: 상호명에 주류/유흥/늦은밤 단어 포함 시 즉시 탈락
+    if any(k in clean_pname for k in ["포차", "주점", "호프", "이자카야", "술집", "맥주", "와인", "펍", "PUB", "비어", "라운지", "BAR", "야시장", "심야", "야식", "오뎅바", "선술집"]):
         return False
     if any(k in category_name for k in ["술집", "주점", "호프", "이자카야", "바(BAR)", "와인바", "포차"]):
         return False
@@ -376,7 +372,7 @@ def verify_place_details(place_id: str, place_name: str, category_name: str) -> 
 
         data = res.json()
 
-        # 안주 메뉴 검증
+        # 안주류 메뉴 검증
         menu_info = data.get("menuInfo", {})
         menu_list = menu_info.get("menuList", [])
         for m in menu_list:
@@ -384,13 +380,13 @@ def verify_place_details(place_id: str, place_name: str, category_name: str) -> 
             if any(snack in m_name for snack in DRINK_SNACK_KEYWORDS):
                 return False
 
-        # 영업시간 파싱 및 점심시간 검증
+        # 영업시간 정밀 분석
         basic_info = data.get("basicInfo", {})
         open_hour_info = basic_info.get("openHour", {})
         period_list = open_hour_info.get("periodList", [])
         
         has_time_data = False
-        is_open_in_lunch = False
+        is_lunch_available = False
 
         if period_list:
             for period in period_list:
@@ -407,16 +403,16 @@ def verify_place_details(place_id: str, place_name: str, category_name: str) -> 
                         if end_h < start_h:
                             end_h += 24.0
                         
-                        # 10:00 ~ 14:30 사이와 겹치는 영업시간이 존재하는지 검증
-                        # (영업 종료가 11:30 이전이거나, 오픈이 14:00 이후면 점심 불가)
-                        if not (end_h <= 11.5 or start_h >= 14.0):
-                            is_open_in_lunch = True
+                        # 14:00 이후 오픈 매장 (15시, 17시 오픈 등) 즉시 제외
+                        # 점심 식사 가능 구간(오픈 13:30 이전 AND 마감 12:00 이후)
+                        if start_h <= 13.5 and end_h >= 12.0:
+                            is_lunch_available = True
                             break
-                if is_open_in_lunch:
+                if is_lunch_available:
                     break
 
-        # 영업시간이 등록되어 있는데 점심시간에 열지 않는 곳은 무조건 제외!
-        if has_time_data and not is_open_in_lunch:
+        # 영업시간 데이터가 명시되어 있는데 점심 미운영 식당이면 차단
+        if has_time_data and not is_lunch_available:
             return False
 
         return True
@@ -427,41 +423,50 @@ def verify_place_details(place_id: str, place_name: str, category_name: str) -> 
 def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_name: str) -> bool:
     clean_name = place_name.replace(" ", "").upper()
 
+    # 1. 유흥/주점/술집 카테고리 및 상호
     if any(ex in category_name for ex in EXCLUDED_CATEGORIES):
         return False
     if any(bad in clean_name for bad in [k.upper() for k in EXCLUDED_NAME_KEYWORDS]):
         return False
 
+    # 2. 전집/주막
     if any(jeon in clean_name for jeon in JEON_KEYWORDS):
         return False
     if any(c in category_name for c in ["전,빈대떡", "빈대떡", "민속주점"]):
         return False
 
-    if any(late in clean_name for late in LATE_NIGHT_KEYWORDS):
-        return False
-    if any(late in category_name for late in ["심야", "야식"]):
-        return False
-
+    # 3. 카페/디저트 제외
     if any(c in category_name for c in ["카페", "디저트", "제과,베이커리"]):
         return False
 
+    # 4. 점심 부적합 업종
     if any(non in category_name for non in NON_LUNCH_CATEGORIES):
         return False
+    
+    # 5. 구이 키워드 예외: '굽자'가 들어가 있는 상호는 허용
+    is_guip_exception = ("굽자" in place_name)
+    if not is_guip_exception:
+        if "구이" in clean_name:
+            return False
+
     if any(bad in clean_name for bad in [k.upper() for k in NON_LUNCH_NAME_KEYWORDS]):
         return False
 
+    # 6. 분식 및 프랜차이즈 필터링
     if menu_name not in BUNSIK_ALLOW_MENUS:
         if any(brand in clean_name for brand in MULTI_MENU_FRANCHISES):
             return False
         if "분식" in category_name and not any(k in category_name for k in ["일식", "양식", "한식", "중식", "아시아음식"]):
             return False
 
+    # 7. 초밥 / 횟집 필터링
     if menu_name == "초밥":
         if any(fish in clean_name for fish in EVENING_RAW_FISH_KEYWORDS):
             return False
         if "해물,생선 > 회" in category_name and not any(k in clean_name for k in ["스시", "초밥"]):
             return False
 
+    # 8. 돈까스 특화
     if menu_name == "돈까스":
         is_tonkatsu_name = any(k in clean_name for k in TONKATSU_NAME_INDICATORS)
         is_tonkatsu_category = any(c in category_name for c in ["돈가스", "돈까스"])
@@ -469,6 +474,7 @@ def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_na
             return False
         return True
 
+    # 9. 전문점 이름 규칙
     if menu_name in STRICT_SPECIALTY_NAME_RULES:
         required_words = STRICT_SPECIALTY_NAME_RULES[menu_name]
         if not any(req in clean_name for req in required_words):
@@ -586,7 +592,7 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
                 if not is_valid_specialized_restaurant(menu_name, p_name, cat_name):
                     continue
 
-                # 점심시간 운영 및 안주 판매 여부 엄격 검증
+                # 점심시간 운영 및 저녁 식당 필터링
                 if p_id and not verify_place_details(p_id, p_name, cat_name):
                     continue
 
