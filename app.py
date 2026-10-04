@@ -38,14 +38,13 @@ st.markdown(
     .radius-wrapper, .cuisine-wrapper {
         animation: smoothSlideDown 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         transform-origin: top center;
-        margin-bottom: 6px;
     }
     div[data-testid="stVerticalBlockBorderWrapper"] {
         border-radius: 18px !important;
         border: 1.8px solid #EAE3DB !important;
         background-color: #FFFFFF !important;
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02) !important;
-        margin-bottom: 14px !important;
+        margin-bottom: 12px !important;
         transition: all 0.2s ease !important;
     }
     div[data-testid="stVerticalBlockBorderWrapper"]:hover {
@@ -100,8 +99,10 @@ KAKAO_REST_KEY = st.secrets["KAKAO_REST_KEY"].strip() if has_key else ""
 # 세션 상태 초기화
 if "selected_radius_preset" not in st.session_state:
     st.session_state.selected_radius_preset = "🚲"
+if "custom_radius_val" not in st.session_state:
+    st.session_state.custom_radius_val = 2.0
 if "selected_cuisine" not in st.session_state:
-    st.session_state.selected_cuisine = None  # 초기에는 미선택 상태
+    st.session_state.selected_cuisine = None
 if "saved_result" not in st.session_state:
     st.session_state.saved_result = None
 if "spin_count" not in st.session_state:
@@ -522,7 +523,7 @@ if not has_key:
     st.warning("⚠️ **API 키 설정 필요**: `.streamlit/secrets.toml` 또는 Cloud Secrets에 `KAKAO_REST_KEY`를 설정해주세요.")
 
 # 1. 위치 입력창
-st.markdown("<div style='margin-bottom: 4px; font-size: 13.5px; font-weight: 600; color: #4A4036;'>📍 위치</div>", unsafe_allow_html=True)
+st.markdown("<div style='margin-bottom: 6px; font-size: 14px; font-weight: 700; color: #3E3228;'>📍 위치</div>", unsafe_allow_html=True)
 col_input, col_gps = st.columns([3.5, 1.2], vertical_alignment="center")
 
 with col_input:
@@ -578,8 +579,9 @@ if clean_region:
 should_show_radius = bool(clean_region and not is_admin_region)
 
 if should_show_radius:
+    st.markdown("<div style='margin-top: 16px;'></div>", unsafe_allow_html=True)
     st.markdown("<div class='radius-wrapper'>", unsafe_allow_html=True)
-    st.markdown("<div style='margin: 10px 0 6px 0; font-size: 13.5px; font-weight: 600; color: #4A4036;'>📏 탐색 반경</div>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-bottom: 6px; font-size: 14px; font-weight: 700; color: #3E3228;'>📏 탐색 반경</div>", unsafe_allow_html=True)
     
     c1, c2, c3, c4 = st.columns([1.0, 1.0, 1.0, 1.2], vertical_alignment="center")
     current_preset = st.session_state.selected_radius_preset
@@ -588,24 +590,28 @@ if should_show_radius:
         if st.button("🚶 도보 700m", key="rbtn_walk", type="primary" if current_preset == "🚶" else "secondary", use_container_width=True):
             if st.session_state.selected_radius_preset != "🚶":
                 st.session_state.selected_radius_preset = "🚶"
+                st.session_state.saved_result = None  # 반경 변경 시 이전 결과 초기화
                 st.rerun()
 
     with c2:
         if st.button("🚲 자전거 1.8km", key="rbtn_bike", type="primary" if current_preset == "🚲" else "secondary", use_container_width=True):
             if st.session_state.selected_radius_preset != "🚲":
                 st.session_state.selected_radius_preset = "🚲"
+                st.session_state.saved_result = None  # 반경 변경 시 이전 결과 초기화
                 st.rerun()
 
     with c3:
         if st.button("🚗 차량 3.5km", key="rbtn_car", type="primary" if current_preset == "🚗" else "secondary", use_container_width=True):
             if st.session_state.selected_radius_preset != "🚗":
                 st.session_state.selected_radius_preset = "🚗"
+                st.session_state.saved_result = None  # 반경 변경 시 이전 결과 초기화
                 st.rerun()
 
     with c4:
         if st.button("직접 입력", key="rbtn_custom", type="primary" if current_preset == "직접 입력" else "secondary", use_container_width=True):
             if st.session_state.selected_radius_preset != "직접 입력":
                 st.session_state.selected_radius_preset = "직접 입력"
+                st.session_state.saved_result = None  # 반경 변경 시 이전 결과 초기화
                 st.rerun()
 
     if st.session_state.selected_radius_preset == "직접 입력":
@@ -613,10 +619,13 @@ if should_show_radius:
             "희망 반경 (단위: km)", 
             min_value=0.2, 
             max_value=10.0, 
-            value=2.0, 
+            value=st.session_state.custom_radius_val, 
             step=0.2,
             key="custom_radius_num"
         )
+        if manual_radius != st.session_state.custom_radius_val:
+            st.session_state.custom_radius_val = manual_radius
+            st.session_state.saved_result = None  # 직접 입력 수치 변경 시 결과 초기화
         radius_km = float(manual_radius)
         radius_display_text = f"직접 입력 {radius_km:.1f}km"
     else:
@@ -629,52 +638,70 @@ else:
     radius_km = 1.8
     radius_display_text = "지역 인근"
 
-# --- 3. 음식 종류 선택 (9개 분류 버튼식 그리드) ---
+# --- 3. 음식 종류 선택 (동일한 16px 마진 적용) ---
+st.markdown("<div style='margin-top: 16px;'></div>", unsafe_allow_html=True)
 st.markdown("<div class='cuisine-wrapper'>", unsafe_allow_html=True)
-st.markdown("<div style='margin: 12px 0 6px 0; font-size: 13.5px; font-weight: 600; color: #4A4036;'>🍽️ 음식 종류</div>", unsafe_allow_html=True)
+st.markdown("<div style='margin-bottom: 6px; font-size: 14px; font-weight: 700; color: #3E3228;'>🍽️ 음식 종류</div>", unsafe_allow_html=True)
 
 cu1, cu2, cu3, cu4 = st.columns(4)
 current_cuisine = st.session_state.selected_cuisine
 
 with cu1:
     if st.button("한식", key="cbtn_korean", type="primary" if current_cuisine == "한식" else "secondary", use_container_width=True):
-        st.session_state.selected_cuisine = "한식"
-        st.rerun()
+        if st.session_state.selected_cuisine != "한식":
+            st.session_state.selected_cuisine = "한식"
+            st.session_state.saved_result = None  # 음식 종류 변경 시 결과 초기화
+            st.rerun()
 with cu2:
     if st.button("중식", key="cbtn_chinese", type="primary" if current_cuisine == "중식" else "secondary", use_container_width=True):
-        st.session_state.selected_cuisine = "중식"
-        st.rerun()
+        if st.session_state.selected_cuisine != "중식":
+            st.session_state.selected_cuisine = "중식"
+            st.session_state.saved_result = None
+            st.rerun()
 with cu3:
     if st.button("일식", key="cbtn_japanese", type="primary" if current_cuisine == "일식" else "secondary", use_container_width=True):
-        st.session_state.selected_cuisine = "일식"
-        st.rerun()
+        if st.session_state.selected_cuisine != "일식":
+            st.session_state.selected_cuisine = "일식"
+            st.session_state.saved_result = None
+            st.rerun()
 with cu4:
     if st.button("양식", key="cbtn_western", type="primary" if current_cuisine == "양식" else "secondary", use_container_width=True):
-        st.session_state.selected_cuisine = "양식"
-        st.rerun()
+        if st.session_state.selected_cuisine != "양식":
+            st.session_state.selected_cuisine = "양식"
+            st.session_state.saved_result = None
+            st.rerun()
 
 cu5, cu6, cu7, cu8 = st.columns(4)
 with cu5:
     if st.button("동남아식", key="cbtn_asian", type="primary" if current_cuisine == "동남아식" else "secondary", use_container_width=True):
-        st.session_state.selected_cuisine = "동남아식"
-        st.rerun()
+        if st.session_state.selected_cuisine != "동남아식":
+            st.session_state.selected_cuisine = "동남아식"
+            st.session_state.saved_result = None
+            st.rerun()
 with cu6:
     if st.button("인도식", key="cbtn_indian", type="primary" if current_cuisine == "인도식" else "secondary", use_container_width=True):
-        st.session_state.selected_cuisine = "인도식"
-        st.rerun()
+        if st.session_state.selected_cuisine != "인도식":
+            st.session_state.selected_cuisine = "인도식"
+            st.session_state.saved_result = None
+            st.rerun()
 with cu7:
     if st.button("멕시코식", key="cbtn_mexican", type="primary" if current_cuisine == "멕시코식" else "secondary", use_container_width=True):
-        st.session_state.selected_cuisine = "멕시코식"
-        st.rerun()
+        if st.session_state.selected_cuisine != "멕시코식":
+            st.session_state.selected_cuisine = "멕시코식"
+            st.session_state.saved_result = None
+            st.rerun()
 with cu8:
     if st.button("퓨전식", key="cbtn_fusion", type="primary" if current_cuisine == "퓨전식" else "secondary", use_container_width=True):
-        st.session_state.selected_cuisine = "퓨전식"
-        st.rerun()
+        if st.session_state.selected_cuisine != "퓨전식":
+            st.session_state.selected_cuisine = "퓨전식"
+            st.session_state.saved_result = None
+            st.rerun()
 
-# 마지막 줄: 모두 (종류 구분 없음) - 1열 전폭 배치
 if st.button("모두 (종류 구분 없음)", key="cbtn_all", type="primary" if current_cuisine == "모두" else "secondary", use_container_width=True):
-    st.session_state.selected_cuisine = "모두"
-    st.rerun()
+    if st.session_state.selected_cuisine != "모두":
+        st.session_state.selected_cuisine = "모두"
+        st.session_state.saved_result = None  # 음식 종류 변경 시 결과 초기화
+        st.rerun()
 
 st.markdown("</div>", unsafe_allow_html=True)
 
@@ -687,7 +714,7 @@ def show_location_warning():
     region_warning_spot.markdown(
         """
         <div style="display: flex; justify-content: center; align-items: center; gap: 8px;
-                    width: 100%; height: 44px; margin: 4px 0 10px 0;
+                    width: 100%; height: 44px; margin: 8px 0 12px 0;
                     background-color: #FFFDF7; border: 1.5px solid #F7D488; border-radius: 12px;">
             <span style="font-size: 16px;">⚠️</span>
             <span style="color: #6C4D0A; font-size: 13.5px; font-weight: 700;">
@@ -702,7 +729,7 @@ def show_cuisine_warning():
     region_warning_spot.markdown(
         """
         <div style="display: flex; justify-content: center; align-items: center; gap: 8px;
-                    width: 100%; height: 44px; margin: 4px 0 10px 0;
+                    width: 100%; height: 44px; margin: 8px 0 12px 0;
                     background-color: #FFFDF7; border: 1.5px solid #F7D488; border-radius: 12px;">
             <span style="font-size: 16px;">⚠️</span>
             <span style="color: #6C4D0A; font-size: 13.5px; font-weight: 700;">
@@ -713,7 +740,8 @@ def show_cuisine_warning():
         unsafe_allow_html=True
     )
 
-# --- 4. 룰렛 방식 선택 ---
+# --- 4. 룰렛 방식 선택 (동일한 16px 마진 적용) ---
+st.markdown("<div style='margin-top: 16px;'></div>", unsafe_allow_html=True)
 st.markdown("<div style='margin-bottom: 6px; font-size: 14px; font-weight: 700; color: #3E3228;'>🎯 룰렛 방식 선택</div>", unsafe_allow_html=True)
 
 with st.container(border=True):
@@ -736,7 +764,6 @@ with st.container(border=True):
             show_cuisine_warning()
         else:
             region_warning_spot.empty()
-            # 음식 종류 필터링 적용 (죽은 속편한식사에서만 나오도록 일반 룰렛 제외)
             cu = st.session_state.selected_cuisine
             if cu == "모두":
                 selected_candidates = [f for f in DEFAULT_FOODS if f[0] != "죽"]
@@ -786,7 +813,6 @@ with st.container(border=True):
             else:
                 filtered = [f for f in DEFAULT_FOODS if f[0] in allowed_names and f[3] == cu]
             
-            # 해당 기분과 음식 종류 교집합이 없을 경우 해당 음식 카테고리 전체 풀을 대체 사용
             if not filtered:
                 filtered = [f for f in DEFAULT_FOODS if (cu == "모두" or f[3] == cu)]
             selected_candidates = filtered
@@ -822,7 +848,6 @@ if spin_triggered and selected_candidates:
                     break
 
             if not places:
-                # 선택된 음식 종류에 맞춘 Fallback 검색
                 cu = st.session_state.selected_cuisine
                 fallback_kw = "백반 가정식" if cu in ["한식", "모두"] else f"{cu} 전문점"
                 fallback_menu = "백반·가정식" if cu in ["한식", "모두"] else f"{cu} 밥집"
