@@ -15,9 +15,8 @@ st.markdown(
     <style>
     /* ============================================================
        [핵심] Streamlit 전역 테마 색상 변수를 '내 위치 찾기' 주황색(#E86A3E)으로 고정
-       이를 통해 Streamlit 내부 기본 다홍색(#FF4B4B) 주입을 원천 차단합니다.
        ============================================================ */
-    :root, .stApp {
+    :root, .stApp, [data-testid="stAppViewContainer"] {
         --primary-color: #E86A3E !important;
         --primary: #E86A3E !important;
     }
@@ -70,7 +69,7 @@ st.markdown(
         margin-bottom: 14px !important;
     }
 
-    /* 박스 내부(Border Wrapper 내부)의 옵션 버튼 공통 스타일 */
+    /* 박스 내부(Border Wrapper 내부)의 옵션 버튼 공통 높이 및 스타일 */
     div[data-testid="stVerticalBlockBorderWrapper"] div.stButton > button {
         height: 40px !important;
         border-radius: 11px !important;
@@ -79,37 +78,46 @@ st.markdown(
     }
     
     /* ============================================================
-       [선택된 옵션 버튼: '내 위치 찾기'와 완전 일치하는 #E86A3E]
-       Streamlit Emotion 클래스 및 속성을 전부 덮어씁니다.
+       [선택된 옵션 버튼: '내 위치 찾기'와 100% 동일한 #E86A3E 강제 적용]
        ============================================================ */
-    div[data-testid="stVerticalBlockBorderWrapper"] button[kind="primary"],
+    button[data-testid*="primary"],
+    button[kind="primary"],
+    .stButton > button[data-testid*="primary"],
     div[data-testid="stVerticalBlockBorderWrapper"] button[data-testid*="primary"],
-    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid*="primary"] > button,
-    div[data-testid="stVerticalBlockBorderWrapper"] button.st-emotion-cache-19rxjzo,
-    div[data-testid="stVerticalBlockBorderWrapper"] div.stButton > button:focus:not(:focus-visible),
-    div[data-testid="stVerticalBlockBorderWrapper"] div.stButton > button[aria-pressed="true"] {
-        background: #E86A3E !important;
+    div[data-testid="stVerticalBlockBorderWrapper"] button[kind="primary"],
+    div[data-testid="stVerticalBlockBorderWrapper"] div.stButton > button[kind="primary"] {
         background-color: #E86A3E !important;
-        color: #FFFFFF !important;
+        background: #E86A3E !important;
         border: none !important;
         border-color: transparent !important;
+        color: #FFFFFF !important;
         font-size: 13.5px !important;
         font-weight: 700 !important;
         box-shadow: 0 2px 8px rgba(232, 106, 62, 0.25) !important;
     }
 
-    div[data-testid="stVerticalBlockBorderWrapper"] button[kind="primary"]:hover,
+    button[data-testid*="primary"]:hover,
+    button[kind="primary"]:hover,
+    .stButton > button[data-testid*="primary"]:hover,
     div[data-testid="stVerticalBlockBorderWrapper"] button[data-testid*="primary"]:hover,
-    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid*="primary"] > button:hover {
-        background: #D65A2F !important;
+    div[data-testid="stVerticalBlockBorderWrapper"] button[kind="primary"]:hover {
         background-color: #D65A2F !important;
+        background: #D65A2F !important;
         color: #FFFFFF !important;
         transform: translateY(-1px);
     }
 
-    div[data-testid="stVerticalBlockBorderWrapper"] button[kind="primary"] *,
-    div[data-testid="stVerticalBlockBorderWrapper"] button[data-testid*="primary"] * {
+    button[data-testid*="primary"] *,
+    div[data-testid="stVerticalBlockBorderWrapper"] button[kind="primary"] * {
         color: #FFFFFF !important;
+    }
+
+    button[data-testid*="primary"]:focus,
+    button[data-testid*="primary"]:active {
+        background-color: #E86A3E !important;
+        background: #E86A3E !important;
+        border-color: #E86A3E !important;
+        box-shadow: 0 0 0 2px rgba(232, 106, 62, 0.3) !important;
     }
     
     /* 선택되지 않은 기본 옵션 버튼 */
