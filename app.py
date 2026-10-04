@@ -109,7 +109,6 @@ st.markdown(
         transform: translateY(-1px);
     }
 
-    /* 세로 컬럼 내부 위젯 정렬 */
     div[data-testid="stColumn"] {
         padding: 0 3px !important;
     }
@@ -293,10 +292,11 @@ DEFAULT_FOODS = [
     ("퓨전파스타", "🍝", "퓨전 양식당", "퓨전식")
 ]
 
+# 상황별 메뉴 목록 (유니코드 키 완벽 일치 처리)
 MOOD_DATA = {
     "🥳 기분좋음": ("양식·일식·특식", ["파스타", "피자", "수제버거", "초밥", "돈까스", "텐동", "스테이크덮밥", "타코", "사케동", "리조또", "팟타이", "나시고랭", "인도커리", "브리또", "퓨전파스타"]),
     "🤯 스트레스": ("화끈·얼큰·매콤", ["짬뽕", "마라탕", "떡볶이", "낙지볶음", "쭈꾸미볶음", "제육볶음", "닭갈비", "육개장", "비빔국수", "부대찌개", "김치찌개"]),
-    "☀️️ 날씨좋음": ("피크닉·야외·테라스", ["김밥", "샌드위치", "포케", "수제버거", "타코", "초밥", "피자", "파스타", "사케동", "텐동", "돈까스", "돌솥비빔밥", "브리또"]),
+    "☀️ 날씨좋음": ("피크닉·야외·테라스", ["김밥", "샌드위치", "포케", "수제버거", "타코", "초밥", "피자", "파스타", "사케동", "텐동", "돈까스", "돌솥비빔밥", "브리또"]),
     "☔ 흐림·비": ("따끈한 국물·면 요리", ["칼국수", "수제비", "김치찌개", "부대찌개", "일본라멘", "우동", "쌀국수", "짬뽕", "동태탕", "순두부찌개", "잔치국수"]),
     "😴 피곤·보양": ("든든한 보양 뚝배기", ["삼계탕", "갈비탕", "추어탕", "도가니탕", "설렁탕", "곰탕", "국밥", "뼈해장국", "백반", "보리밥정식"]),
     "🫠 입맛없음": ("산뜻·시원한 별미", ["막국수", "냉면", "소바", "포케", "비빔국수", "회덮밥", "돌솥비빔밥", "샌드위치", "간장게장백반", "쌈밥정식"]),
@@ -818,11 +818,12 @@ with st.container(border=True):
     for left_k, right_k in ROW_PAIRS:
         col_left, col_right = st.columns(2)
         with col_left:
-            desc_l, _ = MOOD_DATA[left_k]
+            # KeyError 방지를 위한 .get() 안전 처리
+            desc_l, _ = MOOD_DATA.get(left_k, ("추천 메뉴", []))
             if st.button(f"{left_k} ({desc_l})", use_container_width=True, key=f"btn_{left_k}"):
                 selected_mood = left_k
         with col_right:
-            desc_r, _ = MOOD_DATA[right_k]
+            desc_r, _ = MOOD_DATA.get(right_k, ("추천 메뉴", []))
             if st.button(f"{right_k} ({desc_r})", use_container_width=True, key=f"btn_{right_k}"):
                 selected_mood = right_k
 
@@ -833,7 +834,7 @@ with st.container(border=True):
             show_cuisine_warning()
         else:
             region_warning_spot.empty()
-            _, allowed_names = MOOD_DATA[selected_mood]
+            _, allowed_names = MOOD_DATA.get(selected_mood, ("", []))
             cu = st.session_state.selected_cuisine
             if cu == "모두":
                 filtered = [f for f in DEFAULT_FOODS if f[0] in allowed_names]
