@@ -267,10 +267,11 @@ DEFAULT_FOODS = [
     ("김밥", "🍙", "김밥 전문점")
 ]
 
+# 상황별 메뉴 목록 (태양 이모지 유니코드 일치 처리)
 MOOD_DATA = {
     "🥳 기분좋음": ("양식·일식·특식", ["파스타", "피자", "수제버거", "초밥", "돈까스", "텐동", "스테이크덮밥", "타코", "사케동", "리조또", "팟타이", "나시고랭"]),
     "🤯 스트레스": ("화끈·얼큰·매콤", ["짬뽕", "마라탕", "떡볶이", "낙지볶음", "쭈꾸미볶음", "제육볶음", "닭갈비", "육개장", "비빔국수", "부대찌개", "김치찌개"]),
-    "☀️️ 날씨좋음": ("피크닉·야외·테라스", ["김밥", "샌드위치", "포케", "수제버거", "타코", "초밥", "피자", "파스타", "사케동", "텐동", "돈까스", "돌솥비빔밥"]),
+    "☀️ 날씨좋음": ("피크닉·야외·테라스", ["김밥", "샌드위치", "포케", "수제버거", "타코", "초밥", "피자", "파스타", "사케동", "텐동", "돈까스", "돌솥비빔밥"]),
     "☔ 흐림·비": ("따끈한 국물·면 요리", ["칼국수", "수제비", "김치찌개", "부대찌개", "일본라멘", "우동", "쌀국수", "짬뽕", "동태탕", "순두부찌개", "잔치국수"]),
     "😴 피곤·보양": ("든든한 보양 뚝배기", ["삼계탕", "갈비탕", "추어탕", "도가니탕", "설렁탕", "곰탕", "국밥", "뼈해장국", "백반", "보리밥정식"]),
     "🫠 입맛없음": ("산뜻·시원한 별미", ["막국수", "냉면", "소바", "포케", "비빔국수", "회덮밥", "돌솥비빔밥", "샌드위치", "간장게장백반", "쌈밥정식"]),
@@ -446,7 +447,6 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
                 cat_name = d.get("category_name", "")
                 addr = d.get("road_address_name") or d.get("address_name", "")
                 
-                # 특정 장소 및 카테고리 검증
                 if not is_valid_specialized_restaurant(menu_name, p_name, cat_name, address=addr):
                     continue
                 
@@ -641,7 +641,6 @@ with st.container(border=True):
             show_location_warning()
         else:
             region_warning_spot.empty()
-            # '죽' 메뉴는 속편한식사에서만 나오도록 일반 룰렛에서 제외
             selected_candidates = [f for f in DEFAULT_FOODS if f[0] != "죽"]
             spin_triggered = True
 
@@ -665,11 +664,14 @@ with st.container(border=True):
     for left_k, right_k in ROW_PAIRS:
         col_left, col_right = st.columns(2)
         with col_left:
-            desc_l, _ = MOOD_DATA[left_k]
+            # 안전한 딕셔너리 값 로드
+            mood_info_l = MOOD_DATA.get(left_k, ("추천 메뉴", []))
+            desc_l = mood_info_l[0]
             if st.button(f"{left_k} ({desc_l})", use_container_width=True, key=f"btn_{left_k}"):
                 selected_mood = left_k
         with col_right:
-            desc_r, _ = MOOD_DATA[right_k]
+            mood_info_r = MOOD_DATA.get(right_k, ("추천 메뉴", []))
+            desc_r = mood_info_r[0]
             if st.button(f"{right_k} ({desc_r})", use_container_width=True, key=f"btn_{right_k}"):
                 selected_mood = right_k
 
@@ -678,7 +680,8 @@ with st.container(border=True):
             show_location_warning()
         else:
             region_warning_spot.empty()
-            _, allowed_names = MOOD_DATA[selected_mood]
+            mood_tuple = MOOD_DATA.get(selected_mood, ("", []))
+            allowed_names = mood_tuple[1]
             filtered = [f for f in DEFAULT_FOODS if f[0] in allowed_names]
             selected_candidates = filtered if filtered else DEFAULT_FOODS
             spin_triggered = True
@@ -686,7 +689,7 @@ with st.container(border=True):
 card_spot = st.empty()
 detail_spot = st.empty()
 
-# --- 4. 룰렛 실행 및 고속 탐색 로직 ---
+# --- 4. 룰렛 실행 및 탐색 로직 ---
 if spin_triggered and selected_candidates:
     detail_spot.empty()
 
