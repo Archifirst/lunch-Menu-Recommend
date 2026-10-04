@@ -7,8 +7,19 @@ import re
 import folium
 from streamlit_folium import st_folium
 
-# 1. API Key 보안 처리
-KAKAO_REST_KEY = st.secrets.get("KAKAO_REST_KEY", "bb9c8bfabfc3d5a4c0dbdb3312d8ca30").strip()
+# 1. API Key 완전 보안 처리 (하드코딩 키 완전 제거)
+if "KAKAO_REST_KEY" not in st.secrets:
+    st.error(
+        """
+        ⚠️ **카카오 API 키가 설정되지 않았습니다.**
+        
+        - **로컬 실행**: `.streamlit/secrets.toml` 파일에 `KAKAO_REST_KEY = "내_카카오_REST_키"`를 추가해주세요.
+        - **Streamlit Cloud**: 앱 설정(Settings) -> **Secrets** 메뉴에 동일한 키를 등록해주세요.
+        """
+    )
+    st.stop()
+
+KAKAO_REST_KEY = st.secrets["KAKAO_REST_KEY"].strip()
 
 st.set_page_config(page_title="오늘 점심 뭐 먹지?", page_icon="🍱", layout="centered")
 
@@ -175,10 +186,10 @@ STRICT_SPECIALTY_NAME_RULES = {
     "뼈해장국": ["해장국", "감자탕", "뼈"],
     "초밥": ["스시", "초밥"],
     "김밥": ["김밥"],
-    "죽": ["죽"]  # 죽 전문점 상호 검증 보강
+    "죽": ["죽"]
 }
 
-# 기본 메뉴 목록 ('전복죽' -> '죽'으로 포괄화)
+# 기본 메뉴 목록
 DEFAULT_FOODS = [
     ("김치찌개", "🥘", "김치찌개 전문점"),
     ("된장찌개", "🍲", "된장찌개 백반"),
@@ -218,7 +229,7 @@ DEFAULT_FOODS = [
     ("잔치국수", "🍜", "국수 전문점"),
     ("비빔국수", "🌶️", "비빔국수 전문점"),
     ("소바", "🥢", "메밀소바 모밀 전문점"),
-    ("죽", "🥣", "죽 전문점"),  # 포괄적 죽 메뉴
+    ("죽", "🥣", "죽 전문점"),
     ("돈까스", "🍱", "돈까스 카츠 전문점"),
     ("초밥", "🍣", "스시 초밥 전문점"),
     ("일본라멘", "🍜", "일본라멘 전문점"),
@@ -248,7 +259,7 @@ DEFAULT_FOODS = [
     ("김밥", "🍙", "김밥 전문점")
 ]
 
-# 상황별 메뉴 목록 ('속편한식사'에만 '죽' 배치)
+# 상황별 메뉴 목록
 MOOD_DATA = {
     "🥳 기분좋음": ("양식·일식·특식", ["파스타", "피자", "수제버거", "초밥", "돈까스", "텐동", "스테이크덮밥", "타코", "사케동", "리조또", "팟타이", "나시고랭"]),
     "🤯 스트레스": ("화끈·얼큰·매콤", ["짬뽕", "마라탕", "떡볶이", "낙지볶음", "쭈꾸미볶음", "제육볶음", "닭갈비", "육개장", "비빔국수", "부대찌개", "김치찌개"]),
@@ -307,7 +318,6 @@ def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_na
         if not is_tonkatsu:
             return False
 
-    # 죽, 칼국수, 순대국 등 전문점 단어 검증
     if menu_name in STRICT_SPECIALTY_NAME_RULES:
         required_words = STRICT_SPECIALTY_NAME_RULES[menu_name]
         if not any(req in clean_name for req in required_words):
@@ -619,7 +629,7 @@ with st.container(border=True):
             show_location_warning()
         else:
             region_warning_spot.empty()
-            # 완전 랜덤 추첨 시에는 '죽' 메뉴를 명시적으로 제외 (속 편한 식사에서만 추천되도록)
+            # 완전 랜덤 추첨 시에는 '죽' 메뉴를 명시적으로 제외
             selected_candidates = [f for f in DEFAULT_FOODS if f[0] != "죽"]
             spin_triggered = True
 
