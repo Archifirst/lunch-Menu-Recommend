@@ -174,9 +174,11 @@ STRICT_SPECIALTY_NAME_RULES = {
     "순대국": ["순대", "순댓국"],
     "뼈해장국": ["해장국", "감자탕", "뼈"],
     "초밥": ["스시", "초밥"],
-    "김밥": ["김밥"]
+    "김밥": ["김밥"],
+    "죽": ["죽"]  # 죽 전문점 상호 검증 보강
 }
 
+# 기본 메뉴 목록 ('전복죽' -> '죽'으로 포괄화)
 DEFAULT_FOODS = [
     ("김치찌개", "🥘", "김치찌개 전문점"),
     ("된장찌개", "🍲", "된장찌개 백반"),
@@ -216,7 +218,7 @@ DEFAULT_FOODS = [
     ("잔치국수", "🍜", "국수 전문점"),
     ("비빔국수", "🌶️", "비빔국수 전문점"),
     ("소바", "🥢", "메밀소바 모밀 전문점"),
-    ("전복죽", "🥣", "전복죽 전문점"),
+    ("죽", "🥣", "죽 전문점"),  # 포괄적 죽 메뉴
     ("돈까스", "🍱", "돈까스 카츠 전문점"),
     ("초밥", "🍣", "스시 초밥 전문점"),
     ("일본라멘", "🍜", "일본라멘 전문점"),
@@ -246,6 +248,7 @@ DEFAULT_FOODS = [
     ("김밥", "🍙", "김밥 전문점")
 ]
 
+# 상황별 메뉴 목록 ('속편한식사'에만 '죽' 배치)
 MOOD_DATA = {
     "🥳 기분좋음": ("양식·일식·특식", ["파스타", "피자", "수제버거", "초밥", "돈까스", "텐동", "스테이크덮밥", "타코", "사케동", "리조또", "팟타이", "나시고랭"]),
     "🤯 스트레스": ("화끈·얼큰·매콤", ["짬뽕", "마라탕", "떡볶이", "낙지볶음", "쭈꾸미볶음", "제육볶음", "닭갈비", "육개장", "비빔국수", "부대찌개", "김치찌개"]),
@@ -253,7 +256,7 @@ MOOD_DATA = {
     "☔ 흐림·비": ("따끈한 국물·면 요리", ["칼국수", "수제비", "김치찌개", "부대찌개", "일본라멘", "우동", "쌀국수", "짬뽕", "동태탕", "순두부찌개", "잔치국수"]),
     "😴 피곤·보양": ("든든한 보양 뚝배기", ["삼계탕", "갈비탕", "추어탕", "도가니탕", "설렁탕", "곰탕", "순대국", "뼈해장국", "백반", "보리밥정식"]),
     "🫠 입맛없음": ("산뜻·시원한 별미", ["막국수", "냉면", "소바", "포케", "비빔국수", "회덮밥", "돌솥비빔밥", "샌드위치", "간장게장백반", "쌈밥정식"]),
-    "🤢 속편한식사": ("순한 국·가정식", ["전복죽", "순두부찌개", "콩나물국밥", "황태해장국", "보리밥정식", "된장찌개", "백반", "설렁탕", "청국장", "수제비"]),
+    "🤢 속편한식사": ("순한 국·가정식·죽", ["죽", "순두부찌개", "콩나물국밥", "황태해장국", "보리밥정식", "된장찌개", "백반", "설렁탕", "청국장", "수제비"]),
     "🍻 시원한 해장": ("속풀이 국물", ["황태해장국", "콩나물국밥", "뼈해장국", "선지해장국", "순대국", "동태탕", "육개장", "짬뽕", "쌀국수", "김치찌개"])
 }
 
@@ -304,6 +307,7 @@ def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_na
         if not is_tonkatsu:
             return False
 
+    # 죽, 칼국수, 순대국 등 전문점 단어 검증
     if menu_name in STRICT_SPECIALTY_NAME_RULES:
         required_words = STRICT_SPECIALTY_NAME_RULES[menu_name]
         if not any(req in clean_name for req in required_words):
@@ -354,6 +358,8 @@ def calculate_priority(place: dict, menu_name: str) -> float:
         score -= 2.0
     if menu_name == "초밥" and any(k in p_name for k in ["스시", "초밥"]):
         score -= 2.5
+    if menu_name == "죽" and "죽" in p_name:
+        score -= 2.0
     return score
 
 # --- 카카오 공식 API 통신 함수 ---
@@ -455,7 +461,7 @@ if qp.get("action") == "gps" and "lat" in qp and "lng" in qp:
             st.session_state.gps_coords = (lat_f, lng_f)
             detected_name = kakao_reverse_geocode(lat_f, lng_f)
             st.session_state.region_input_val = detected_name
-            st.session_state.saved_result = None  # 새 위치 감지 시 이전 결과 초기화
+            st.session_state.saved_result = None
             st.toast(f"현재 위치 감지: '{detected_name}'", icon="📍")
     except Exception:
         pass
@@ -477,11 +483,10 @@ with col_input:
         key="main_region_input",
         label_visibility="collapsed"
     )
-    # 입력값이 달라졌거나 비워졌을 때 이전 결과 및 좌표를 즉시 초기화
     if region != st.session_state.region_input_val:
         st.session_state.region_input_val = region
         st.session_state.gps_coords = None
-        st.session_state.saved_result = None  # 이전 당첨 결과 즉각 제거
+        st.session_state.saved_result = None
 
     if not region.strip() and not st.session_state.gps_coords:
         st.session_state.saved_result = None
@@ -584,7 +589,7 @@ def show_location_warning():
         <div style="display: flex; justify-content: center; align-items: center; gap: 8px;
                     width: 100%; height: 44px; margin: 4px 0 10px 0;
                     background-color: #FFFDF7; border: 1.5px solid #F7D488; border-radius: 12px;">
-            <span style="font-size: 16px;">⚠️️</span>
+            <span style="font-size: 16px;">⚠️</span>
             <span style="color: #6C4D0A; font-size: 13.5px; font-weight: 700;">
                 위치를 입력하거나 '내 위치 찾기'를 눌러주세요!
             </span>
@@ -602,7 +607,7 @@ with st.container(border=True):
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
             <div>
                 <div style="font-size: 15.5px; font-weight: 800; color: #2E1C10;">🎲 완전 랜덤 룰렛</div>
-                <div style="font-size: 12.5px; color: #8C827A; margin-top: 2px;">66종의 검증된 점심 밥집 메뉴 중에서 무작위 추천!</div>
+                <div style="font-size: 12.5px; color: #8C827A; margin-top: 2px;">검증된 점심 밥집 메뉴 중에서 무작위 추천!</div>
             </div>
             <span style="font-size: 22px;">🎰</span>
         </div>
@@ -614,7 +619,8 @@ with st.container(border=True):
             show_location_warning()
         else:
             region_warning_spot.empty()
-            selected_candidates = DEFAULT_FOODS.copy()
+            # 완전 랜덤 추첨 시에는 '죽' 메뉴를 명시적으로 제외 (속 편한 식사에서만 추천되도록)
+            selected_candidates = [f for f in DEFAULT_FOODS if f[0] != "죽"]
             spin_triggered = True
 
 st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
@@ -721,7 +727,7 @@ if spin_triggered and selected_candidates:
         else:
             region_warning_spot.warning(f"⚠️ 설정하신 반경 내에 순수 점심 식당을 찾지 못했습니다. 탐색 반경을 넓혀보세요!")
 
-# --- 5. 결과 화면 출력 (위치 정보가 유효할 때만 노출) ---
+# --- 5. 결과 화면 출력 ---
 has_valid_location = bool(region.strip() or st.session_state.gps_coords)
 res = st.session_state.saved_result
 
