@@ -59,7 +59,7 @@ st.markdown(
         margin-bottom: 14px !important;
     }
 
-    /* 일반 옵션 버튼 스타일 (기본 높이 40px) */
+    /* 기본 옵션 버튼 스타일 (기본 높이 40px) */
     div.stButton > button {
         height: 40px !important;
         border-radius: 11px !important;
@@ -94,12 +94,12 @@ st.markdown(
         transform: translateY(-1px);
     }
 
-    /* 컬럼 좌우 간격 통일 */
+    /* 컬럼 좌우 간격 */
     div[data-testid="stColumn"] {
         padding: 0 3px !important;
     }
 
-    /* 음식 종류 세로 버튼 간격 미세 조정 */
+    /* 음식 종류 세로 버튼 간격 */
     div:has(> div.stButton > button[key="cbtn_korean"]) {
         margin-bottom: -6px !important;
     }
@@ -107,7 +107,7 @@ st.markdown(
         margin-bottom: -6px !important;
     }
 
-    /* 음식 종류 '모두' 버튼 상단 간격 확보 및 하단 잉여 마진 제거 */
+    /* 음식 종류 '모두' 버튼 간격 제어 */
     div.stButton:has(> button[key="cbtn_all"]) {
         margin-top: 6px !important;
         margin-bottom: 0px !important;
@@ -117,7 +117,7 @@ st.markdown(
     }
 
     /* ============================================================
-       [메인 룰렛 버튼: 박스 2배(84px) & 텍스트 1.5배(24px, 900 볼드)]
+       [메인 룰렛 버튼: 마커(#spin-marker) 인접 요소를 이용한 강제 타깃팅]
        ============================================================ */
     @keyframes roulettePulse {
         0% {
@@ -134,16 +134,15 @@ st.markdown(
         }
     }
 
-    /* 룰렛 감싸는 래퍼: 상하 간격 16px 균일화 */
-    .hero-spin-wrapper {
-        margin-top: 16px !important;
-        margin-bottom: 16px !important;
+    /* 마커 태그는 공간을 차지하지 않음 */
+    #spin-marker {
+        display: none !important;
     }
 
-    /* 전역 40px !important를 완벽하게 덮어쓰는 초고우선순위 선택자 */
-    .hero-spin-wrapper div.stButton button,
-    .hero-spin-wrapper button,
-    .hero-spin-wrapper div[data-testid="stBaseButton-primary"] button {
+    /* 마커를 포함한 요소 바로 다음의 stButton 또는 stElementContainer 타깃 */
+    div:has(> #spin-marker) + div.stElementContainer button,
+    div:has(> #spin-marker) + div.stButton button,
+    div:has(> #spin-marker) ~ div[data-testid="stElementContainer"] button {
         height: 84px !important;
         min-height: 84px !important;
         background: linear-gradient(135deg, #FF7B47 0%, #E85A2A 50%, #D84A1A 100%) !important;
@@ -156,12 +155,14 @@ st.markdown(
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
+        margin-top: 16px !important;
+        margin-bottom: 16px !important;
     }
 
-    /* 텍스트 1.5배(24px) 및 볼드(900) 강제 적용 */
-    .hero-spin-wrapper button p,
-    .hero-spin-wrapper button span,
-    .hero-spin-wrapper button div {
+    /* 버튼 내부 텍스트 폰트 강제 확대 */
+    div:has(> #spin-marker) + div.stElementContainer button *,
+    div:has(> #spin-marker) + div.stButton button *,
+    div:has(> #spin-marker) ~ div[data-testid="stElementContainer"] button * {
         font-size: 24px !important;
         font-weight: 900 !important;
         letter-spacing: -0.5px !important;
@@ -169,8 +170,9 @@ st.markdown(
         line-height: 1.2 !important;
     }
 
-    .hero-spin-wrapper div.stButton button:hover,
-    .hero-spin-wrapper button:hover {
+    div:has(> #spin-marker) + div.stElementContainer button:hover,
+    div:has(> #spin-marker) + div.stButton button:hover,
+    div:has(> #spin-marker) ~ div[data-testid="stElementContainer"] button:hover {
         background: linear-gradient(135deg, #FF662A 0%, #D64716 100%) !important;
         transform: scale(1.02) !important;
     }
@@ -223,7 +225,7 @@ if "gps_coords" not in st.session_state:
 if "region_input_val" not in st.session_state:
     st.session_state.region_input_val = ""
 
-# --- 정밀 필터링 키워드 정의 ---
+# --- 필터링 키워드 정의 ---
 EXCLUDED_CATEGORIES = [
     "술집", "주점", "호프", "포차", "이자카야", "바(BAR)", "요리주점", "와인바",
     "칵테일바", "민속주점", "맥주", "룸살롱", "단란주점", "유흥주점", "라이브카페", 
@@ -312,7 +314,7 @@ DEFAULT_FOODS = [
     ("갈비탕", "🍖", "갈비탕 전문점", "한식", "mid"),
     ("삼계탕", "🍗", "삼계탕 전문점", "한식", "mid"),
     ("추어탕", "🍲", "추어탕 전문점", "한식", "mid"),
-    ("육개장", "🌶️", "전통 육개장 전문점", "한식", "low"),
+    ("육개장", "🌶️️", "전통 육개장 전문점", "한식", "low"),
     ("콩나물국밥", "🌱", "콩나물국밥 전문점", "한식", "low"),
     ("황태해장국", "🐟", "황태해장국 전문점", "한식", "low"),
     ("선지해장국", "🥘", "선지해장국 전문점", "한식", "low"),
@@ -918,12 +920,9 @@ def show_cuisine_warning():
         unsafe_allow_html=True
     )
 
-# --- 6. 메인 룰렛 버튼 (고유 래퍼 기반 박스 2배 & 텍스트 1.5배, 상하 간격 16px 균일) ---
-hero_container = st.container()
-with hero_container:
-    st.markdown('<div class="hero-spin-wrapper">', unsafe_allow_html=True)
-    spin_clicked = st.button("🎲 오늘 점심 랜덤 룰렛 돌리기!", use_container_width=True, type="primary", key="btn_trigger_random")
-    st.markdown('</div>', unsafe_allow_html=True)
+# --- 6. 메인 룰렛 버튼 (마커를 심어 100% 확실하게 타깃) ---
+st.markdown('<span id="spin-marker"></span>', unsafe_allow_html=True)
+spin_clicked = st.button("🎲 오늘 점심 랜덤 룰렛 돌리기!", use_container_width=True, type="primary", key="btn_trigger_random")
 
 if spin_clicked:
     if not region.strip() and not st.session_state.gps_coords:
