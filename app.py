@@ -18,9 +18,11 @@ st.markdown(
         background-color: #FAF8F5;
         font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo", sans-serif;
     }
+    
+    /* 상단바와 타이틀 사이 간격을 시원하고 넉넉하게 확보 */
     .block-container {
-        padding-top: 2.2rem !important;
-        padding-bottom: 3.2rem !important;
+        padding-top: 4.0rem !important;
+        padding-bottom: 3.6rem !important;
         max-width: 620px !important;
     }
 
@@ -59,14 +61,14 @@ st.markdown(
         margin-bottom: 14px !important;
     }
 
-    /* 일반 옵션 버튼 스타일 (기본 높이 40px) */
-    div.stButton > button {
+    /* [중요] 룰렛 버튼을 제외한 '일반 옵션 버튼'에만 40px 적용 */
+    div.stButton > button:not([key="btn_trigger_random"]) {
         height: 40px !important;
         border-radius: 11px !important;
         transition: all 0.15s ease !important;
         white-space: nowrap !important;
     }
-    div.stButton > button[kind="primary"] {
+    div.stButton > button:not([key="btn_trigger_random"])[kind="primary"] {
         background-color: #E86A3E !important;
         color: white !important;
         border: none !important;
@@ -74,11 +76,11 @@ st.markdown(
         font-weight: 700 !important;
         box-shadow: 0 2px 7px rgba(232, 106, 62, 0.22) !important;
     }
-    div.stButton > button[kind="primary"]:hover {
+    div.stButton > button:not([key="btn_trigger_random"])[kind="primary"]:hover {
         background-color: #D65A2F !important;
         transform: translateY(-1px);
     }
-    div.stButton > button[kind="secondary"] {
+    div.stButton > button:not([key="btn_trigger_random"])[kind="secondary"] {
         border: 1.2px solid #EDE4DC !important;
         background-color: #FFFFFF !important;
         color: #3E3228 !important;
@@ -87,19 +89,19 @@ st.markdown(
         padding: 6px 8px !important;
         box-shadow: 0 1px 4px rgba(0,0,0,0.02) !important;
     }
-    div.stButton > button[kind="secondary"]:hover {
+    div.stButton > button:not([key="btn_trigger_random"])[kind="secondary"]:hover {
         border-color: #E86A3E !important;
         color: #E86A3E !important;
         background-color: #FFFDF9 !important;
         transform: translateY(-1px);
     }
 
-    /* 컬럼 좌우 간격 */
+    /* 컬럼 좌우 간격 통일 */
     div[data-testid="stColumn"] {
         padding: 0 3px !important;
     }
 
-    /* 음식 종류 세로 버튼 간격 */
+    /* 음식 종류 세로 버튼 간격 미세 조정 */
     div:has(> div.stButton > button[key="cbtn_korean"]) {
         margin-bottom: -6px !important;
     }
@@ -107,7 +109,7 @@ st.markdown(
         margin-bottom: -6px !important;
     }
 
-    /* 음식 종류 '모두' 버튼 간격 제어 */
+    /* 음식 종류 '모두' 버튼 상단 간격 확보 및 하단 잉여 마진 제거 */
     div.stButton:has(> button[key="cbtn_all"]) {
         margin-top: 6px !important;
         margin-bottom: 0px !important;
@@ -116,7 +118,9 @@ st.markdown(
         margin-bottom: 0px !important;
     }
 
-    /* 룰렛 펄스 애니메이션 */
+    /* ============================================================
+       [메인 룰렛 버튼: 박스 2배(84px) & 텍스트 1.5배(24px, 900 볼드)]
+       ============================================================ */
     @keyframes roulettePulse {
         0% {
             transform: scale(1);
@@ -130,6 +134,43 @@ st.markdown(
             transform: scale(1);
             box-shadow: 0 6px 20px rgba(232, 106, 62, 0.45), 0 0 0 0 rgba(232, 106, 62, 0);
         }
+    }
+
+    /* 룰렛 버튼 컨테이너: 상하 16px 균일 마진 */
+    div.stButton:has(> button[key="btn_trigger_random"]) {
+        margin-top: 16px !important;
+        margin-bottom: 16px !important;
+    }
+
+    /* 룰렛 버튼 자체 스타일 */
+    div.stButton > button[key="btn_trigger_random"] {
+        height: 84px !important;
+        min-height: 84px !important;
+        background: linear-gradient(135deg, #FF7B47 0%, #E85A2A 50%, #D84A1A 100%) !important;
+        color: #FFFFFF !important;
+        border: none !important;
+        border-radius: 20px !important;
+        animation: roulettePulse 2.0s infinite ease-in-out !important;
+        cursor: pointer !important;
+        box-shadow: 0 6px 20px rgba(232, 106, 62, 0.45) !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+
+    /* 룰렛 버튼 내부 텍스트 스타일 */
+    div.stButton > button[key="btn_trigger_random"] p,
+    div.stButton > button[key="btn_trigger_random"] span {
+        font-size: 24px !important;
+        font-weight: 900 !important;
+        letter-spacing: -0.5px !important;
+        color: #FFFFFF !important;
+        line-height: 1.2 !important;
+    }
+
+    div.stButton > button[key="btn_trigger_random"]:hover {
+        background: linear-gradient(135deg, #FF662A 0%, #D64716 100%) !important;
+        transform: scale(1.02) !important;
     }
 
     .warning-box {
@@ -179,15 +220,9 @@ if "gps_coords" not in st.session_state:
     st.session_state.gps_coords = None
 if "region_input_val" not in st.session_state:
     st.session_state.region_input_val = ""
-if "spin_clicked_from_html" not in st.session_state:
-    st.session_state.spin_clicked_from_html = False
 
-# --- 브라우저 GPS 및 룰렛 클릭 수신 처리 ---
+# --- 브라우저 GPS 수신 처리 ---
 qp = st.query_params
-if qp.get("action") == "spin":
-    st.session_state.spin_clicked_from_html = True
-    st.query_params.clear()
-
 if qp.get("action") == "gps" and "lat" in qp and "lng" in qp:
     try:
         lat_f = float(qp.get("lat"))
@@ -202,7 +237,7 @@ if qp.get("action") == "gps" and "lat" in qp and "lng" in qp:
         pass
     st.query_params.clear()
 
-# --- 정밀 필터링 키워드 정의 ---
+# --- 필터링 키워드 정의 ---
 EXCLUDED_CATEGORIES = [
     "술집", "주점", "호프", "포차", "이자카야", "바(BAR)", "요리주점", "와인바",
     "칵테일바", "민속주점", "맥주", "룸살롱", "단란주점", "유흥주점", "라이브카페", 
@@ -613,9 +648,9 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
         pass
     return []
 
-# --- 화면 상단 제목 및 설명 ---
-st.markdown("<h1 style='color: #2E1C10; font-size: 26px; font-weight: 800; margin: 0 0 4px 0;'>🍱 오늘 점심 뭐 먹지?</h1>", unsafe_allow_html=True)
-st.markdown("<div style='color: #8C827A; font-size: 13px; margin-bottom: 14px;'>고민되는 점심 메뉴와 검증된 주변 밥집을 랜덤으로 골라드립니다.</div>", unsafe_allow_html=True)
+# --- 화면 상단 제목 및 설명 (여백을 넉넉하고 보기 좋게 배치) ---
+st.markdown("<h1 style='color: #2E1C10; font-size: 28px; font-weight: 800; margin: 0 0 10px 0; letter-spacing: -0.6px;'>🍱 오늘 점심 뭐 먹지?</h1>", unsafe_allow_html=True)
+st.markdown("<div style='color: #8C827A; font-size: 13.5px; margin-bottom: 22px; line-height: 1.5;'>고민되는 점심 메뉴와 검증된 주변 밥집을 랜덤으로 골라드립니다.</div>", unsafe_allow_html=True)
 
 if not has_key:
     st.warning("⚠️ **API 키 설정 필요**: `.streamlit/secrets.toml` 또는 Cloud Secrets에 `KAKAO_REST_KEY`를 설정해주세요.")
@@ -665,7 +700,7 @@ with st.container(border=True):
             unsafe_allow_html=True
         )
 
-# --- 2. 탐색 반경 (개별 박스) ---
+# --- 2. 탐색 반경 (개별 박스: 균등 4칸 배치) ---
 clean_region = region.strip()
 is_admin_region = False
 
@@ -681,7 +716,7 @@ if should_show_radius:
     with st.container(border=True):
         st.markdown("<div class='section-title'>📏 탐색 반경</div>", unsafe_allow_html=True)
         
-        c1, c2, c3, c4 = st.columns([1.0, 1.0, 1.0, 1.2], vertical_alignment="center")
+        c1, c2, c3, c4 = st.columns(4, vertical_alignment="center")
         current_preset = st.session_state.selected_radius_preset
 
         with c1:
@@ -737,7 +772,7 @@ else:
 
 # --- 3. 음식 종류 선택 (개별 박스: 하단 내부 여백 완벽 밀착) ---
 with st.container(border=True):
-    st.markdown("<div class='section-title'>🍽️️ 음식 종류</div>", unsafe_allow_html=True)
+    st.markdown("<div class='section-title'>🍽️ 음식 종류</div>", unsafe_allow_html=True)
 
     cu1, cu2, cu3, cu4 = st.columns(4)
     current_cuisine = st.session_state.selected_cuisine
@@ -881,40 +916,8 @@ def show_cuisine_warning():
         unsafe_allow_html=True
     )
 
-# --- 6. 메인 룰렛 버튼 (순수 HTML 인라인 버튼 - 100% 반영) ---
-st.markdown(
-    """
-    <div style="margin: 16px 0;">
-        <button onclick="
-            const url = new URL(window.location.href);
-            url.searchParams.set('action', 'spin');
-            window.location.href = url.href;
-        " style="
-            width: 100%;
-            height: 84px;
-            font-size: 24px;
-            font-weight: 900;
-            letter-spacing: -0.5px;
-            background: linear-gradient(135deg, #FF7B47 0%, #E85A2A 50%, #D84A1A 100%);
-            color: #FFFFFF;
-            border: none;
-            border-radius: 20px;
-            cursor: pointer;
-            box-shadow: 0 6px 20px rgba(232, 106, 62, 0.45);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            animation: roulettePulse 2.0s infinite ease-in-out;
-        ">
-            🎲 오늘 점심 랜덤 룰렛 돌리기!
-        </button>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-
-if st.session_state.spin_clicked_from_html:
-    st.session_state.spin_clicked_from_html = False
+# --- 6. 메인 룰렛 버튼 (Streamlit 네이티브 버튼 복원 + 84px / 24px Ultra Bold) ---
+if st.button("🎲 오늘 점심 랜덤 룰렛 돌리기!", use_container_width=True, type="primary", key="btn_trigger_random"):
     if not region.strip() and not st.session_state.gps_coords:
         show_location_warning()
     elif not st.session_state.selected_cuisine:
