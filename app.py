@@ -99,7 +99,7 @@ st.markdown(
         padding: 0 3px !important;
     }
 
-    /* 음식 종류 버튼 간격 미세 조정 */
+    /* 음식 종류 세로 버튼 간격 미세 조정 */
     div:has(> div.stButton > button[key="cbtn_korean"]) {
         margin-bottom: -6px !important;
     }
@@ -107,7 +107,7 @@ st.markdown(
         margin-bottom: -6px !important;
     }
 
-    /* 음식 종류 '모두' 버튼 상·하단 마진 제어로 박스 하단 내부 간격 통일 */
+    /* 음식 종류 '모두' 버튼 상단 간격 확보 및 하단 잉여 마진 제거 */
     div.stButton:has(> button[key="cbtn_all"]) {
         margin-top: 6px !important;
         margin-bottom: 0px !important;
@@ -134,16 +134,20 @@ st.markdown(
         }
     }
 
-    /* 상하 간격을 균일하게 16px로 제어 */
+    /* 룰렛 버튼 상하 간격 16px 균일화 */
     .hero-spin-box {
         margin-top: 16px !important;
         margin-bottom: 16px !important;
     }
 
-    .hero-spin-box div.stButton > button {
-        height: 84px !important;                 /* 기본(40px) 대비 2배 이상 */
-        font-size: 24px !important;               /* 일반 폰트(14px) 대비 약 1.5~1.7배 */
-        font-weight: 900 !important;              /* 볼드 적용 */
+    /* 기본 40px 스타일을 덮어쓰기 위한 최고 우선순위 타깃 선택자 */
+    button[key="btn_trigger_random"],
+    div:has(> button[key="btn_trigger_random"]) > button,
+    .hero-spin-box button {
+        height: 84px !important;
+        min-height: 84px !important;
+        font-size: 24px !important;
+        font-weight: 900 !important;
         letter-spacing: -0.5px !important;
         background: linear-gradient(135deg, #FF7B47 0%, #E85A2A 50%, #D84A1A 100%) !important;
         color: #FFFFFF !important;
@@ -156,7 +160,19 @@ st.markdown(
         justify-content: center !important;
         box-shadow: 0 6px 20px rgba(232, 106, 62, 0.45) !important;
     }
-    .hero-spin-box div.stButton > button:hover {
+
+    /* 텍스트 요소(p, span) 폰트 크기 및 굵기 강제 적용 */
+    button[key="btn_trigger_random"] *,
+    div:has(> button[key="btn_trigger_random"]) > button *,
+    .hero-spin-box button * {
+        font-size: 24px !important;
+        font-weight: 900 !important;
+        color: #FFFFFF !important;
+    }
+
+    button[key="btn_trigger_random"]:hover,
+    div:has(> button[key="btn_trigger_random"]) > button:hover,
+    .hero-spin-box button:hover {
         background: linear-gradient(135deg, #FF662A 0%, #D64716 100%) !important;
         transform: scale(1.02) !important;
     }
@@ -209,7 +225,7 @@ if "gps_coords" not in st.session_state:
 if "region_input_val" not in st.session_state:
     st.session_state.region_input_val = ""
 
-# 필터링 키워드 정의
+# --- 정밀 필터링 키워드 정의 ---
 EXCLUDED_CATEGORIES = [
     "술집", "주점", "호프", "포차", "이자카야", "바(BAR)", "요리주점", "와인바",
     "칵테일바", "민속주점", "맥주", "룸살롱", "단란주점", "유흥주점", "라이브카페", 
