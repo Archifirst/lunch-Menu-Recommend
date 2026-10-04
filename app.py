@@ -833,7 +833,7 @@ if has_valid_location and res is not None and res.get("places"):
                     )
 
         st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
-        st.markdown("<h3 style='margin-bottom: 2px; font-size: 16px; font-weight: 800; color: #2E1C10;'>🗺 식당 위치 지도</h3>", unsafe_allow_html=True)
+        st.markdown("<h3 style='margin-bottom: 2px; font-size: 16px; font-weight: 800; color: #2E1C10;'>🗺️ 식당 위치 지도</h3>", unsafe_allow_html=True)
         st.caption("🔴 빨간 핀: 1픽 매장 / 🔵 파란 핀: 주변 후보")
 
         m = folium.Map(location=[top_pick["lat"], top_pick["lng"]], zoom_start=15, control_scale=True)
