@@ -178,7 +178,6 @@ KNOWN_FRANCHISE_BRANDS = [
 
 TONKATSU_NAME_INDICATORS = ["돈까스", "돈가스", "카츠", "카쯔", "가츠", "돈카츠", "포크커틀릿"]
 
-# 순수 단품 전문점 상호 검증 규칙 (육개장 전문점 추가)
 STRICT_SPECIALTY_NAME_RULES = {
     "칼국수": ["칼국수"],
     "막국수": ["막국수"],
@@ -191,7 +190,6 @@ STRICT_SPECIALTY_NAME_RULES = {
     "육개장": ["육개장", "육대장", "혜장국"]
 }
 
-# 기본 메뉴 목록 ('육개장' 검색어 정밀화)
 DEFAULT_FOODS = [
     ("김치찌개", "🥘", "김치찌개 전문점"),
     ("된장찌개", "🍲", "된장찌개 백반"),
@@ -261,7 +259,6 @@ DEFAULT_FOODS = [
     ("김밥", "🍙", "김밥 전문점")
 ]
 
-# 상황별 메뉴 목록
 MOOD_DATA = {
     "🥳 기분좋음": ("양식·일식·특식", ["파스타", "피자", "수제버거", "초밥", "돈까스", "텐동", "스테이크덮밥", "타코", "사케동", "리조또", "팟타이", "나시고랭"]),
     "🤯 스트레스": ("화끈·얼큰·매콤", ["짬뽕", "마라탕", "떡볶이", "낙지볶음", "쭈꾸미볶음", "제육볶음", "닭갈비", "육개장", "비빔국수", "부대찌개", "김치찌개"]),
@@ -280,24 +277,20 @@ ROW_PAIRS = [
     ("🤢 속편한식사", "🍻 시원한 해장")
 ]
 
-# --- 식당 검증 엔진 ---
+# --- 식당 텍스트 필터링 엔진 ---
 def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_name: str) -> bool:
     clean_name = place_name.replace(" ", "").upper()
     cat_full = category_name.replace(" ", "")
 
-    # 1. 카테고리 전체 경로 검사
     if any(ex in cat_full for ex in EXCLUDED_CATEGORIES):
         return False
-    # 2. 상호명 키워드 검사
     if any(bad in clean_name for bad in [k.upper() for k in EXCLUDED_NAME_KEYWORDS]):
         return False
-    # 3. 전집 검사
     if any(jeon in clean_name for jeon in JEON_KEYWORDS):
         return False
     if any(c in cat_full for c in ["전,빈대떡", "빈대떡"]):
         return False
 
-    # 4. 고깃집 배제
     if any(non in cat_full for non in NON_LUNCH_CATEGORIES):
         if not (menu_name == "닭갈비" and "닭요리" in cat_full):
             return False
@@ -308,34 +301,29 @@ def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_na
         if any(bad in clean_name for bad in [k.upper() for k in MEAT_SHOP_KEYWORDS]):
             return False
 
-    # 5. 분식 체인 검사
     if menu_name not in ["김밥", "떡볶이"]:
         if any(brand in clean_name for brand in MULTI_MENU_FRANCHISES):
             return False
         if "분식" in cat_full and not any(k in cat_full for k in ["일식", "양식", "한식", "중식", "아시아음식"]):
             return False
 
-    # 6. 초밥/회 검사
     if menu_name == "초밥":
         if any(fish in clean_name for fish in EVENING_RAW_FISH_KEYWORDS):
             return False
         if "회" in cat_full and not any(k in clean_name for k in ["스시", "초밥"]):
             return False
 
-    # 7. 돈까스 검사
     if menu_name == "돈까스":
         is_tonkatsu = any(k in clean_name for k in TONKATSU_NAME_INDICATORS) or any(c in cat_full for c in ["돈가스", "돈까스"])
         if not is_tonkatsu:
             return False
 
-    # 8. 잔치국수 전용 베트남/아시안 쌀국수 엄격 차단 필터
     if menu_name == "잔치국수":
         if any(asian in cat_full for asian in ["아시아음식", "베트남", "태국", "동남아"]):
             return False
         if any(pho in clean_name for pho in VIETNAMESE_NOODLE_KEYWORDS):
             return False
 
-    # 9. 단품 전문점 상호 규칙 검사 (육개장, 국밥, 칼국수 등)
     if menu_name in STRICT_SPECIALTY_NAME_RULES:
         required_words = STRICT_SPECIALTY_NAME_RULES[menu_name]
         if not any(req in clean_name for req in required_words):
@@ -343,53 +331,91 @@ def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_na
 
     return True
 
-def quick_verify_lunch_hour(place_id: str) -> bool:
-    """영업시간 데이터를 통해 점심 장사를 하지 않는 야간 술집을 강력 필터링"""
-    if not place_id:
-        return True
-    url = f"https://place.map.kakao.com/main/v/{place_id}"
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        "Referer": "https://map.kakao.com/"
-    }
+# --- [네이버 지도 교차 검증] 14시 이후 오픈 식당 엄격 차단 엔진 ---
+def verify_naver_lunch_hour(place_name: str, address: str) -> bool:
+    """네이버 플레이스 모바일 검색을 호출해 오픈 시간이 14:00 이후인 식당을 100% 탈락시킴"""
     try:
-        res = requests.get(url, headers=headers, timeout=0.8)
+        clean_pname = place_name.split()[0]
+        # 검색 정확도를 위해 시/구/동 일부 주소 결합
+        addr_chunk = " ".join(address.split()[:2]) if address else ""
+        query = f"{addr_chunk} {clean_pname}".strip()
+        
+        url = "https://m.map.naver.com/search2/searchMore.naver"
+        params = {
+            "query": query,
+            "page": 1,
+            "displayCount": 2,
+            "type": "SITE",
+            "siteSort": "1"
+        }
+        headers = {
+            "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1",
+            "Referer": "https://m.map.naver.com/"
+        }
+        res = requests.get(url, params=params, headers=headers, timeout=1.2)
         if res.status_code != 200:
             return True
+            
         data = res.json()
-        period_list = data.get("basicInfo", {}).get("openHour", {}).get("periodList", [])
-        if not period_list:
+        site_list = data.get("result", {}).get("site", {}).get("list", [])
+        if not site_list:
             return True
             
-        has_time_data = False
-        is_lunch_available = False
+        target = site_list[0]
+        biz_hour_text = target.get("bizhour", "") or target.get("context", "")
         
-        for period in period_list:
-            for t in period.get("timeList", []):
-                time_se = t.get("timeSE", "")
-                times = re.findall(r"(\d{1,2}):(\d{2})", time_se)
-                if len(times) >= 2:
-                    has_time_data = True
-                    start_h = int(times[0][0]) + int(times[0][1]) / 60.0
-                    end_h = int(times[1][0]) + int(times[1][1]) / 60.0
-                    if end_h < start_h:
-                        end_h += 24.0
-                    
-                    if start_h >= 14.5:
-                        return False
-                    
-                    if start_h <= 12.5 and end_h >= 13.0:
-                        is_lunch_available = True
-                        break
-            if is_lunch_available:
-                break
-                
-        if has_time_data and not is_lunch_available:
-            return False
+        if biz_hour_text:
+            # 예: "16:30에 영업 시작", "17:00 ~ 02:00", "오후 5시 오픈" 등 탐지
+            time_matches = re.findall(r"(\d{1,2}):(\d{2})", biz_hour_text)
+            if time_matches:
+                start_h = int(time_matches[0][0]) + int(time_matches[0][1]) / 60.0
+                if start_h >= 14.0:
+                    return False
             
+            # 한글 표기 분석 (예: 오후 4시, 17시 등)
+            pm_matches = re.findall(r"(?:오후\s*|밤\s*)(\d{1,2})시", biz_hour_text)
+            if pm_matches:
+                h = int(pm_matches[0])
+                if h < 12:
+                    h += 12
+                if h >= 14:
+                    return False
         return True
     except Exception:
         return True
+
+def is_valid_lunch_time_cross_check(place_id: str, place_name: str, address: str) -> bool:
+    """카카오 1차 검증 + 네이버 지도 교차 검증을 통해 14시 이후 오픈 매장을 철저히 배제"""
+    # 1. 카카오맵 상세 정보 1차 확인
+    if place_id:
+        url = f"https://place.map.kakao.com/main/v/{place_id}"
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Referer": "https://map.kakao.com/"
+        }
+        try:
+            res = requests.get(url, headers=headers, timeout=0.8)
+            if res.status_code == 200:
+                data = res.json()
+                period_list = data.get("basicInfo", {}).get("openHour", {}).get("periodList", [])
+                if period_list:
+                    for period in period_list:
+                        for t in period.get("timeList", []):
+                            time_se = t.get("timeSE", "")
+                            times = re.findall(r"(\d{1,2}):(\d{2})", time_se)
+                            if len(times) >= 2:
+                                start_h = int(times[0][0]) + int(times[0][1]) / 60.0
+                                # 14시 이후 오픈(14.0 이상)인 곳은 무조건 탈락
+                                if start_h >= 14.0:
+                                    return False
+        except Exception:
+            pass
+
+    # 2. [네이버 지도 교차 검증] 네이버 플레이스를 통한 2차 검증
+    if not verify_naver_lunch_hour(place_name, address):
+        return False
+
+    return True
 
 def calculate_priority(place: dict, menu_name: str) -> float:
     score = place["dist"]
@@ -498,11 +524,12 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
             
             candidates.sort(key=lambda x: x["priority_score"])
             
-            # 상위 후보군 순차 검증
+            # 14시 이후 오픈 식당 네이버 교차 검증 적용 (상위 5곳 검사)
             if candidates:
                 valid_top = None
-                for i in range(min(4, len(candidates))):
-                    if quick_verify_lunch_hour(candidates[i]["id"]):
+                for i in range(min(5, len(candidates))):
+                    cand = candidates[i]
+                    if is_valid_lunch_time_cross_check(cand["id"], cand["name"], cand["address"]):
                         valid_top = candidates.pop(i)
                         break
                 if valid_top:
@@ -746,7 +773,7 @@ if spin_triggered and selected_candidates:
         shuffled = selected_candidates.copy()
         random.shuffle(shuffled)
 
-        with st.spinner("주변 점심 전문점을 엄선하는 중..."):
+        with st.spinner("주변 점심 전문점을 엄선하는 중... (네이버 교차 검증 중)"):
             for m_name, m_emoji, m_kw in shuffled[:5]:
                 found = kakao_search_places(c_lat, c_lng, m_name, m_kw, radius_km=radius_km)
                 if found:
