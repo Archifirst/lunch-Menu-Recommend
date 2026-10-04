@@ -18,27 +18,50 @@ st.markdown(
         font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo", sans-serif;
     }
     .block-container {
-        padding-top: 3.0rem !important;
+        padding-top: 2.8rem !important;
         padding-bottom: 2.8rem !important;
+        max-width: 680px !important;
     }
+
+    /* 통일된 섹션 헤더 스타일 */
+    .section-title {
+        font-size: 14px;
+        font-weight: 700;
+        color: #3E3228;
+        margin-top: 20px;
+        margin-bottom: 8px;
+        letter-spacing: -0.3px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .section-title:first-of-type {
+        margin-top: 4px;
+    }
+
+    /* 입력창 디자인 */
     div[data-baseweb="input"] {
         border-radius: 12px !important;
         border: 1.5px solid #E6DFD5 !important;
         background-color: #FFFFFF !important;
-        height: 40px !important;
+        height: 42px !important;
     }
     div[data-baseweb="input"]:focus-within {
         border-color: #E86A3E !important;
         box-shadow: 0 0 0 2px rgba(232, 106, 62, 0.15) !important;
     }
+
+    /* 부드러운 애니메이션 */
     @keyframes smoothSlideDown {
-        0% { opacity: 0; transform: translateY(-8px) scale(0.99); }
+        0% { opacity: 0; transform: translateY(-6px) scale(0.99); }
         100% { opacity: 1; transform: translateY(0) scale(1); }
     }
     .radius-wrapper, .cuisine-wrapper {
         animation: smoothSlideDown 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         transform-origin: top center;
     }
+
+    /* 룰렛 방식 전체 묶음 박스 */
     div[data-testid="stVerticalBlockBorderWrapper"] {
         border-radius: 18px !important;
         border: 1.8px solid #EAE3DB !important;
@@ -50,33 +73,34 @@ st.markdown(
     div[data-testid="stVerticalBlockBorderWrapper"]:hover {
         border-color: #F0A284 !important;
     }
+
+    /* 버튼 스타일 통일 (높이 42px) */
+    div.stButton > button {
+        height: 42px !important;
+        border-radius: 12px !important;
+        transition: all 0.15s ease !important;
+        white-space: nowrap !important;
+    }
     div.stButton > button[kind="primary"] {
         background-color: #E86A3E !important;
         color: white !important;
         border: none !important;
-        border-radius: 12px !important;
-        height: 42px !important;
         font-size: 14px !important;
         font-weight: 700 !important;
         box-shadow: 0 3px 10px rgba(232, 106, 62, 0.22) !important;
-        transition: all 0.15s ease !important;
     }
     div.stButton > button[kind="primary"]:hover {
         background-color: #D65A2F !important;
         transform: translateY(-1px);
     }
     div.stButton > button[kind="secondary"] {
-        border-radius: 12px !important;
         border: 1.2px solid #EDE4DC !important;
         background-color: #FFFFFF !important;
         color: #3E3228 !important;
         font-size: 13px !important;
         font-weight: 600 !important;
         padding: 8px 10px !important;
-        height: 42px !important;
         box-shadow: 0 2px 5px rgba(0,0,0,0.02) !important;
-        transition: all 0.15s ease !important;
-        white-space: nowrap !important;
     }
     div.stButton > button[kind="secondary"]:hover {
         border-color: #E86A3E !important;
@@ -84,8 +108,10 @@ st.markdown(
         background-color: #FFFDF9 !important;
         transform: translateY(-1px);
     }
-    div[data-testid="stColumn"] > div > div > div.stButton > button {
-        height: 40px !important;
+
+    /* 세로 컬럼 내부 위젯 정렬 */
+    div[data-testid="stColumn"] {
+        padding: 0 3px !important;
     }
     </style>
     """,
@@ -194,7 +220,7 @@ STRICT_SPECIALTY_NAME_RULES = {
     "육개장": ["육개장", "육대장", "혜장국"]
 }
 
-# 기본 메뉴 목록 (카테고리 정보 포함: [메뉴명, 이모지, 검색키워드, 음식종류])
+# 기본 메뉴 목록
 DEFAULT_FOODS = [
     ("김치찌개", "🥘", "김치찌개 전문점", "한식"),
     ("된장찌개", "🍲", "된장찌개 백반", "한식"),
@@ -270,7 +296,7 @@ DEFAULT_FOODS = [
 MOOD_DATA = {
     "🥳 기분좋음": ("양식·일식·특식", ["파스타", "피자", "수제버거", "초밥", "돈까스", "텐동", "스테이크덮밥", "타코", "사케동", "리조또", "팟타이", "나시고랭", "인도커리", "브리또", "퓨전파스타"]),
     "🤯 스트레스": ("화끈·얼큰·매콤", ["짬뽕", "마라탕", "떡볶이", "낙지볶음", "쭈꾸미볶음", "제육볶음", "닭갈비", "육개장", "비빔국수", "부대찌개", "김치찌개"]),
-    "☀️ 날씨좋음": ("피크닉·야외·테라스", ["김밥", "샌드위치", "포케", "수제버거", "타코", "초밥", "피자", "파스타", "사케동", "텐동", "돈까스", "돌솥비빔밥", "브리또"]),
+    "☀️️ 날씨좋음": ("피크닉·야외·테라스", ["김밥", "샌드위치", "포케", "수제버거", "타코", "초밥", "피자", "파스타", "사케동", "텐동", "돈까스", "돌솥비빔밥", "브리또"]),
     "☔ 흐림·비": ("따끈한 국물·면 요리", ["칼국수", "수제비", "김치찌개", "부대찌개", "일본라멘", "우동", "쌀국수", "짬뽕", "동태탕", "순두부찌개", "잔치국수"]),
     "😴 피곤·보양": ("든든한 보양 뚝배기", ["삼계탕", "갈비탕", "추어탕", "도가니탕", "설렁탕", "곰탕", "국밥", "뼈해장국", "백반", "보리밥정식"]),
     "🫠 입맛없음": ("산뜻·시원한 별미", ["막국수", "냉면", "소바", "포케", "비빔국수", "회덮밥", "돌솥비빔밥", "샌드위치", "간장게장백반", "쌈밥정식"]),
@@ -517,13 +543,13 @@ if qp.get("action") == "gps" and "lat" in qp and "lng" in qp:
 
 # --- 화면 레이아웃 상단부 ---
 st.markdown("<h1 style='color: #2E1C10; font-size: 26px; font-weight: 800; margin: 0 0 4px 0;'>🍱 오늘 점심 뭐 먹지?</h1>", unsafe_allow_html=True)
-st.markdown("<div style='color: #8C827A; font-size: 13px; margin-bottom: 16px;'>고민되는 점심 메뉴와 검증된 주변 밥집을 랜덤으로 골라드립니다.</div>", unsafe_allow_html=True)
+st.markdown("<div style='color: #8C827A; font-size: 13px; margin-bottom: 14px;'>고민되는 점심 메뉴와 검증된 주변 밥집을 랜덤으로 골라드립니다.</div>", unsafe_allow_html=True)
 
 if not has_key:
     st.warning("⚠️ **API 키 설정 필요**: `.streamlit/secrets.toml` 또는 Cloud Secrets에 `KAKAO_REST_KEY`를 설정해주세요.")
 
-# 1. 위치 입력창
-st.markdown("<div style='margin-bottom: 6px; font-size: 14px; font-weight: 700; color: #3E3228;'>📍 위치</div>", unsafe_allow_html=True)
+# 1. 위치 입력 섹션
+st.markdown("<div class='section-title'>📍 위치</div>", unsafe_allow_html=True)
 col_input, col_gps = st.columns([3.5, 1.2], vertical_alignment="center")
 
 with col_input:
@@ -559,14 +585,14 @@ with col_gps:
             } else {
                 alert('GPS를 지원하지 않는 브라우저입니다.');
             }
-        " style="width:100%; height:40px; background-color:#E86A3E; color:white; border:none; border-radius:12px; font-size:13px; font-weight:700; cursor:pointer; box-shadow: 0 2px 8px rgba(232, 106, 62, 0.2);">
+        " style="width:100%; height:42px; background-color:#E86A3E; color:white; border:none; border-radius:12px; font-size:13px; font-weight:700; cursor:pointer; box-shadow: 0 2px 8px rgba(232, 106, 62, 0.2);">
             내 위치 찾기
         </button>
         """,
         unsafe_allow_html=True
     )
 
-# 2. 반경 노출 및 즉각 반응형 선택기
+# 2. 반경 노출 섹션
 clean_region = region.strip()
 is_admin_region = False
 
@@ -579,9 +605,8 @@ if clean_region:
 should_show_radius = bool(clean_region and not is_admin_region)
 
 if should_show_radius:
-    st.markdown("<div style='margin-top: 16px;'></div>", unsafe_allow_html=True)
     st.markdown("<div class='radius-wrapper'>", unsafe_allow_html=True)
-    st.markdown("<div style='margin-bottom: 6px; font-size: 14px; font-weight: 700; color: #3E3228;'>📏 탐색 반경</div>", unsafe_allow_html=True)
+    st.markdown("<div class='section-title'>📏 탐색 반경</div>", unsafe_allow_html=True)
     
     c1, c2, c3, c4 = st.columns([1.0, 1.0, 1.0, 1.2], vertical_alignment="center")
     current_preset = st.session_state.selected_radius_preset
@@ -590,28 +615,28 @@ if should_show_radius:
         if st.button("🚶 도보 700m", key="rbtn_walk", type="primary" if current_preset == "🚶" else "secondary", use_container_width=True):
             if st.session_state.selected_radius_preset != "🚶":
                 st.session_state.selected_radius_preset = "🚶"
-                st.session_state.saved_result = None  # 반경 변경 시 이전 결과 초기화
+                st.session_state.saved_result = None
                 st.rerun()
 
     with c2:
         if st.button("🚲 자전거 1.8km", key="rbtn_bike", type="primary" if current_preset == "🚲" else "secondary", use_container_width=True):
             if st.session_state.selected_radius_preset != "🚲":
                 st.session_state.selected_radius_preset = "🚲"
-                st.session_state.saved_result = None  # 반경 변경 시 이전 결과 초기화
+                st.session_state.saved_result = None
                 st.rerun()
 
     with c3:
         if st.button("🚗 차량 3.5km", key="rbtn_car", type="primary" if current_preset == "🚗" else "secondary", use_container_width=True):
             if st.session_state.selected_radius_preset != "🚗":
                 st.session_state.selected_radius_preset = "🚗"
-                st.session_state.saved_result = None  # 반경 변경 시 이전 결과 초기화
+                st.session_state.saved_result = None
                 st.rerun()
 
     with c4:
         if st.button("직접 입력", key="rbtn_custom", type="primary" if current_preset == "직접 입력" else "secondary", use_container_width=True):
             if st.session_state.selected_radius_preset != "직접 입력":
                 st.session_state.selected_radius_preset = "직접 입력"
-                st.session_state.saved_result = None  # 반경 변경 시 이전 결과 초기화
+                st.session_state.saved_result = None
                 st.rerun()
 
     if st.session_state.selected_radius_preset == "직접 입력":
@@ -625,7 +650,7 @@ if should_show_radius:
         )
         if manual_radius != st.session_state.custom_radius_val:
             st.session_state.custom_radius_val = manual_radius
-            st.session_state.saved_result = None  # 직접 입력 수치 변경 시 결과 초기화
+            st.session_state.saved_result = None
         radius_km = float(manual_radius)
         radius_display_text = f"직접 입력 {radius_km:.1f}km"
     else:
@@ -638,10 +663,9 @@ else:
     radius_km = 1.8
     radius_display_text = "지역 인근"
 
-# --- 3. 음식 종류 선택 (동일한 16px 마진 적용) ---
-st.markdown("<div style='margin-top: 16px;'></div>", unsafe_allow_html=True)
+# --- 3. 음식 종류 선택 섹션 ---
 st.markdown("<div class='cuisine-wrapper'>", unsafe_allow_html=True)
-st.markdown("<div style='margin-bottom: 6px; font-size: 14px; font-weight: 700; color: #3E3228;'>🍽️ 음식 종류</div>", unsafe_allow_html=True)
+st.markdown("<div class='section-title'>🍽️ 음식 종류</div>", unsafe_allow_html=True)
 
 cu1, cu2, cu3, cu4 = st.columns(4)
 current_cuisine = st.session_state.selected_cuisine
@@ -650,7 +674,7 @@ with cu1:
     if st.button("한식", key="cbtn_korean", type="primary" if current_cuisine == "한식" else "secondary", use_container_width=True):
         if st.session_state.selected_cuisine != "한식":
             st.session_state.selected_cuisine = "한식"
-            st.session_state.saved_result = None  # 음식 종류 변경 시 결과 초기화
+            st.session_state.saved_result = None
             st.rerun()
 with cu2:
     if st.button("중식", key="cbtn_chinese", type="primary" if current_cuisine == "중식" else "secondary", use_container_width=True):
@@ -670,6 +694,8 @@ with cu4:
             st.session_state.selected_cuisine = "양식"
             st.session_state.saved_result = None
             st.rerun()
+
+st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
 
 cu5, cu6, cu7, cu8 = st.columns(4)
 with cu5:
@@ -697,10 +723,12 @@ with cu8:
             st.session_state.saved_result = None
             st.rerun()
 
+st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
+
 if st.button("모두 (종류 구분 없음)", key="cbtn_all", type="primary" if current_cuisine == "모두" else "secondary", use_container_width=True):
     if st.session_state.selected_cuisine != "모두":
         st.session_state.selected_cuisine = "모두"
-        st.session_state.saved_result = None  # 음식 종류 변경 시 결과 초기화
+        st.session_state.saved_result = None
         st.rerun()
 
 st.markdown("</div>", unsafe_allow_html=True)
@@ -714,7 +742,7 @@ def show_location_warning():
     region_warning_spot.markdown(
         """
         <div style="display: flex; justify-content: center; align-items: center; gap: 8px;
-                    width: 100%; height: 44px; margin: 8px 0 12px 0;
+                    width: 100%; height: 44px; margin: 12px 0 8px 0;
                     background-color: #FFFDF7; border: 1.5px solid #F7D488; border-radius: 12px;">
             <span style="font-size: 16px;">⚠️</span>
             <span style="color: #6C4D0A; font-size: 13.5px; font-weight: 700;">
@@ -729,7 +757,7 @@ def show_cuisine_warning():
     region_warning_spot.markdown(
         """
         <div style="display: flex; justify-content: center; align-items: center; gap: 8px;
-                    width: 100%; height: 44px; margin: 8px 0 12px 0;
+                    width: 100%; height: 44px; margin: 12px 0 8px 0;
                     background-color: #FFFDF7; border: 1.5px solid #F7D488; border-radius: 12px;">
             <span style="font-size: 16px;">⚠️</span>
             <span style="color: #6C4D0A; font-size: 13.5px; font-weight: 700;">
@@ -740,9 +768,8 @@ def show_cuisine_warning():
         unsafe_allow_html=True
     )
 
-# --- 4. 룰렛 방식 선택 (동일한 16px 마진 적용) ---
-st.markdown("<div style='margin-top: 16px;'></div>", unsafe_allow_html=True)
-st.markdown("<div style='margin-bottom: 6px; font-size: 14px; font-weight: 700; color: #3E3228;'>🎯 룰렛 방식 선택</div>", unsafe_allow_html=True)
+# --- 4. 룰렛 방식 선택 섹션 ---
+st.markdown("<div class='section-title'>🎯 룰렛 방식 선택</div>", unsafe_allow_html=True)
 
 with st.container(border=True):
     st.markdown(
@@ -771,7 +798,7 @@ with st.container(border=True):
                 selected_candidates = [f for f in DEFAULT_FOODS if f[3] == cu and f[0] != "죽"]
             spin_triggered = True
 
-st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
+st.markdown("<div style='height: 2px;'></div>", unsafe_allow_html=True)
 
 with st.container(border=True):
     st.markdown(
