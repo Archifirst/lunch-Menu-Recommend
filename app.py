@@ -61,7 +61,7 @@ st.markdown(
         margin-bottom: 14px !important;
     }
 
-    /* 박스 내부(Border Wrapper 내부)의 옵션 버튼 스타일 */
+    /* 박스 내부(Border Wrapper 내부)의 옵션 버튼 공통 스타일 */
     div[data-testid="stVerticalBlockBorderWrapper"] div.stButton > button {
         height: 40px !important;
         border-radius: 11px !important;
@@ -69,30 +69,49 @@ st.markdown(
         white-space: nowrap !important;
     }
     
-    /* 선택된 버튼: '내 위치 찾기'와 동일한 주황색 (#E86A3E) */
-    div[data-testid="stVerticalBlockBorderWrapper"] div.stButton > button[kind="primary"] {
+    /* ============================================================
+       [선택된 버튼: '내 위치 찾기'와 100% 동일한 #E86A3E 강제 적용]
+       Streamlit의 data-testid, kind, 클래스 전체를 정확히 덮어씁니다.
+       ============================================================ */
+    div[data-testid="stVerticalBlockBorderWrapper"] div.stButton > button[data-testid="stBaseButton-primary"],
+    div[data-testid="stVerticalBlockBorderWrapper"] div.stButton > button[data-testid="baseButton-primary"],
+    div[data-testid="stVerticalBlockBorderWrapper"] div.stButton > button[kind="primary"],
+    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stBaseButton-primary"] > button,
+    div[data-testid="stVerticalBlockBorderWrapper"] div.stButton > button[aria-selected="true"] {
         background-color: #E86A3E !important;
-        color: white !important;
+        background: #E86A3E !important;
+        color: #FFFFFF !important;
         border: none !important;
         font-size: 13.5px !important;
         font-weight: 700 !important;
         box-shadow: 0 2px 8px rgba(232, 106, 62, 0.25) !important;
     }
-    div[data-testid="stVerticalBlockBorderWrapper"] div.stButton > button[kind="primary"]:hover {
+
+    div[data-testid="stVerticalBlockBorderWrapper"] div.stButton > button[data-testid="stBaseButton-primary"]:hover,
+    div[data-testid="stVerticalBlockBorderWrapper"] div.stButton > button[data-testid="baseButton-primary"]:hover,
+    div[data-testid="stVerticalBlockBorderWrapper"] div.stButton > button[kind="primary"]:hover,
+    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stBaseButton-primary"] > button:hover {
         background-color: #D65A2F !important;
+        background: #D65A2F !important;
+        color: #FFFFFF !important;
         transform: translateY(-1px);
     }
     
     /* 선택되지 않은 기본 버튼 */
-    div[data-testid="stVerticalBlockBorderWrapper"] div.stButton > button[kind="secondary"] {
+    div[data-testid="stVerticalBlockBorderWrapper"] div.stButton > button[data-testid="stBaseButton-secondary"],
+    div[data-testid="stVerticalBlockBorderWrapper"] div.stButton > button[data-testid="baseButton-secondary"],
+    div[data-testid="stVerticalBlockBorderWrapper"] div.stButton > button[kind="secondary"],
+    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stBaseButton-secondary"] > button {
         border: 1.2px solid #EDE4DC !important;
         background-color: #FFFFFF !important;
+        background: #FFFFFF !important;
         color: #3E3228 !important;
         font-size: 13px !important;
         font-weight: 600 !important;
         padding: 6px 8px !important;
         box-shadow: 0 1px 4px rgba(0,0,0,0.02) !important;
     }
+    div[data-testid="stVerticalBlockBorderWrapper"] div.stButton > button[data-testid="stBaseButton-secondary"]:hover,
     div[data-testid="stVerticalBlockBorderWrapper"] div.stButton > button[kind="secondary"]:hover {
         border-color: #E86A3E !important;
         color: #E86A3E !important;
@@ -639,7 +658,7 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
         pass
     return []
 
-# --- 화면 상단 제목 및 설명 (여백 넉넉하게 확보) ---
+# --- 화면 상단 제목 및 설명 (넉넉한 상단 여백 및 조화로운 간격) ---
 st.markdown("<h1 style='color: #2E1C10; font-size: 28px; font-weight: 800; margin: 0 0 10px 0; letter-spacing: -0.6px;'>🍱 오늘 점심 뭐 먹지?</h1>", unsafe_allow_html=True)
 st.markdown("<div style='color: #8C827A; font-size: 13.5px; margin-bottom: 22px; line-height: 1.5;'>고민되는 점심 메뉴와 검증된 주변 밥집을 랜덤으로 골라드립니다.</div>", unsafe_allow_html=True)
 
@@ -1037,7 +1056,7 @@ if has_valid_location and res is not None and res.get("places"):
 
         parking_badge = ""
         if top_pick.get("has_parking", False):
-            parking_badge = '<span style="font-size: 11px; background: #E8F4EA; color: #2E7D32; padding: 2px 7px; border-radius: 6px; font-weight: 700;">🅿️ 주차 편리</span>'
+            parking_badge = '<span style="font-size: 11px; background: #E8F4EA; color: #2E7D32; padding: 2px 7px; border-radius: 6px; font-weight: 700;">🅿️️ 주차 편리</span>'
 
         top_pick_html = (
             f'<div style="margin-bottom: 20px; padding: 22px 18px; '
@@ -1062,8 +1081,8 @@ if has_valid_location and res is not None and res.get("places"):
         st.markdown(top_pick_html, unsafe_allow_html=True)
 
         if len(places) > 1:
-            # 근처 다른 후보 타이틀에 어울리는 이모티콘(📍) 추가
-            st.markdown(f"<div style='font-size: 14.5px; font-weight: 700; color: #2E1C10; margin-bottom: 8px;'>📍 근처 다른 후보 ({len(places)-1}곳)</div>", unsafe_allow_html=True)
+            # 📍 위치와 겹치지 않는 단정한 리스트/클립보드(📋) 이모티콘 적용
+            st.markdown(f"<div style='font-size: 14.5px; font-weight: 700; color: #2E1C10; margin-bottom: 8px;'>📋 근처 다른 후보 ({len(places)-1}곳)</div>", unsafe_allow_html=True)
             other_candidates = places[1:11]
             col_left, col_right = st.columns(2)
 
