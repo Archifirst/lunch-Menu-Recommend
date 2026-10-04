@@ -7,7 +7,7 @@ import re
 import folium
 from streamlit_folium import st_folium
 
-# 1. API Key 보안 처리 (Streamlit Secrets 우선 참조, 미설정 시 기본 키 사용)
+# 1. API Key 보안 처리
 KAKAO_REST_KEY = st.secrets.get("KAKAO_REST_KEY", "bb9c8bfabfc3d5a4c0dbdb3312d8ca30").strip()
 
 st.set_page_config(page_title="오늘 점심 뭐 먹지?", page_icon="🍱", layout="centered")
@@ -455,6 +455,7 @@ if qp.get("action") == "gps" and "lat" in qp and "lng" in qp:
             st.session_state.gps_coords = (lat_f, lng_f)
             detected_name = kakao_reverse_geocode(lat_f, lng_f)
             st.session_state.region_input_val = detected_name
+            st.session_state.saved_result = None  # 새 위치 감지 시 이전 결과 초기화
             st.toast(f"현재 위치 감지: '{detected_name}'", icon="📍")
     except Exception:
         pass
@@ -476,8 +477,14 @@ with col_input:
         key="main_region_input",
         label_visibility="collapsed"
     )
+    # 입력값이 달라졌거나 비워졌을 때 이전 결과 및 좌표를 즉시 초기화
     if region != st.session_state.region_input_val:
+        st.session_state.region_input_val = region
         st.session_state.gps_coords = None
+        st.session_state.saved_result = None  # 이전 당첨 결과 즉각 제거
+
+    if not region.strip() and not st.session_state.gps_coords:
+        st.session_state.saved_result = None
 
 with col_gps:
     st.markdown(
@@ -577,7 +584,7 @@ def show_location_warning():
         <div style="display: flex; justify-content: center; align-items: center; gap: 8px;
                     width: 100%; height: 44px; margin: 4px 0 10px 0;
                     background-color: #FFFDF7; border: 1.5px solid #F7D488; border-radius: 12px;">
-            <span style="font-size: 16px;">⚠️</span>
+            <span style="font-size: 16px;">⚠️️</span>
             <span style="color: #6C4D0A; font-size: 13.5px; font-weight: 700;">
                 위치를 입력하거나 '내 위치 찾기'를 눌러주세요!
             </span>
@@ -714,9 +721,11 @@ if spin_triggered and selected_candidates:
         else:
             region_warning_spot.warning(f"⚠️ 설정하신 반경 내에 순수 점심 식당을 찾지 못했습니다. 탐색 반경을 넓혀보세요!")
 
-# --- 5. 결과 화면 출력 ---
+# --- 5. 결과 화면 출력 (위치 정보가 유효할 때만 노출) ---
+has_valid_location = bool(region.strip() or st.session_state.gps_coords)
 res = st.session_state.saved_result
-if res is not None and res.get("places"):
+
+if has_valid_location and res is not None and res.get("places"):
     card_spot.markdown(
         f"""
         <div style="text-align: center; margin: 16px 0 14px 0; padding: 24px 20px; 
