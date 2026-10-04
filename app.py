@@ -32,6 +32,11 @@ st.markdown(
         max-width: 620px !important;
     }
 
+    /* [핵심] Streamlit 내부 버티컬 블록들의 불필요한 누적 갭(gap) 제거 */
+    .block-container > div[data-testid="stVerticalBlock"] {
+        gap: 0px !important;
+    }
+
     /* 통일된 소제목 헤더 스타일 */
     .section-title {
         font-size: 14.5px !important;
@@ -64,6 +69,7 @@ st.markdown(
         background-color: #FFFFFF !important;
         box-shadow: 0 3px 12px rgba(0, 0, 0, 0.02) !important;
         padding: 16px 16px 16px 16px !important;
+        margin-top: 0px !important;
         margin-bottom: 14px !important;
     }
 
@@ -75,7 +81,7 @@ st.markdown(
         white-space: nowrap !important;
     }
     
-    /* 선택된 옵션 버튼 */
+    /* 선택된 옵션 버튼: '내 위치 찾기'와 동일한 오렌지 (#E86A3E) */
     button[data-testid*="primary"],
     button[kind="primary"],
     .stButton > button[data-testid*="primary"],
@@ -160,7 +166,7 @@ st.markdown(
     }
 
     /* ============================================================
-       [메인 룰렛 버튼: 박스 간격 14px 통일 & 텍스트 18px 700 볼드 조절]
+       [메인 룰렛 버튼: 박스 간격 14px 정밀 일치 및 스타일]
        ============================================================ */
     @keyframes roulettePulse {
         0% {
@@ -177,9 +183,9 @@ st.markdown(
         }
     }
 
-    /* 메뉴 추천 박스 간격(14px)과 완벽 일치 */
+    /* 주차 박스 하단과 룰렛 버튼 사이, 룰렛 버튼과 추천 결과 카드 사이 마진을 정확히 14px로 통일 */
     div.block-container > div[data-testid="stVerticalBlock"] > div.stElementContainer:not(div[data-testid="stVerticalBlockBorderWrapper"] *) div.stButton {
-        margin-top: 14px !important;
+        margin-top: 0px !important;
         margin-bottom: 14px !important;
     }
 
@@ -220,7 +226,7 @@ st.markdown(
         gap: 8px;
         width: 100%;
         height: 44px;
-        margin: 6px 0 14px 0;
+        margin: 0 0 14px 0;
         background-color: #FFFDF7;
         border: 1.5px solid #F7D488;
         border-radius: 12px;
@@ -277,7 +283,7 @@ if qp.get("action") == "gps" and "lat" in qp and "lng" in qp:
         pass
     st.query_params.clear()
 
-# 필터링 키워드 정의
+# --- 정밀 필터링 키워드 정의 (술집/야간포차 대폭 강화) ---
 EXCLUDED_CATEGORIES = [
     "술집", "주점", "호프", "포차", "이자카야", "바(BAR)", "요리주점", "와인바",
     "칵테일바", "민속주점", "맥주", "룸살롱", "단란주점", "유흥주점", "라이브카페", 
@@ -290,7 +296,8 @@ EXCLUDED_NAME_KEYWORDS = [
     "BEER", "라운지", "BAR", "노래방", "포장마차", "야시장", "소주", "오뎅바",
     "막걸리", "동동주", "생맥주", "달빛", "심야", "야식", "올나잇", "주막", "동동",
     "탁주", "양조장", "브루어리", "BREW", "탭룸", "살롱", "가라오케", "선술집",
-    "대포", "대포집", "통닭발", "껍데기", "연탄구이", "원조골뱅이"
+    "대포", "대포집", "통닭발", "껍데기", "연탄구이", "원조골뱅이", "골뱅이", "노가리",
+    "닭발", "짝태", "먹태", "야채곱창", "밤", "새벽"
 ]
 
 JEON_KEYWORDS = [
@@ -304,11 +311,11 @@ NON_LUNCH_CATEGORIES = [
 ]
 
 MEAT_SHOP_KEYWORDS = [
-    "축산", "정육", "식육", "마장", "가든", "화로", "연탄", "숯불", "솥뚜껑",
+    "축산", "정육", "식육", "마장", "화로", "연탄", "숯불", "솥뚜껑",
     "뒷고기", "주먹고기", "생고기", "생삼겹", "대패", "삼겹", "오겹",
     "곱창", "막창", "대창", "특양", "양꼬치", "양갈비", "갈매기", "뽈살",
     "야키니쿠", "우삼겹", "냉삼", "생갈비", "소갈비", "돼지갈비", "통닭발",
-    "불닭발", "조개구이", "장어구이", "야키토리", "쿠시카츠", "닭강정"
+    "불닭발", "조개구이", "장어구이", "야키토리", "쿠시카츠", "닭강정", "치킨"
 ]
 
 EVENING_RAW_FISH_KEYWORDS = [
@@ -340,7 +347,9 @@ KNOWN_FRANCHISE_BRANDS = [
 
 TONKATSU_NAME_INDICATORS = ["돈까스", "돈가스", "카츠", "카쯔", "가츠", "돈카츠", "포크커틀릿"]
 
+# 특정 단어가 상호명에 반드시 포함되어야 하는 엄격한 전문점 규칙
 STRICT_SPECIALTY_NAME_RULES = {
+    "닭갈비": ["닭갈비"],  # 닭갈비 선택 시 통닭/치킨/삼계탕 차단
     "칼국수": ["칼국수"],
     "막국수": ["막국수"],
     "국밥": ["국밥", "순대", "순댓국", "돼지국밥", "따로국밥", "소머리국밥"],
@@ -428,8 +437,10 @@ def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_na
     clean_name = place_name.replace(" ", "").upper()
     cat_full = category_name.replace(" ", "")
 
+    # 1. 술집 카테고리 완전 배제
     if any(ex in cat_full for ex in EXCLUDED_CATEGORIES):
         return False
+    # 2. 술집/주점 상호명 완전 배제
     if any(bad in clean_name for bad in [k.upper() for k in EXCLUDED_NAME_KEYWORDS]):
         return False
     if any(jeon in clean_name for jeon in JEON_KEYWORDS):
@@ -437,6 +448,7 @@ def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_na
     if any(c in cat_full for c in ["전,빈대떡", "빈대떡"]):
         return False
 
+    # 3. 점심 부적합(고깃집, 구이류, 곱창, 치킨 등) 배제
     if any(non in cat_full for non in NON_LUNCH_CATEGORIES):
         if not (menu_name == "닭갈비" and "닭요리" in cat_full):
             return False
@@ -445,8 +457,10 @@ def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_na
         if "구이" in clean_name and menu_name != "생선구이백반":
             return False
         if any(bad in clean_name for bad in [k.upper() for k in MEAT_SHOP_KEYWORDS]):
+            # 닭갈비 메뉴일 때는 통닭/치킨 상호는 무조건 탈락
             return False
 
+    # 4. 잡다한 분식 프랜차이즈 배제
     if menu_name not in ["김밥", "떡볶이"]:
         if any(brand in clean_name for brand in MULTI_MENU_FRANCHISES):
             return False
@@ -470,6 +484,7 @@ def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_na
         if any(pho in clean_name for pho in VIETNAMESE_NOODLE_KEYWORDS):
             return False
 
+    # 5. [중요] 닭갈비 등 특정 전문점 상호 규칙 검증
     if menu_name in STRICT_SPECIALTY_NAME_RULES:
         required_words = STRICT_SPECIALTY_NAME_RULES[menu_name]
         if not any(req in clean_name for req in required_words):
@@ -489,7 +504,7 @@ def is_dinner_only_restaurant(place_name: str, address: str) -> bool:
     url = f"https://m.search.daum.net/search?w=tot&q={urllib.parse.quote(query)}"
 
     try:
-        res = requests.get(url, headers=headers, timeout=0.8)
+        res = requests.get(url, headers=headers, timeout=1.2)
         if res.status_code == 200:
             text = res.text
             time_matches = re.findall(r"(\d{1,2}):(\d{2})\s*(?:~|-|에|오픈|영업)", text)
@@ -551,6 +566,8 @@ def calculate_priority(place: dict, menu_name: str, has_parking: bool = False, n
         score -= 2.0
     if menu_name == "초밥" and any(k in p_name for k in ["스시", "초밥"]):
         score -= 2.5
+    if menu_name == "닭갈비" and "닭갈비" in p_name:
+        score -= 3.0
     if menu_name == "죽" and "죽" in p_name:
         score -= 2.0
     if menu_name == "국밥" and any(k in p_name for k in ["국밥", "순대", "순댓국", "돼지국밥"]):
@@ -684,7 +701,7 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
         pass
     return []
 
-# --- 화면 상단 제목 및 설명 (넉넉한 상단 여백 및 조화로운 간격) ---
+# --- 화면 상단 제목 및 설명 ---
 st.markdown("<h1 style='color: #2E1C10; font-size: 28px; font-weight: 800; margin: 0 0 10px 0; letter-spacing: -0.6px;'>🍱 오늘 점심 뭐 먹지?</h1>", unsafe_allow_html=True)
 st.markdown("<div style='color: #8C827A; font-size: 13.5px; margin-bottom: 22px; line-height: 1.5;'>고민되는 점심 메뉴와 검증된 주변 밥집을 랜덤으로 골라드립니다.</div>", unsafe_allow_html=True)
 
@@ -1024,7 +1041,7 @@ if spin_triggered and selected_candidates:
                 temp = random.choice(selected_candidates)
                 card_spot.markdown(
                     f"""
-                    <div style="text-align: center; margin: 14px 0 14px 0; padding: 20px 18px; 
+                    <div style="text-align: center; margin: 0 0 14px 0; padding: 20px 18px; 
                                 background: #FFFDF9; border-radius: 20px; border: 1.5px solid #F5D5B8; 
                                 box-shadow: 0 4px 16px rgba(245, 213, 184, 0.35);">
                         <div style="font-size: 54px; line-height: 1; margin-bottom: 6px;">{temp[1]}</div>
@@ -1050,13 +1067,13 @@ if spin_triggered and selected_candidates:
         else:
             region_warning_spot.warning(f"⚠️ 설정하신 조건 내에 만족하는 식당을 찾지 못했습니다. 반경을 넓히거나 가격/주차 옵션을 조정해 보세요!")
 
-# --- 8. 결과 화면 출력 (상단 외부 여백 14px로 일치) ---
+# --- 8. 결과 화면 출력 (상단 외부 여백을 14px로 일치) ---
 has_valid_location = bool(region.strip() or st.session_state.gps_coords)
 res = st.session_state.saved_result
 
 if has_valid_location and res is not None and res.get("places"):
     card_html = (
-        f'<div style="text-align: center; margin: 14px 0 14px 0; padding: 24px 20px; '
+        f'<div style="text-align: center; margin: 0 0 14px 0; padding: 24px 20px; '
         f'background: #FFFDF9; border-radius: 22px; border: 1.5px solid #F5D5B8; '
         f'box-shadow: 0 4px 18px rgba(245, 213, 184, 0.35);">'
         f'<div style="font-size: 68px; line-height: 1; margin-bottom: 8px;">{res["emoji"]}</div>'
