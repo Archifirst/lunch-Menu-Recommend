@@ -139,15 +139,15 @@ KAKAO_REST_KEY = st.secrets["KAKAO_REST_KEY"].strip() if has_key else ""
 
 # 세션 상태 초기화
 if "selected_radius_preset" not in st.session_state:
-    st.session_state.selected_radius_preset = "🚲"
+    st.session_state.selected_radius_preset = "근거리"
 if "custom_radius_val" not in st.session_state:
     st.session_state.custom_radius_val = 2.0
 if "selected_cuisine" not in st.session_state:
     st.session_state.selected_cuisine = None
 if "selected_price" not in st.session_state:
-    st.session_state.selected_price = "상관 없음"
+    st.session_state.selected_price = "금액 상관 없음"
 if "selected_parking" not in st.session_state:
-    st.session_state.selected_parking = "상관 없음"
+    st.session_state.selected_parking = "주차 불필요"
 if "saved_result" not in st.session_state:
     st.session_state.saved_result = None
 if "spin_count" not in st.session_state:
@@ -158,9 +158,9 @@ if "region_input_val" not in st.session_state:
     st.session_state.region_input_val = ""
 
 PRESET_RADIUS = {
-    "🚶": 0.7,
-    "🚲": 1.8,
-    "🚗": 3.5,
+    "인근": 0.7,
+    "근거리": 1.8,
+    "원거리": 3.5,
     "직접 입력": None
 }
 
@@ -239,8 +239,6 @@ STRICT_SPECIALTY_NAME_RULES = {
     "육개장": ["육개장", "육대장", "혜장국"]
 }
 
-# 기본 메뉴 목록 (카테고리 & 대표 가격대 정보 포함)
-# 가격대 코드: "low"(1만원 이하), "mid"(1~2만원), "high"(2만원 이상)
 DEFAULT_FOODS = [
     ("김치찌개", "🥘", "김치찌개 전문점", "한식", "low"),
     ("된장찌개", "🍲", "된장찌개 백반", "한식", "low"),
@@ -404,7 +402,36 @@ def is_dinner_only_restaurant(place_name: str, address: str) -> bool:
 
     return False
 
-def calculate_priority(place: dict, menu_name: str, need_parking: bool = False) -> float:
+# --- 인근 주차장(300m 이내) 보유 여부 검증 함수 ---
+def has_nearby_parking(lat: float, lng: float, place_name: str) -> bool:
+    """식당 자체 주차장 힌트가 있거나 인근 300m 이내에 주차장(PK6)이 있는지 조회"""
+    # 1. 상호명 힌트
+    if any(k in place_name for k in ["주차", "타워", "빌딩", "스퀘어", "몰", "프라자", "센터"]):
+        return True
+    
+    if not KAKAO_REST_KEY:
+        return False
+
+    # 2. 카카오 카테고리 검색(PK6: 주차장) 반경 300m 확인
+    url = "https://dapi.kakao.com/v2/local/search/category.json"
+    headers = {"Authorization": f"KakaoAK {KAKAO_REST_KEY}"}
+    params = {
+        "category_group_code": "PK6",
+        "x": str(lng),
+        "y": str(lat),
+        "radius": 300,
+        "size": 1
+    }
+    try:
+        res = requests.get(url, headers=headers, params=params, timeout=1.0)
+        if res.status_code == 200:
+            docs = res.json().get("documents", [])
+            return len(docs) > 0
+    except Exception:
+        pass
+    return False
+
+def calculate_priority(place: dict, menu_name: str, has_parking: bool = False, need_parking: bool = False) -> float:
     score = place["dist"]
     p_name = place["name"]
     is_franchise = any(f_name in p_name for f_name in KNOWN_FRANCHISE_BRANDS) or any(p_name.strip().endswith(sfx) for sfx in ["점", "호점", "직영점"])
@@ -429,10 +456,9 @@ def calculate_priority(place: dict, menu_name: str, need_parking: bool = False) 
         if any(k in p_name for k in ["육개장", "육대장"]):
             score -= 3.0
 
-    # 주차장 선호도 점수 계산
+    # 주차장 필요 시 우선순위 가중치
     if need_parking:
-        has_parking_hint = any(k in p_name for k in ["주차", "타워", "빌딩", "스퀘어", "몰", "프라자", "센터"])
-        score -= (3.0 if has_parking_hint else 0.0)
+        score -= (3.5 if has_parking else 0.0)
 
     return score
 
@@ -479,11 +505,8 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
     headers = {"Authorization": f"KakaoAK {KAKAO_REST_KEY}"}
     radius_meters = int(radius_km * 1000)
 
-    # 주차장 필요 시 검색 쿼리에 주차 키워드 결합 시도
-    query_text = f"{search_query} 주차" if need_parking else search_query
-
     params = {
-        "query": query_text,
+        "query": search_query,
         "category_group_code": "FD6",
         "x": str(lng),
         "y": str(lat),
@@ -494,15 +517,10 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
 
     try:
         res = requests.get(url, headers=headers, params=params, timeout=3.0)
-        # 주차 키워드로 결과가 너무 적으면 일반 쿼리로 fallback
-        docs = res.json().get("documents", []) if res.status_code == 200 else []
-        if not docs and need_parking:
-            params["query"] = search_query
-            res = requests.get(url, headers=headers, params=params, timeout=3.0)
-            docs = res.json().get("documents", []) if res.status_code == 200 else []
-
-        if docs:
+        if res.status_code == 200:
+            docs = res.json().get("documents", [])
             candidates = []
+            
             for d in docs:
                 p_name = d.get("place_name", "")
                 cat_name = d.get("category_name", "")
@@ -510,20 +528,33 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
                     continue
                 
                 dist_m = float(d.get("distance", 0))
+                p_lat = float(d.get("y"))
+                p_lng = float(d.get("x"))
+                
+                # 주차 가능 여부 판별 (상호 자체 or 인근 주차장 여부)
+                parking_available = False
+                if need_parking:
+                    parking_available = has_nearby_parking(p_lat, p_lng, p_name)
+
                 p_dict = {
                     "id": d.get("id", ""),
                     "name": p_name,
                     "category": cat_name.split(">")[-1].strip() if ">" in cat_name else cat_name,
-                    "lat": float(d.get("y")),
-                    "lng": float(d.get("x")),
+                    "lat": p_lat,
+                    "lng": p_lng,
                     "dist": round(dist_m / 1000, 2) if dist_m > 0 else 0.1,
                     "address": d.get("road_address_name") or d.get("address_name", ""),
-                    "place_url": d.get("place_url", "")
+                    "place_url": d.get("place_url", ""),
+                    "has_parking": parking_available
                 }
-                p_dict["priority_score"] = calculate_priority(p_dict, menu_name, need_parking=need_parking)
+                p_dict["priority_score"] = calculate_priority(p_dict, menu_name, has_parking=parking_available, need_parking=need_parking)
                 candidates.append(p_dict)
             
-            candidates.sort(key=lambda x: x["priority_score"])
+            # 주차 필요 시 주차 가능한 곳을 최우선 정렬
+            if need_parking:
+                candidates.sort(key=lambda x: (not x["has_parking"], x["priority_score"]))
+            else:
+                candidates.sort(key=lambda x: x["priority_score"])
 
             if candidates:
                 valid_top = None
@@ -628,23 +659,23 @@ if should_show_radius:
     current_preset = st.session_state.selected_radius_preset
 
     with c1:
-        if st.button("🚶 도보 700m", key="rbtn_walk", type="primary" if current_preset == "🚶" else "secondary", use_container_width=True):
-            if st.session_state.selected_radius_preset != "🚶":
-                st.session_state.selected_radius_preset = "🚶"
+        if st.button("🚶 인근", key="rbtn_walk", type="primary" if current_preset == "인근" else "secondary", use_container_width=True):
+            if st.session_state.selected_radius_preset != "인근":
+                st.session_state.selected_radius_preset = "인근"
                 st.session_state.saved_result = None
                 st.rerun()
 
     with c2:
-        if st.button("🚲 자전거 1.8km", key="rbtn_bike", type="primary" if current_preset == "🚲" else "secondary", use_container_width=True):
-            if st.session_state.selected_radius_preset != "🚲":
-                st.session_state.selected_radius_preset = "🚲"
+        if st.button("🚲 근거리", key="rbtn_bike", type="primary" if current_preset == "근거리" else "secondary", use_container_width=True):
+            if st.session_state.selected_radius_preset != "근거리":
+                st.session_state.selected_radius_preset = "근거리"
                 st.session_state.saved_result = None
                 st.rerun()
 
     with c3:
-        if st.button("🚗 차량 3.5km", key="rbtn_car", type="primary" if current_preset == "🚗" else "secondary", use_container_width=True):
-            if st.session_state.selected_radius_preset != "🚗":
-                st.session_state.selected_radius_preset = "🚗"
+        if st.button("🚗 원거리", key="rbtn_car", type="primary" if current_preset == "원거리" else "secondary", use_container_width=True):
+            if st.session_state.selected_radius_preset != "원거리":
+                st.session_state.selected_radius_preset = "원거리"
                 st.session_state.saved_result = None
                 st.rerun()
 
@@ -673,8 +704,7 @@ if should_show_radius:
         radius_display_text = f"직접 입력 {radius_km:.1f}km"
     else:
         radius_km = PRESET_RADIUS[st.session_state.selected_radius_preset]
-        name_map = {"🚶": "도보 700m", "🚲": "자전거 1.8km", "🚗": "차량 3.5km"}
-        radius_display_text = name_map[st.session_state.selected_radius_preset]
+        radius_display_text = f"{st.session_state.selected_radius_preset} ({radius_km}km)"
 
     st.markdown("</div>", unsafe_allow_html=True)
 else:
@@ -683,7 +713,7 @@ else:
 
 # --- 3. 음식 종류 선택 섹션 ---
 st.markdown("<div class='cuisine-wrapper'>", unsafe_allow_html=True)
-st.markdown("<div class='section-title'>🍽️️ 음식 종류</div>", unsafe_allow_html=True)
+st.markdown("<div class='section-title'>🍽️ 음식 종류</div>", unsafe_allow_html=True)
 
 cu1, cu2, cu3, cu4 = st.columns(4)
 current_cuisine = st.session_state.selected_cuisine
@@ -751,9 +781,9 @@ if st.button("모두 (종류 구분 없음)", key="cbtn_all", type="primary" if 
 
 st.markdown("</div>", unsafe_allow_html=True)
 
-# --- 4. 음식 가격 & 주차장 여부 선택 섹션 ---
+# --- 4. 음식(식사 기준) 가격 & 주차 가능 여부 선택 섹션 ---
 st.markdown("<div class='filter-wrapper'>", unsafe_allow_html=True)
-st.markdown("<div class='section-title'>💵 식사 가격</div>", unsafe_allow_html=True)
+st.markdown("<div class='section-title'>💵 음식(식사 기준) 가격</div>", unsafe_allow_html=True)
 
 p1, p2, p3, p4 = st.columns(4)
 current_price = st.session_state.selected_price
@@ -777,26 +807,26 @@ with p3:
             st.session_state.saved_result = None
             st.rerun()
 with p4:
-    if st.button("상관 없음", key="pbtn_any", type="primary" if current_price == "상관 없음" else "secondary", use_container_width=True):
-        if st.session_state.selected_price != "상관 없음":
-            st.session_state.selected_price = "상관 없음"
+    if st.button("금액 상관 없음", key="pbtn_any", type="primary" if current_price == "금액 상관 없음" else "secondary", use_container_width=True):
+        if st.session_state.selected_price != "금액 상관 없음":
+            st.session_state.selected_price = "금액 상관 없음"
             st.session_state.saved_result = None
             st.rerun()
 
-st.markdown("<div class='section-title'>🅿️ 주차장</div>", unsafe_allow_html=True)
+st.markdown("<div class='section-title'>🅿️ 주차 가능 여부</div>", unsafe_allow_html=True)
 pk1, pk2 = st.columns(2)
 current_parking = st.session_state.selected_parking
 
 with pk1:
-    if st.button("식당 주차장 있음", key="pkbtn_yes", type="primary" if current_parking == "식당 주차장 있음" else "secondary", use_container_width=True):
-        if st.session_state.selected_parking != "식당 주차장 있음":
-            st.session_state.selected_parking = "식당 주차장 있음"
+    if st.button("식당 주차장 혹은 인근 주차장 있음", key="pkbtn_yes", type="primary" if current_parking == "식당 주차장 혹은 인근 주차장 있음" else "secondary", use_container_width=True):
+        if st.session_state.selected_parking != "식당 주차장 혹은 인근 주차장 있음":
+            st.session_state.selected_parking = "식당 주차장 혹은 인근 주차장 있음"
             st.session_state.saved_result = None
             st.rerun()
 with pk2:
-    if st.button("상관 없음", key="pkbtn_any", type="primary" if current_parking == "상관 없음" else "secondary", use_container_width=True):
-        if st.session_state.selected_parking != "상관 없음":
-            st.session_state.selected_parking = "상관 없음"
+    if st.button("주차 불필요", key="pkbtn_any", type="primary" if current_parking == "주차 불필요" else "secondary", use_container_width=True):
+        if st.session_state.selected_parking != "주차 불필요":
+            st.session_state.selected_parking = "주차 불필요"
             st.session_state.saved_result = None
             st.rerun()
 
@@ -869,7 +899,7 @@ with st.container(border=True):
             else:
                 candidates_pool = [f for f in DEFAULT_FOODS if f[3] == cu and f[0] != "죽"]
 
-            # 2차 필터링: 가격대 (상관 없음이 아닐 경우)
+            # 2차 필터링: 가격대 (금액 상관 없음이 아닐 경우)
             if target_pr:
                 price_filtered = [f for f in candidates_pool if f[4] == target_pr]
                 selected_candidates = price_filtered if price_filtered else candidates_pool
@@ -899,7 +929,7 @@ if spin_triggered and selected_candidates:
         shuffled = selected_candidates.copy()
         random.shuffle(shuffled)
 
-        need_parking_flag = (st.session_state.selected_parking == "식당 주차장 있음")
+        need_parking_flag = (st.session_state.selected_parking == "식당 주차장 혹은 인근 주차장 있음")
 
         with st.spinner("조건에 맞는 점심 식당을 필터링하는 중..."):
             for m_name, m_emoji, m_kw, _, _ in shuffled[:6]:
@@ -947,7 +977,7 @@ if spin_triggered and selected_candidates:
                 "id": st.session_state.spin_count
             }
         else:
-            region_warning_spot.warning(f"⚠️ 설정하신 조건 내에 만족하는 식당을 찾지 못했습니다. 반경을 넓히거나 가격/주차 옵션을 '상관 없음'으로 조정해 보세요!")
+            region_warning_spot.warning(f"⚠️ 설정하신 조건 내에 만족하는 식당을 찾지 못했습니다. 반경을 넓히거나 가격/주차 옵션을 조정해 보세요!")
 
 # --- 7. 결과 화면 출력 ---
 has_valid_location = bool(region.strip() or st.session_state.gps_coords)
@@ -982,8 +1012,8 @@ if has_valid_location and res is not None and res.get("places"):
         tag_color = "#C85A32" if top_pick.get("is_personal", True) else "#8A532B"
 
         parking_badge = ""
-        if st.session_state.selected_parking == "식당 주차장 있음":
-            parking_badge = '<span style="font-size: 11px; background: #E8F4EA; color: #2E7D32; padding: 2px 7px; border-radius: 6px; font-weight: 700;">🅿️ 주차 고려</span>'
+        if top_pick.get("has_parking", False):
+            parking_badge = '<span style="font-size: 11px; background: #E8F4EA; color: #2E7D32; padding: 2px 7px; border-radius: 6px; font-weight: 700;">🅿️️ 주차 편리</span>'
 
         st.markdown(
             f"""
@@ -1050,7 +1080,7 @@ if has_valid_location and res is not None and res.get("places"):
                     )
 
         st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
-        st.markdown("<h3 style='margin-bottom: 2px; font-size: 16px; font-weight: 800; color: #2E1C10;'>🗺️️ 식당 위치 지도</h3>", unsafe_allow_html=True)
+        st.markdown("<h3 style='margin-bottom: 2px; font-size: 16px; font-weight: 800; color: #2E1C10;'>🗺️ 식당 위치 지도</h3>", unsafe_allow_html=True)
         st.caption("🔴 빨간 핀: 1픽 매장 / 🔵 파란 핀: 주변 후보")
 
         m = folium.Map(location=[top_pick["lat"], top_pick["lng"]], zoom_start=15, control_scale=True)
