@@ -115,6 +115,14 @@ PRESET_RADIUS = {
     "직접 입력": None
 }
 
+# --- 특정 주소/상호 블랙리스트 (부산 하단동 야간주점 배제) ---
+EXCLUDED_SPECIFIC_PLACES = [
+    {"name": "닭도리탕", "address_kw": "낙동남로1423번길 128"},
+    {"name": "부대찌개", "address_kw": "낙동남로1423번길 128"},
+    {"name": "닭도리탕", "address_kw": "하단동 505-1"},
+    {"name": "부대찌개", "address_kw": "하단동 505-1"}
+]
+
 # --- 정밀 필터링 키워드 정의 ---
 EXCLUDED_CATEGORIES = [
     "술집", "주점", "호프", "포차", "이자카야", "바(BAR)", "요리주점", "와인바",
@@ -190,7 +198,6 @@ STRICT_SPECIALTY_NAME_RULES = {
     "육개장": ["육개장", "육대장", "혜장국"]
 }
 
-# 기본 메뉴 목록
 DEFAULT_FOODS = [
     ("김치찌개", "🥘", "김치찌개 전문점"),
     ("된장찌개", "🍲", "된장찌개 백반"),
@@ -263,7 +270,7 @@ DEFAULT_FOODS = [
 MOOD_DATA = {
     "🥳 기분좋음": ("양식·일식·특식", ["파스타", "피자", "수제버거", "초밥", "돈까스", "텐동", "스테이크덮밥", "타코", "사케동", "리조또", "팟타이", "나시고랭"]),
     "🤯 스트레스": ("화끈·얼큰·매콤", ["짬뽕", "마라탕", "떡볶이", "낙지볶음", "쭈꾸미볶음", "제육볶음", "닭갈비", "육개장", "비빔국수", "부대찌개", "김치찌개"]),
-    "☀️ 날씨좋음": ("피크닉·야외·테라스", ["김밥", "샌드위치", "포케", "수제버거", "타코", "초밥", "피자", "파스타", "사케동", "텐동", "돈까스", "돌솥비빔밥"]),
+    "☀️️ 날씨좋음": ("피크닉·야외·테라스", ["김밥", "샌드위치", "포케", "수제버거", "타코", "초밥", "피자", "파스타", "사케동", "텐동", "돈까스", "돌솥비빔밥"]),
     "☔ 흐림·비": ("따끈한 국물·면 요리", ["칼국수", "수제비", "김치찌개", "부대찌개", "일본라멘", "우동", "쌀국수", "짬뽕", "동태탕", "순두부찌개", "잔치국수"]),
     "😴 피곤·보양": ("든든한 보양 뚝배기", ["삼계탕", "갈비탕", "추어탕", "도가니탕", "설렁탕", "곰탕", "국밥", "뼈해장국", "백반", "보리밥정식"]),
     "🫠 입맛없음": ("산뜻·시원한 별미", ["막국수", "냉면", "소바", "포케", "비빔국수", "회덮밥", "돌솥비빔밥", "샌드위치", "간장게장백반", "쌈밥정식"]),
@@ -279,19 +286,31 @@ ROW_PAIRS = [
 ]
 
 # --- 식당 텍스트 및 카테고리 정밀 검증 엔진 ---
-def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_name: str) -> bool:
+def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_name: str, address: str = "") -> bool:
     clean_name = place_name.replace(" ", "").upper()
     cat_full = category_name.replace(" ", "")
+    clean_addr = address.replace(" ", "")
 
+    # [0단계] 특정 문제 주소/상호 블랙리스트 배제 (부산 하단동 닭도리탕, 부대찌개)
+    for target in EXCLUDED_SPECIFIC_PLACES:
+        target_name = target["name"].replace(" ", "").upper()
+        target_addr = target["address_kw"].replace(" ", "")
+        if target_name in clean_name and target_addr in clean_addr:
+            return False
+
+    # [1단계] 주점/술집/카페 카테고리 차단
     if any(ex in cat_full for ex in EXCLUDED_CATEGORIES):
         return False
+    # [2단계] 술집 상호 키워드 차단
     if any(bad in clean_name for bad in [k.upper() for k in EXCLUDED_NAME_KEYWORDS]):
         return False
+    # [3단계] 전집/주막 배제
     if any(jeon in clean_name for jeon in JEON_KEYWORDS):
         return False
     if any(c in cat_full for c in ["전,빈대떡", "빈대떡"]):
         return False
 
+    # [4단계] 고깃집 배제 (닭갈비 예외)
     if any(non in cat_full for non in NON_LUNCH_CATEGORIES):
         if not (menu_name == "닭갈비" and "닭요리" in cat_full):
             return False
@@ -302,29 +321,34 @@ def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_na
         if any(bad in clean_name for bad in [k.upper() for k in MEAT_SHOP_KEYWORDS]):
             return False
 
+    # [5단계] 분식 및 다메뉴 체인 필터링
     if menu_name not in ["김밥", "떡볶이"]:
         if any(brand in clean_name for brand in MULTI_MENU_FRANCHISES):
             return False
         if "분식" in cat_full and not any(k in cat_full for k in ["일식", "양식", "한식", "중식", "아시아음식"]):
             return False
 
+    # [6단계] 초밥/횟집 필터링
     if menu_name == "초밥":
         if any(fish in clean_name for fish in EVENING_RAW_FISH_KEYWORDS):
             return False
         if "회" in cat_full and not any(k in clean_name for k in ["스시", "초밥"]):
             return False
 
+    # [7단계] 돈까스 특화
     if menu_name == "돈까스":
         is_tonkatsu = any(k in clean_name for k in TONKATSU_NAME_INDICATORS) or any(c in cat_full for c in ["돈가스", "돈까스"])
         if not is_tonkatsu:
             return False
 
+    # [8단계] 잔치국수 전용 베트남/아시안 쌀국수 차단
     if menu_name == "잔치국수":
         if any(asian in cat_full for asian in ["아시아음식", "베트남", "태국", "동남아"]):
             return False
         if any(pho in clean_name for pho in VIETNAMESE_NOODLE_KEYWORDS):
             return False
 
+    # [9단계] 단품 전문점 상호 규칙 (국밥, 육개장, 칼국수, 죽 등)
     if menu_name in STRICT_SPECIALTY_NAME_RULES:
         required_words = STRICT_SPECIALTY_NAME_RULES[menu_name]
         if not any(req in clean_name for req in required_words):
@@ -420,7 +444,10 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
             for d in docs:
                 p_name = d.get("place_name", "")
                 cat_name = d.get("category_name", "")
-                if not is_valid_specialized_restaurant(menu_name, p_name, cat_name):
+                addr = d.get("road_address_name") or d.get("address_name", "")
+                
+                # 특정 장소 및 카테고리 검증
+                if not is_valid_specialized_restaurant(menu_name, p_name, cat_name, address=addr):
                     continue
                 
                 dist_m = float(d.get("distance", 0))
@@ -431,7 +458,7 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
                     "lat": float(d.get("y")),
                     "lng": float(d.get("x")),
                     "dist": round(dist_m / 1000, 2) if dist_m > 0 else 0.1,
-                    "address": d.get("road_address_name") or d.get("address_name", ""),
+                    "address": addr,
                     "place_url": d.get("place_url", "")
                 }
                 p_dict["priority_score"] = calculate_priority(p_dict, menu_name)
@@ -614,6 +641,7 @@ with st.container(border=True):
             show_location_warning()
         else:
             region_warning_spot.empty()
+            # '죽' 메뉴는 속편한식사에서만 나오도록 일반 룰렛에서 제외
             selected_candidates = [f for f in DEFAULT_FOODS if f[0] != "죽"]
             spin_triggered = True
 
