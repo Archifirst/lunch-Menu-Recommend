@@ -24,24 +24,13 @@ st.markdown(
         max-width: 620px !important;
     }
 
-    /* 통일된 소제목 헤더 스타일 */
+    /* 통일된 소제목 헤더 스타일 (개별 박스 내부 최상단에 배치) */
     .section-title {
-        font-size: 14px !important;
+        font-size: 14.5px !important;
         font-weight: 700 !important;
         color: #3E3228 !important;
-        margin-top: 18px !important;
-        margin-bottom: 6px !important;
-        letter-spacing: -0.3px !important;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-    }
-    .section-title-first {
         margin-top: 0px !important;
-        margin-bottom: 6px !important;
-        font-size: 14px !important;
-        font-weight: 700 !important;
-        color: #3E3228 !important;
+        margin-bottom: 8px !important;
         letter-spacing: -0.3px !important;
         display: flex;
         align-items: center;
@@ -70,14 +59,14 @@ st.markdown(
         transform-origin: top center;
     }
 
-    /* 설정 영역 통합 컨테이너 박스 */
+    /* 개별 박스(Border Container) 카드 스타일 */
     div[data-testid="stVerticalBlockBorderWrapper"] {
-        border-radius: 20px !important;
+        border-radius: 18px !important;
         border: 1.8px solid #EAE3DB !important;
         background-color: #FFFFFF !important;
-        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.03) !important;
-        padding: 20px 18px 26px 18px !important;
-        margin-bottom: 22px !important;
+        box-shadow: 0 3px 12px rgba(0, 0, 0, 0.02) !important;
+        padding: 16px 16px !important;
+        margin-bottom: 12px !important;
     }
 
     /* 일반 옵션 버튼 스타일 */
@@ -120,53 +109,53 @@ st.markdown(
         padding: 0 3px !important;
     }
 
-    /* ============================================================
-       [음식 종류 버튼 세로 간격을 가로 간격(6px)과 완전 일치시키는 CSS]
-       ============================================================ */
+    /* 음식 종류 세로 간격을 가로 간격(6px)과 완전 일치시키는 설정 */
     .cuisine-grid div[data-testid="stVerticalBlock"] > div:has(button[key^="cbtn_"]) {
         margin-bottom: -10px !important;
     }
-    /* 마지막 줄 '모두' 버튼 상단 여백을 6px 규격으로 조정 */
     .cuisine-all-btn > div > div > div.stButton > button {
         margin-top: 6px !important;
     }
 
     /* ============================================================
-       [메인 룰렛 버튼 전용 강조 애니메이션]
+       [메인 룰렛 버튼: 박스 2배(88px) & 텍스트 1.5배(24px) 특대형 강조]
        ============================================================ */
     @keyframes roulettePulse {
         0% {
             transform: scale(1);
-            box-shadow: 0 4px 15px rgba(232, 106, 62, 0.4), 0 0 0 0 rgba(232, 106, 62, 0.6);
+            box-shadow: 0 6px 20px rgba(232, 106, 62, 0.45), 0 0 0 0 rgba(232, 106, 62, 0.6);
         }
         50% {
             transform: scale(1.02);
-            box-shadow: 0 8px 25px rgba(232, 106, 62, 0.6), 0 0 0 10px rgba(232, 106, 62, 0);
+            box-shadow: 0 10px 30px rgba(232, 106, 62, 0.65), 0 0 0 12px rgba(232, 106, 62, 0);
         }
         100% {
             transform: scale(1);
-            box-shadow: 0 4px 15px rgba(232, 106, 62, 0.4), 0 0 0 0 rgba(232, 106, 62, 0);
+            box-shadow: 0 6px 20px rgba(232, 106, 62, 0.45), 0 0 0 0 rgba(232, 106, 62, 0);
         }
     }
 
     button[key="btn_trigger_random"], 
     div:has(> button[key="btn_trigger_random"]) > button {
-        height: 52px !important;
-        font-size: 16.5px !important;
-        font-weight: 800 !important;
-        letter-spacing: -0.3px !important;
-        background: linear-gradient(135deg, #FF6F3D 0%, #E85A2A 50%, #D84A1A 100%) !important;
+        height: 88px !important;  /* 기존 대비 2배 사이즈 */
+        font-size: 24px !important; /* 기존 16px 대비 1.5배 사이즈 */
+        font-weight: 900 !important;
+        letter-spacing: -0.5px !important;
+        background: linear-gradient(135deg, #FF7B47 0%, #E85A2A 50%, #D84A1A 100%) !important;
         color: #FFFFFF !important;
         border: none !important;
-        border-radius: 15px !important;
+        border-radius: 20px !important;
         animation: roulettePulse 2.0s infinite ease-in-out !important;
         cursor: pointer !important;
-        margin-top: 4px !important;
-        margin-bottom: 8px !important;
+        margin-top: 6px !important;
+        margin-bottom: 12px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
     }
     button[key="btn_trigger_random"]:hover {
-        background: linear-gradient(135deg, #FF5B22 0%, #D64716 100%) !important;
-        transform: scale(1.03) !important;
+        background: linear-gradient(135deg, #FF662A 0%, #D64716 100%) !important;
+        transform: scale(1.025) !important;
     }
 
     /* 경고창 여백 */
@@ -176,8 +165,8 @@ st.markdown(
         align-items: center;
         gap: 8px;
         width: 100%;
-        height: 42px;
-        margin: 6px 0 12px 0;
+        height: 44px;
+        margin: 6px 0 14px 0;
         background-color: #FFFDF7;
         border: 1.5px solid #F7D488;
         border-radius: 12px;
@@ -649,10 +638,9 @@ st.markdown("<div style='color: #8C827A; font-size: 13px; margin-bottom: 14px;'>
 if not has_key:
     st.warning("⚠️ **API 키 설정 필요**: `.streamlit/secrets.toml` 또는 Cloud Secrets에 `KAKAO_REST_KEY`를 설정해주세요.")
 
-# --- [통합 컨테이너 박스] 위치, 탐색 반경, 음식 종류, 가격, 주차 설정 ---
+# --- 1. 위치 입력 (개별 박스) ---
 with st.container(border=True):
-    # 1. 위치 입력 섹션
-    st.markdown("<div class='section-title-first'>📍 위치</div>", unsafe_allow_html=True)
+    st.markdown("<div class='section-title'>📍 위치</div>", unsafe_allow_html=True)
     col_input, col_gps = st.columns([3.5, 1.2], vertical_alignment="center")
 
     with col_input:
@@ -695,80 +683,78 @@ with st.container(border=True):
             unsafe_allow_html=True
         )
 
-    # 2. 반경 노출 섹션
-    clean_region = region.strip()
-    is_admin_region = False
+# --- 2. 탐색 반경 (개별 박스) ---
+clean_region = region.strip()
+is_admin_region = False
 
-    if clean_region:
-        is_spot = bool(re.search(r"(역|출구|거리|센터|스퀘어|타워|빌딩|공원|마트|백화점)$", clean_region))
-        is_pure_admin = bool(re.search(r"([시군구읍면동]|\b\w+[0-9]*가)$", clean_region))
-        if is_pure_admin and not is_spot:
-            is_admin_region = True
+if clean_region:
+    is_spot = bool(re.search(r"(역|출구|거리|센터|스퀘어|타워|빌딩|공원|마트|백화점)$", clean_region))
+    is_pure_admin = bool(re.search(r"([시군구읍면동]|\b\w+[0-9]*가)$", clean_region))
+    if is_pure_admin and not is_spot:
+        is_admin_region = True
 
 should_show_radius = bool(clean_region and not is_admin_region)
 
 if should_show_radius:
-    st.markdown("<div class='radius-wrapper'>", unsafe_allow_html=True)
-    st.markdown("<div class='section-title'>📏 탐색 반경</div>", unsafe_allow_html=True)
-    
-    c1, c2, c3, c4 = st.columns([1.0, 1.0, 1.0, 1.2], vertical_alignment="center")
-    current_preset = st.session_state.selected_radius_preset
+    with st.container(border=True):
+        st.markdown("<div class='section-title'>📏 탐색 반경</div>", unsafe_allow_html=True)
+        
+        c1, c2, c3, c4 = st.columns([1.0, 1.0, 1.0, 1.2], vertical_alignment="center")
+        current_preset = st.session_state.selected_radius_preset
 
-    with c1:
-        if st.button("🚶 인근", key="rbtn_walk", type="primary" if current_preset == "인근" else "secondary", use_container_width=True):
-            if st.session_state.selected_radius_preset != "인근":
-                st.session_state.selected_radius_preset = "인근"
+        with c1:
+            if st.button("🚶 인근", key="rbtn_walk", type="primary" if current_preset == "인근" else "secondary", use_container_width=True):
+                if st.session_state.selected_radius_preset != "인근":
+                    st.session_state.selected_radius_preset = "인근"
+                    st.session_state.saved_result = None
+                    st.rerun()
+
+        with c2:
+            if st.button("🚲 근거리", key="rbtn_bike", type="primary" if current_preset == "근거리" else "secondary", use_container_width=True):
+                if st.session_state.selected_radius_preset != "근거리":
+                    st.session_state.selected_radius_preset = "근거리"
+                    st.session_state.saved_result = None
+                    st.rerun()
+
+        with c3:
+            if st.button("🚗 원거리", key="rbtn_car", type="primary" if current_preset == "원거리" else "secondary", use_container_width=True):
+                if st.session_state.selected_radius_preset != "원거리":
+                    st.session_state.selected_radius_preset = "원거리"
+                    st.session_state.saved_result = None
+                    st.rerun()
+
+        with c4:
+            if st.button("직접 입력", key="rbtn_custom", type="primary" if current_preset == "직접 입력" else "secondary", use_container_width=True):
+                if st.session_state.selected_radius_preset != "직접 입력":
+                    st.session_state.selected_radius_preset = "직접 입력"
+                    st.session_state.saved_result = None
+                    st.rerun()
+
+        if st.session_state.selected_radius_preset == "직접 입력":
+            st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
+            manual_radius = st.number_input(
+                "희망 반경 (단위: km)", 
+                min_value=0.2, 
+                max_value=10.0, 
+                value=st.session_state.custom_radius_val, 
+                step=0.2,
+                key="custom_radius_num",
+                label_visibility="collapsed"
+            )
+            if manual_radius != st.session_state.custom_radius_val:
+                st.session_state.custom_radius_val = manual_radius
                 st.session_state.saved_result = None
-                st.rerun()
-
-    with c2:
-        if st.button("🚲 근거리", key="rbtn_bike", type="primary" if current_preset == "근거리" else "secondary", use_container_width=True):
-            if st.session_state.selected_radius_preset != "근거리":
-                st.session_state.selected_radius_preset = "근거리"
-                st.session_state.saved_result = None
-                st.rerun()
-
-    with c3:
-        if st.button("🚗 원거리", key="rbtn_car", type="primary" if current_preset == "원거리" else "secondary", use_container_width=True):
-            if st.session_state.selected_radius_preset != "원거리":
-                st.session_state.selected_radius_preset = "원거리"
-                st.session_state.saved_result = None
-                st.rerun()
-
-    with c4:
-        if st.button("직접 입력", key="rbtn_custom", type="primary" if current_preset == "직접 입력" else "secondary", use_container_width=True):
-            if st.session_state.selected_radius_preset != "직접 입력":
-                st.session_state.selected_radius_preset = "직접 입력"
-                st.session_state.saved_result = None
-                st.rerun()
-
-    if st.session_state.selected_radius_preset == "직접 입력":
-        st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
-        manual_radius = st.number_input(
-            "희망 반경 (단위: km)", 
-            min_value=0.2, 
-            max_value=10.0, 
-            value=st.session_state.custom_radius_val, 
-            step=0.2,
-            key="custom_radius_num",
-            label_visibility="collapsed"
-        )
-        if manual_radius != st.session_state.custom_radius_val:
-            st.session_state.custom_radius_val = manual_radius
-            st.session_state.saved_result = None
-        radius_km = float(manual_radius)
-        radius_display_text = f"직접 입력 {radius_km:.1f}km"
-    else:
-        radius_km = PRESET_RADIUS.get(st.session_state.selected_radius_preset, 1.8)
-        radius_display_text = f"{st.session_state.selected_radius_preset} ({radius_km}km)"
-
-    st.markdown("</div>", unsafe_allow_html=True)
+            radius_km = float(manual_radius)
+            radius_display_text = f"직접 입력 {radius_km:.1f}km"
+        else:
+            radius_km = PRESET_RADIUS.get(st.session_state.selected_radius_preset, 1.8)
+            radius_display_text = f"{st.session_state.selected_radius_preset} ({radius_km}km)"
 else:
     radius_km = 1.8
     radius_display_text = "지역 인근"
 
-# --- 3. 음식 종류 선택 섹션 (완벽한 가로/세로 6px 일치) ---
-with st.container():
+# --- 3. 음식 종류 선택 (개별 박스) ---
+with st.container(border=True):
     st.markdown("<div class='section-title'>🍽️ 음식 종류</div>", unsafe_allow_html=True)
     st.markdown("<div class='cuisine-grid'>", unsafe_allow_html=True)
 
@@ -835,7 +821,8 @@ with st.container():
     st.markdown("</div>", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # 4. 음식 가격(식사 기준) 선택 섹션
+# --- 4. 음식 가격(식사 기준) 선택 (개별 박스) ---
+with st.container(border=True):
     st.markdown("<div class='section-title'>💵 음식 가격(식사 기준)</div>", unsafe_allow_html=True)
 
     p1, p2, p3, p4 = st.columns(4)
@@ -866,7 +853,8 @@ with st.container():
                 st.session_state.saved_result = None
                 st.rerun()
 
-    # 5. 주차 가능 여부 선택 섹션
+# --- 5. 주차 가능 여부 선택 (개별 박스) ---
+with st.container(border=True):
     st.markdown("<div class='section-title'>🅿️ 주차 가능 여부</div>", unsafe_allow_html=True)
     pk1, pk2 = st.columns(2)
     current_parking = st.session_state.selected_parking
@@ -906,7 +894,7 @@ def show_cuisine_warning():
     region_warning_spot.markdown(
         """
         <div class="warning-box">
-            <span style="font-size: 16px;">⚠️️</span>
+            <span style="font-size: 16px;">⚠️</span>
             <span style="color: #6C4D0A; font-size: 13.5px; font-weight: 700;">
                 음식 종류를 선택해 주세요!
             </span>
@@ -915,7 +903,7 @@ def show_cuisine_warning():
         unsafe_allow_html=True
     )
 
-# --- 2. 단독 룰렛 돌리기 버튼 (강조 애니메이션 적용) ---
+# --- 6. 메인 룰렛 버튼 (2배 크기 & 1.5배 텍스트 강조) ---
 if st.button("🎲 오늘 점심 랜덤 룰렛 돌리기!", use_container_width=True, type="primary", key="btn_trigger_random"):
     if not region.strip() and not st.session_state.gps_coords:
         show_location_warning()
@@ -945,7 +933,7 @@ if st.button("🎲 오늘 점심 랜덤 룰렛 돌리기!", use_container_width=
 card_spot = st.empty()
 detail_spot = st.empty()
 
-# --- 3. 룰렛 실행 및 고속 탐색 로직 ---
+# --- 7. 룰렛 실행 및 고속 탐색 로직 ---
 if spin_triggered and selected_candidates:
     detail_spot.empty()
 
@@ -1013,7 +1001,7 @@ if spin_triggered and selected_candidates:
         else:
             region_warning_spot.warning(f"⚠️ 설정하신 조건 내에 만족하는 식당을 찾지 못했습니다. 반경을 넓히거나 가격/주차 옵션을 조정해 보세요!")
 
-# --- 4. 결과 화면 출력 ---
+# --- 8. 결과 화면 출력 ---
 has_valid_location = bool(region.strip() or st.session_state.gps_coords)
 res = st.session_state.saved_result
 
@@ -1045,7 +1033,7 @@ if has_valid_location and res is not None and res.get("places"):
 
         parking_badge = ""
         if top_pick.get("has_parking", False):
-            parking_badge = '<span style="font-size: 11px; background: #E8F4EA; color: #2E7D32; padding: 2px 7px; border-radius: 6px; font-weight: 700;">🅿️ 주차 편리</span>'
+            parking_badge = '<span style="font-size: 11px; background: #E8F4EA; color: #2E7D32; padding: 2px 7px; border-radius: 6px; font-weight: 700;">🅿️️ 주차 편리</span>'
 
         top_pick_html = (
             f'<div style="margin-bottom: 20px; padding: 22px 18px; '
