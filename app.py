@@ -59,7 +59,7 @@ st.markdown(
         margin-bottom: 14px !important;
     }
 
-    /* 기본 옵션 버튼 스타일 (기본 높이 40px) */
+    /* 일반 옵션 버튼 스타일 (기본 높이 40px) */
     div.stButton > button {
         height: 40px !important;
         border-radius: 11px !important;
@@ -116,9 +116,7 @@ st.markdown(
         margin-bottom: 0px !important;
     }
 
-    /* ============================================================
-       [메인 룰렛 버튼: 마커(#spin-marker) 인접 요소를 이용한 강제 타깃팅]
-       ============================================================ */
+    /* 룰렛 펄스 애니메이션 */
     @keyframes roulettePulse {
         0% {
             transform: scale(1);
@@ -132,49 +130,6 @@ st.markdown(
             transform: scale(1);
             box-shadow: 0 6px 20px rgba(232, 106, 62, 0.45), 0 0 0 0 rgba(232, 106, 62, 0);
         }
-    }
-
-    /* 마커 태그는 공간을 차지하지 않음 */
-    #spin-marker {
-        display: none !important;
-    }
-
-    /* 마커를 포함한 요소 바로 다음의 stButton 또는 stElementContainer 타깃 */
-    div:has(> #spin-marker) + div.stElementContainer button,
-    div:has(> #spin-marker) + div.stButton button,
-    div:has(> #spin-marker) ~ div[data-testid="stElementContainer"] button {
-        height: 84px !important;
-        min-height: 84px !important;
-        background: linear-gradient(135deg, #FF7B47 0%, #E85A2A 50%, #D84A1A 100%) !important;
-        color: #FFFFFF !important;
-        border: none !important;
-        border-radius: 20px !important;
-        animation: roulettePulse 2.0s infinite ease-in-out !important;
-        cursor: pointer !important;
-        box-shadow: 0 6px 20px rgba(232, 106, 62, 0.45) !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        margin-top: 16px !important;
-        margin-bottom: 16px !important;
-    }
-
-    /* 버튼 내부 텍스트 폰트 강제 확대 */
-    div:has(> #spin-marker) + div.stElementContainer button *,
-    div:has(> #spin-marker) + div.stButton button *,
-    div:has(> #spin-marker) ~ div[data-testid="stElementContainer"] button * {
-        font-size: 24px !important;
-        font-weight: 900 !important;
-        letter-spacing: -0.5px !important;
-        color: #FFFFFF !important;
-        line-height: 1.2 !important;
-    }
-
-    div:has(> #spin-marker) + div.stElementContainer button:hover,
-    div:has(> #spin-marker) + div.stButton button:hover,
-    div:has(> #spin-marker) ~ div[data-testid="stElementContainer"] button:hover {
-        background: linear-gradient(135deg, #FF662A 0%, #D64716 100%) !important;
-        transform: scale(1.02) !important;
     }
 
     .warning-box {
@@ -224,8 +179,30 @@ if "gps_coords" not in st.session_state:
     st.session_state.gps_coords = None
 if "region_input_val" not in st.session_state:
     st.session_state.region_input_val = ""
+if "spin_clicked_from_html" not in st.session_state:
+    st.session_state.spin_clicked_from_html = False
 
-# --- 필터링 키워드 정의 ---
+# --- 브라우저 GPS 및 룰렛 클릭 수신 처리 ---
+qp = st.query_params
+if qp.get("action") == "spin":
+    st.session_state.spin_clicked_from_html = True
+    st.query_params.clear()
+
+if qp.get("action") == "gps" and "lat" in qp and "lng" in qp:
+    try:
+        lat_f = float(qp.get("lat"))
+        lng_f = float(qp.get("lng"))
+        if st.session_state.gps_coords != (lat_f, lng_f):
+            st.session_state.gps_coords = (lat_f, lng_f)
+            detected_name = kakao_reverse_geocode(lat_f, lng_f)
+            st.session_state.region_input_val = detected_name
+            st.session_state.saved_result = None
+            st.toast(f"현재 위치 감지: '{detected_name}'", icon="📍")
+    except Exception:
+        pass
+    st.query_params.clear()
+
+# --- 정밀 필터링 키워드 정의 ---
 EXCLUDED_CATEGORIES = [
     "술집", "주점", "호프", "포차", "이자카야", "바(BAR)", "요리주점", "와인바",
     "칵테일바", "민속주점", "맥주", "룸살롱", "단란주점", "유흥주점", "라이브카페", 
@@ -314,7 +291,7 @@ DEFAULT_FOODS = [
     ("갈비탕", "🍖", "갈비탕 전문점", "한식", "mid"),
     ("삼계탕", "🍗", "삼계탕 전문점", "한식", "mid"),
     ("추어탕", "🍲", "추어탕 전문점", "한식", "mid"),
-    ("육개장", "🌶️️", "전통 육개장 전문점", "한식", "low"),
+    ("육개장", "🌶", "전통 육개장 전문점", "한식", "low"),
     ("콩나물국밥", "🌱", "콩나물국밥 전문점", "한식", "low"),
     ("황태해장국", "🐟", "황태해장국 전문점", "한식", "low"),
     ("선지해장국", "🥘", "선지해장국 전문점", "한식", "low"),
@@ -636,22 +613,6 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
         pass
     return []
 
-# --- 브라우저 GPS 수신 처리 ---
-qp = st.query_params
-if qp.get("action") == "gps" and "lat" in qp and "lng" in qp:
-    try:
-        lat_f = float(qp.get("lat"))
-        lng_f = float(qp.get("lng"))
-        if st.session_state.gps_coords != (lat_f, lng_f):
-            st.session_state.gps_coords = (lat_f, lng_f)
-            detected_name = kakao_reverse_geocode(lat_f, lng_f)
-            st.session_state.region_input_val = detected_name
-            st.session_state.saved_result = None
-            st.toast(f"현재 위치 감지: '{detected_name}'", icon="📍")
-    except Exception:
-        pass
-    st.query_params.clear()
-
 # --- 화면 상단 제목 및 설명 ---
 st.markdown("<h1 style='color: #2E1C10; font-size: 26px; font-weight: 800; margin: 0 0 4px 0;'>🍱 오늘 점심 뭐 먹지?</h1>", unsafe_allow_html=True)
 st.markdown("<div style='color: #8C827A; font-size: 13px; margin-bottom: 14px;'>고민되는 점심 메뉴와 검증된 주변 밥집을 랜덤으로 골라드립니다.</div>", unsafe_allow_html=True)
@@ -776,7 +737,7 @@ else:
 
 # --- 3. 음식 종류 선택 (개별 박스: 하단 내부 여백 완벽 밀착) ---
 with st.container(border=True):
-    st.markdown("<div class='section-title'>🍽️ 음식 종류</div>", unsafe_allow_html=True)
+    st.markdown("<div class='section-title'>🍽️️ 음식 종류</div>", unsafe_allow_html=True)
 
     cu1, cu2, cu3, cu4 = st.columns(4)
     current_cuisine = st.session_state.selected_cuisine
@@ -920,11 +881,40 @@ def show_cuisine_warning():
         unsafe_allow_html=True
     )
 
-# --- 6. 메인 룰렛 버튼 (마커를 심어 100% 확실하게 타깃) ---
-st.markdown('<span id="spin-marker"></span>', unsafe_allow_html=True)
-spin_clicked = st.button("🎲 오늘 점심 랜덤 룰렛 돌리기!", use_container_width=True, type="primary", key="btn_trigger_random")
+# --- 6. 메인 룰렛 버튼 (순수 HTML 인라인 버튼 - 100% 반영) ---
+st.markdown(
+    """
+    <div style="margin: 16px 0;">
+        <button onclick="
+            const url = new URL(window.location.href);
+            url.searchParams.set('action', 'spin');
+            window.location.href = url.href;
+        " style="
+            width: 100%;
+            height: 84px;
+            font-size: 24px;
+            font-weight: 900;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #FF7B47 0%, #E85A2A 50%, #D84A1A 100%);
+            color: #FFFFFF;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(232, 106, 62, 0.45);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: roulettePulse 2.0s infinite ease-in-out;
+        ">
+            🎲 오늘 점심 랜덤 룰렛 돌리기!
+        </button>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
-if spin_clicked:
+if st.session_state.spin_clicked_from_html:
+    st.session_state.spin_clicked_from_html = False
     if not region.strip() and not st.session_state.gps_coords:
         show_location_warning()
     elif not st.session_state.selected_cuisine:
