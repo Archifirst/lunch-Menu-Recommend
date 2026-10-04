@@ -59,52 +59,52 @@ st.markdown(
         transform-origin: top center;
     }
 
-    /* 개별 박스(Border Container) 카드 스타일 - 모든 박스 동일 여백 */
+    /* 개별 박스(Border Container) 카드 스타일 및 하단 여백 통일 (14px) */
     div[data-testid="stVerticalBlockBorderWrapper"] {
         border-radius: 18px !important;
         border: 1.8px solid #EAE3DB !important;
         background-color: #FFFFFF !important;
         box-shadow: 0 3px 12px rgba(0, 0, 0, 0.02) !important;
-        padding: 16px 16px !important;
-        margin-bottom: 12px !important;
+        padding: 16px 16px 16px 16px !important;
+        margin-bottom: 14px !important;
     }
 
-    /* 일반 옵션 버튼 스타일 (특정 클래스 제외) */
+    /* 일반 옵션 버튼 스타일 (기본 40px) */
     div.stButton > button {
-        height: 40px;
-        border-radius: 11px;
-        transition: all 0.15s ease;
-        white-space: nowrap;
+        height: 40px !important;
+        border-radius: 11px !important;
+        transition: all 0.15s ease !important;
+        white-space: nowrap !important;
     }
     div.stButton > button[kind="primary"] {
-        background-color: #E86A3E;
-        color: white;
-        border: none;
-        font-size: 13.5px;
-        font-weight: 700;
-        box-shadow: 0 2px 7px rgba(232, 106, 62, 0.22);
+        background-color: #E86A3E !important;
+        color: white !important;
+        border: none !important;
+        font-size: 13.5px !important;
+        font-weight: 700 !important;
+        box-shadow: 0 2px 7px rgba(232, 106, 62, 0.22) !important;
     }
     div.stButton > button[kind="primary"]:hover {
-        background-color: #D65A2F;
+        background-color: #D65A2F !important;
         transform: translateY(-1px);
     }
     div.stButton > button[kind="secondary"] {
-        border: 1.2px solid #EDE4DC;
-        background-color: #FFFFFF;
-        color: #3E3228;
-        font-size: 13px;
-        font-weight: 600;
-        padding: 6px 8px;
-        box-shadow: 0 1px 4px rgba(0,0,0,0.02);
+        border: 1.2px solid #EDE4DC !important;
+        background-color: #FFFFFF !important;
+        color: #3E3228 !important;
+        font-size: 13px !important;
+        font-weight: 600 !important;
+        padding: 6px 8px !important;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.02) !important;
     }
     div.stButton > button[kind="secondary"]:hover {
-        border-color: #E86A3E;
-        color: #E86A3E;
-        background-color: #FFFDF9;
+        border-color: #E86A3E !important;
+        color: #E86A3E !important;
+        background-color: #FFFDF9 !important;
         transform: translateY(-1px);
     }
 
-    /* 가로 컬럼 간격 균일화 (양옆 패딩 3px씩 = 총 6px 간격) */
+    /* 가로 컬럼 간격 균일화 */
     div[data-testid="stColumn"] {
         padding: 0 3px !important;
     }
@@ -115,11 +115,11 @@ st.markdown(
     }
     .cuisine-all-btn > div > div > div.stButton > button {
         margin-top: 6px !important;
+        margin-bottom: 0px !important;
     }
 
     /* ============================================================
-       [메인 룰렛 버튼: 박스 2배(84px) & 텍스트 1.5배(24px) 특대형 볼드]
-       최우선 순위 셀렉터로 100% 강제 적용
+       [메인 룰렛 버튼: 박스 2배(84px) & 텍스트 1.5배(24px, 900 볼드)]
        ============================================================ */
     @keyframes roulettePulse {
         0% {
@@ -136,12 +136,15 @@ st.markdown(
         }
     }
 
-    /* 메인 룰렛 버튼 컨테이너를 타겟팅하여 높이 2배, 폰트 1.5배 강제 주입 */
-    div.big-spin-container div.stButton > button {
-        height: 84px !important;
-        min-height: 84px !important;
-        font-size: 24px !important;
-        font-weight: 900 !important;
+    .hero-spin-box {
+        margin-top: 16px !important;
+        margin-bottom: 16px !important;
+    }
+
+    .hero-spin-box div.stButton > button {
+        height: 84px !important;          /* 일반 버튼(40px) 대비 2배 이상 */
+        font-size: 24px !important;        /* 일반 버튼(14px) 대비 약 1.7배 */
+        font-weight: 900 !important;       /* 가장 굵은 Ultra Bold */
         letter-spacing: -0.5px !important;
         background: linear-gradient(135deg, #FF7B47 0%, #E85A2A 50%, #D84A1A 100%) !important;
         color: #FFFFFF !important;
@@ -149,13 +152,12 @@ st.markdown(
         border-radius: 20px !important;
         animation: roulettePulse 2.0s infinite ease-in-out !important;
         cursor: pointer !important;
-        margin-top: 4px !important;
-        margin-bottom: 12px !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
+        box-shadow: 0 6px 20px rgba(232, 106, 62, 0.45) !important;
     }
-    div.big-spin-container div.stButton > button:hover {
+    .hero-spin-box div.stButton > button:hover {
         background: linear-gradient(135deg, #FF662A 0%, #D64716 100%) !important;
         transform: scale(1.025) !important;
     }
@@ -755,7 +757,7 @@ else:
     radius_km = 1.8
     radius_display_text = "지역 인근"
 
-# --- 3. 음식 종류 선택 (개별 박스 & 가로/세로 균일 간격) ---
+# --- 3. 음식 종류 선택 (개별 박스 - 하단 내부 여백 완벽 밀착) ---
 with st.container(border=True):
     st.markdown("<div class='section-title'>🍽️ 음식 종류</div>", unsafe_allow_html=True)
     st.markdown("<div class='cuisine-grid'>", unsafe_allow_html=True)
@@ -905,8 +907,8 @@ def show_cuisine_warning():
         unsafe_allow_html=True
     )
 
-# --- 6. 메인 룰렛 버튼 (박스 2배 크기 & 텍스트 1.5배 특대형 강조) ---
-st.markdown("<div class='big-spin-container'>", unsafe_allow_html=True)
+# --- 6. 메인 룰렛 버튼 (박스 2배 & 텍스트 1.5배, 상하 간격 16px 균일) ---
+st.markdown("<div class='hero-spin-box'>", unsafe_allow_html=True)
 if st.button("🎲 오늘 점심 랜덤 룰렛 돌리기!", use_container_width=True, type="primary", key="btn_trigger_random"):
     if not region.strip() and not st.session_state.gps_coords:
         show_location_warning()
@@ -979,7 +981,7 @@ if spin_triggered and selected_candidates:
                 temp = random.choice(selected_candidates)
                 card_spot.markdown(
                     f"""
-                    <div style="text-align: center; margin: 16px 0 14px 0; padding: 20px 18px; 
+                    <div style="text-align: center; margin: 16px 0 16px 0; padding: 20px 18px; 
                                 background: #FFFDF9; border-radius: 20px; border: 1.5px solid #F5D5B8; 
                                 box-shadow: 0 4px 16px rgba(245, 213, 184, 0.35);">
                         <div style="font-size: 54px; line-height: 1; margin-bottom: 6px;">{temp[1]}</div>
@@ -1005,13 +1007,13 @@ if spin_triggered and selected_candidates:
         else:
             region_warning_spot.warning(f"⚠️ 설정하신 조건 내에 만족하는 식당을 찾지 못했습니다. 반경을 넓히거나 가격/주차 옵션을 조정해 보세요!")
 
-# --- 8. 결과 화면 출력 ---
+# --- 8. 결과 화면 출력 (상단 외부 여백 16px 유지) ---
 has_valid_location = bool(region.strip() or st.session_state.gps_coords)
 res = st.session_state.saved_result
 
 if has_valid_location and res is not None and res.get("places"):
     card_html = (
-        f'<div style="text-align: center; margin: 18px 0 16px 0; padding: 24px 20px; '
+        f'<div style="text-align: center; margin: 16px 0 16px 0; padding: 24px 20px; '
         f'background: #FFFDF9; border-radius: 22px; border: 1.5px solid #F5D5B8; '
         f'box-shadow: 0 4px 18px rgba(245, 213, 184, 0.35);">'
         f'<div style="font-size: 68px; line-height: 1; margin-bottom: 8px;">{res["emoji"]}</div>'
