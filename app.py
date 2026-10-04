@@ -134,45 +134,43 @@ st.markdown(
         }
     }
 
-    /* 룰렛 버튼 상하 간격 16px 균일화 */
-    .hero-spin-box {
+    /* 룰렛 감싸는 래퍼: 상하 간격 16px 균일화 */
+    .hero-spin-wrapper {
         margin-top: 16px !important;
         margin-bottom: 16px !important;
     }
 
-    /* 기본 40px 스타일을 덮어쓰기 위한 최고 우선순위 타깃 선택자 */
-    button[key="btn_trigger_random"],
-    div:has(> button[key="btn_trigger_random"]) > button,
-    .hero-spin-box button {
+    /* 전역 40px !important를 완벽하게 덮어쓰는 초고우선순위 선택자 */
+    .hero-spin-wrapper div.stButton button,
+    .hero-spin-wrapper button,
+    .hero-spin-wrapper div[data-testid="stBaseButton-primary"] button {
         height: 84px !important;
         min-height: 84px !important;
-        font-size: 24px !important;
-        font-weight: 900 !important;
-        letter-spacing: -0.5px !important;
         background: linear-gradient(135deg, #FF7B47 0%, #E85A2A 50%, #D84A1A 100%) !important;
         color: #FFFFFF !important;
         border: none !important;
         border-radius: 20px !important;
         animation: roulettePulse 2.0s infinite ease-in-out !important;
         cursor: pointer !important;
+        box-shadow: 0 6px 20px rgba(232, 106, 62, 0.45) !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
-        box-shadow: 0 6px 20px rgba(232, 106, 62, 0.45) !important;
     }
 
-    /* 텍스트 요소(p, span) 폰트 크기 및 굵기 강제 적용 */
-    button[key="btn_trigger_random"] *,
-    div:has(> button[key="btn_trigger_random"]) > button *,
-    .hero-spin-box button * {
+    /* 텍스트 1.5배(24px) 및 볼드(900) 강제 적용 */
+    .hero-spin-wrapper button p,
+    .hero-spin-wrapper button span,
+    .hero-spin-wrapper button div {
         font-size: 24px !important;
         font-weight: 900 !important;
+        letter-spacing: -0.5px !important;
         color: #FFFFFF !important;
+        line-height: 1.2 !important;
     }
 
-    button[key="btn_trigger_random"]:hover,
-    div:has(> button[key="btn_trigger_random"]) > button:hover,
-    .hero-spin-box button:hover {
+    .hero-spin-wrapper div.stButton button:hover,
+    .hero-spin-wrapper button:hover {
         background: linear-gradient(135deg, #FF662A 0%, #D64716 100%) !important;
         transform: scale(1.02) !important;
     }
@@ -920,9 +918,14 @@ def show_cuisine_warning():
         unsafe_allow_html=True
     )
 
-# --- 6. 메인 룰렛 버튼 (박스 2배 & 텍스트 1.5배, 상하 간격 16px 균일) ---
-st.markdown("<div class='hero-spin-box'>", unsafe_allow_html=True)
-if st.button("🎲 오늘 점심 랜덤 룰렛 돌리기!", use_container_width=True, type="primary", key="btn_trigger_random"):
+# --- 6. 메인 룰렛 버튼 (고유 래퍼 기반 박스 2배 & 텍스트 1.5배, 상하 간격 16px 균일) ---
+hero_container = st.container()
+with hero_container:
+    st.markdown('<div class="hero-spin-wrapper">', unsafe_allow_html=True)
+    spin_clicked = st.button("🎲 오늘 점심 랜덤 룰렛 돌리기!", use_container_width=True, type="primary", key="btn_trigger_random")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+if spin_clicked:
     if not region.strip() and not st.session_state.gps_coords:
         show_location_warning()
     elif not st.session_state.selected_cuisine:
@@ -947,7 +950,6 @@ if st.button("🎲 오늘 점심 랜덤 룰렛 돌리기!", use_container_width=
             selected_candidates = candidates_pool
 
         spin_triggered = True
-st.markdown("</div>", unsafe_allow_html=True)
 
 card_spot = st.empty()
 detail_spot = st.empty()
