@@ -49,7 +49,7 @@ st.markdown(
         box-shadow: 0 0 0 2px rgba(232, 106, 62, 0.15) !important;
     }
 
-    /* 개별 박스(Border Container) 카드 스타일 및 하단 여백 통일 (14px) */
+    /* 개별 박스(Border Container) 카드 스타일 및 하단 마진 통일 (14px) */
     div[data-testid="stVerticalBlockBorderWrapper"] {
         border-radius: 18px !important;
         border: 1.8px solid #EAE3DB !important;
@@ -59,7 +59,7 @@ st.markdown(
         margin-bottom: 14px !important;
     }
 
-    /* 일반 옵션 버튼 스타일 (기본 40px) */
+    /* 일반 옵션 버튼 스타일 (기본 높이 40px) */
     div.stButton > button {
         height: 40px !important;
         border-radius: 11px !important;
@@ -98,15 +98,18 @@ st.markdown(
         padding: 0 3px !important;
     }
 
+    /* 음식 종류 세로 간격 및 최하단 '모두' 버튼 여백 정밀 제어 */
     .cuisine-grid div[data-testid="stVerticalBlock"] > div:has(button[key^="cbtn_"]) {
         margin-bottom: -10px !important;
     }
     .cuisine-all-btn > div > div > div.stButton > button {
         margin-top: 6px !important;
-        margin-bottom: 0px !important;
+        margin-bottom: -4px !important; /* 바닥 패딩과 닿는 불필요 여백 제거 */
     }
 
-    /* 메인 룰렛 버튼 */
+    /* ============================================================
+       [메인 룰렛 버튼: 박스 2배(84px) & 텍스트 1.5배(24px, 900 볼드)]
+       ============================================================ */
     @keyframes roulettePulse {
         0% {
             transform: scale(1);
@@ -122,15 +125,16 @@ st.markdown(
         }
     }
 
+    /* 룰렛 버튼 상하 간격을 균일하게 16px로 제어 */
     .hero-spin-box {
         margin-top: 16px !important;
         margin-bottom: 16px !important;
     }
 
     .hero-spin-box div.stButton > button {
-        height: 84px !important;
-        font-size: 24px !important;
-        font-weight: 900 !important;
+        height: 84px !important;                 /* 기본 40px 대비 2배 이상 */
+        font-size: 24px !important;               /* 일반 14px 대비 약 1.5~1.7배 */
+        font-weight: 900 !important;              /* 볼드 적용 */
         letter-spacing: -0.5px !important;
         background: linear-gradient(135deg, #FF7B47 0%, #E85A2A 50%, #D84A1A 100%) !important;
         color: #FFFFFF !important;
@@ -145,7 +149,7 @@ st.markdown(
     }
     .hero-spin-box div.stButton > button:hover {
         background: linear-gradient(135deg, #FF662A 0%, #D64716 100%) !important;
-        transform: scale(1.025) !important;
+        transform: scale(1.02) !important;
     }
 
     .warning-box {
@@ -196,7 +200,7 @@ if "gps_coords" not in st.session_state:
 if "region_input_val" not in st.session_state:
     st.session_state.region_input_val = ""
 
-# 필터링 키워드
+# --- 필터링 키워드 정의 ---
 EXCLUDED_CATEGORIES = [
     "술집", "주점", "호프", "포차", "이자카야", "바(BAR)", "요리주점", "와인바",
     "칵테일바", "민속주점", "맥주", "룸살롱", "단란주점", "유흥주점", "라이브카페", 
@@ -343,6 +347,7 @@ DEFAULT_FOODS = [
     ("퓨전파스타", "🍝", "퓨전 양식당", "퓨전식", "mid")
 ]
 
+# --- 식당 텍스트 및 카테고리 정밀 검증 엔진 ---
 def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_name: str) -> bool:
     clean_name = place_name.replace(" ", "").upper()
     cat_full = category_name.replace(" ", "")
@@ -396,8 +401,7 @@ def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_na
 
     return True
 
-# 외부 검색 기반 영업시간 판정 (캐시 처리로 속도 및 IP 차단 완화)
-@st.cache_data(ttl=3600, show_spinner=False)
+# --- 실시간 검색 기반 14시 이후 오픈 식당 필터링 ---
 def is_dinner_only_restaurant(place_name: str, address: str) -> bool:
     clean_pname = place_name.split()[0]
     region_chunk = " ".join(address.split()[:2]) if address else ""
@@ -434,6 +438,7 @@ def is_dinner_only_restaurant(place_name: str, address: str) -> bool:
 
     return False
 
+# --- 인근 주차장(300m 이내) 보유 여부 검증 ---
 def has_nearby_parking(lat: float, lng: float, place_name: str) -> bool:
     if any(k in place_name for k in ["주차", "타워", "빌딩", "스퀘어", "몰", "프라자", "센터"]):
         return True
@@ -490,7 +495,6 @@ def calculate_priority(place: dict, menu_name: str, has_parking: bool = False, n
     return score
 
 # --- 카카오 공식 API 통신 함수 ---
-@st.cache_data(ttl=86400, show_spinner=False)
 def kakao_get_coordinates(query: str):
     if not KAKAO_REST_KEY:
         return None, None
@@ -507,7 +511,6 @@ def kakao_get_coordinates(query: str):
         pass
     return None, None
 
-@st.cache_data(ttl=86400, show_spinner=False)
 def kakao_reverse_geocode(lat: float, lng: float) -> str:
     if not KAKAO_REST_KEY:
         return "내 위치"
@@ -541,7 +544,7 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
         "category_group_code": "FD6",
         "x": str(lng),
         "y": str(lat),
-        "radius": max(200, min(radius_meters, 20000)),
+        "radius": min(radius_meters, 20000),
         "sort": "distance",
         "size": 15
     }
@@ -621,14 +624,14 @@ if qp.get("action") == "gps" and "lat" in qp and "lng" in qp:
         pass
     st.query_params.clear()
 
-# --- 화면 상단 헤더 ---
+# --- 화면 상단 제목 및 설명 ---
 st.markdown("<h1 style='color: #2E1C10; font-size: 26px; font-weight: 800; margin: 0 0 4px 0;'>🍱 오늘 점심 뭐 먹지?</h1>", unsafe_allow_html=True)
 st.markdown("<div style='color: #8C827A; font-size: 13px; margin-bottom: 14px;'>고민되는 점심 메뉴와 검증된 주변 밥집을 랜덤으로 골라드립니다.</div>", unsafe_allow_html=True)
 
 if not has_key:
     st.warning("⚠️ **API 키 설정 필요**: `.streamlit/secrets.toml` 또는 Cloud Secrets에 `KAKAO_REST_KEY`를 설정해주세요.")
 
-# --- 1. 위치 입력 ---
+# --- 1. 위치 입력 (개별 박스) ---
 with st.container(border=True):
     st.markdown("<div class='section-title'>📍 위치</div>", unsafe_allow_html=True)
     col_input, col_gps = st.columns([3.5, 1.2], vertical_alignment="center")
@@ -673,7 +676,7 @@ with st.container(border=True):
             unsafe_allow_html=True
         )
 
-# --- 2. 탐색 반경 ---
+# --- 2. 탐색 반경 (개별 박스) ---
 clean_region = region.strip()
 is_admin_region = False
 
@@ -743,7 +746,7 @@ else:
     radius_km = 1.8
     radius_display_text = "지역 인근"
 
-# --- 3. 음식 종류 선택 ---
+# --- 3. 음식 종류 선택 (개별 박스: 하단 내부 여백 완벽 밀착) ---
 with st.container(border=True):
     st.markdown("<div class='section-title'>🍽️ 음식 종류</div>", unsafe_allow_html=True)
     st.markdown("<div class='cuisine-grid'>", unsafe_allow_html=True)
@@ -811,7 +814,7 @@ with st.container(border=True):
     st.markdown("</div>", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
-# --- 4. 음식 가격 선택 ---
+# --- 4. 음식 가격(식사 기준) 선택 (개별 박스) ---
 with st.container(border=True):
     st.markdown("<div class='section-title'>💵 음식 가격(식사 기준)</div>", unsafe_allow_html=True)
 
@@ -843,9 +846,9 @@ with st.container(border=True):
                 st.session_state.saved_result = None
                 st.rerun()
 
-# --- 5. 주차 가능 여부 선택 ---
+# --- 5. 주차 가능 여부 선택 (개별 박스) ---
 with st.container(border=True):
-    st.markdown("<div class='section-title'>🅿️️ 주차 가능 여부</div>", unsafe_allow_html=True)
+    st.markdown("<div class='section-title'>🅿️ 주차 가능 여부</div>", unsafe_allow_html=True)
     pk1, pk2 = st.columns(2)
     current_parking = st.session_state.selected_parking
 
@@ -893,7 +896,7 @@ def show_cuisine_warning():
         unsafe_allow_html=True
     )
 
-# --- 6. 메인 룰렛 버튼 ---
+# --- 6. 메인 룰렛 버튼 (박스 2배 & 텍스트 1.5배, 상하 간격 16px 균일) ---
 st.markdown("<div class='hero-spin-box'>", unsafe_allow_html=True)
 if st.button("🎲 오늘 점심 랜덤 룰렛 돌리기!", use_container_width=True, type="primary", key="btn_trigger_random"):
     if not region.strip() and not st.session_state.gps_coords:
@@ -993,7 +996,7 @@ if spin_triggered and selected_candidates:
         else:
             region_warning_spot.warning(f"⚠️ 설정하신 조건 내에 만족하는 식당을 찾지 못했습니다. 반경을 넓히거나 가격/주차 옵션을 조정해 보세요!")
 
-# --- 8. 결과 화면 출력 ---
+# --- 8. 결과 화면 출력 (상단 외부 여백 16px 유지) ---
 has_valid_location = bool(region.strip() or st.session_state.gps_coords)
 res = st.session_state.saved_result
 
@@ -1083,7 +1086,7 @@ if has_valid_location and res is not None and res.get("places"):
             location=[top_pick["lat"], top_pick["lng"]],
             popup=folium.Popup(f"<b>⭐ {top_pick['name']}</b><br>{top_pick['address']}<br><a href='{top_pick['place_url']}' target='_blank'>카카오맵 열기</a>", max_width=250),
             tooltip=f"⭐ 1픽: {top_pick['name']}",
-            icon=folium.Icon(color="red", icon="cutlery", prefix="fa")
+            icon=folium.Icon(color="red", icon="star", prefix="fa")
         ).add_to(m)
 
         for idx, p in enumerate(places[1:10], start=2):
@@ -1091,7 +1094,7 @@ if has_valid_location and res is not None and res.get("places"):
                 location=[p["lat"], p["lng"]],
                 popup=folium.Popup(f"<b>{idx}. {p['name']}</b><br>{p['address']}<br><a href='{p['place_url']}' target='_blank'>카카오맵 열기</a>", max_width=250),
                 tooltip=f"{idx}. {p['name']}",
-                icon=folium.Icon(color="blue", icon="info-sign")
+                icon=folium.Icon(color="blue", icon="cutlery", prefix="fa")
             ).add_to(m)
 
         unique_map_key = f"map_{res['id']}_{int(top_pick['lat'] * 10000)}"
