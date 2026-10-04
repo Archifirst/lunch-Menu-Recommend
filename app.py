@@ -35,7 +35,7 @@ st.markdown(
         0% { opacity: 0; transform: translateY(-8px) scale(0.99); }
         100% { opacity: 1; transform: translateY(0) scale(1); }
     }
-    .radius-wrapper {
+    .radius-wrapper, .cuisine-wrapper {
         animation: smoothSlideDown 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         transform-origin: top center;
         margin-bottom: 6px;
@@ -56,8 +56,8 @@ st.markdown(
         color: white !important;
         border: none !important;
         border-radius: 12px !important;
-        height: 44px !important;
-        font-size: 15px !important;
+        height: 42px !important;
+        font-size: 14px !important;
         font-weight: 700 !important;
         box-shadow: 0 3px 10px rgba(232, 106, 62, 0.22) !important;
         transition: all 0.15s ease !important;
@@ -74,6 +74,7 @@ st.markdown(
         font-size: 13px !important;
         font-weight: 600 !important;
         padding: 8px 10px !important;
+        height: 42px !important;
         box-shadow: 0 2px 5px rgba(0,0,0,0.02) !important;
         transition: all 0.15s ease !important;
         white-space: nowrap !important;
@@ -99,6 +100,8 @@ KAKAO_REST_KEY = st.secrets["KAKAO_REST_KEY"].strip() if has_key else ""
 # 세션 상태 초기화
 if "selected_radius_preset" not in st.session_state:
     st.session_state.selected_radius_preset = "🚲"
+if "selected_cuisine" not in st.session_state:
+    st.session_state.selected_cuisine = None  # 초기에는 미선택 상태
 if "saved_result" not in st.session_state:
     st.session_state.saved_result = None
 if "spin_count" not in st.session_state:
@@ -190,80 +193,83 @@ STRICT_SPECIALTY_NAME_RULES = {
     "육개장": ["육개장", "육대장", "혜장국"]
 }
 
-# 기본 메뉴 목록
+# 기본 메뉴 목록 (카테고리 정보 포함: [메뉴명, 이모지, 검색키워드, 음식종류])
 DEFAULT_FOODS = [
-    ("김치찌개", "🥘", "김치찌개 전문점"),
-    ("된장찌개", "🍲", "된장찌개 백반"),
-    ("순두부찌개", "🥚", "순두부찌개 전문점"),
-    ("부대찌개", "🥓", "부대찌개 전문점"),
-    ("청국장", "🍲", "청국장 전문점"),
-    ("동태탕", "🐟", "동태탕 전문점"),
-    ("국밥", "🥣", "국밥 전문점"),
-    ("뼈해장국", "🍖", "뼈해장국"),
-    ("설렁탕", "🥣", "설렁탕 전문점"),
-    ("곰탕", "🥩", "곰탕 전문점"),
-    ("갈비탕", "🍖", "갈비탕 전문점"),
-    ("삼계탕", "🍗", "삼계탕 전문점"),
-    ("추어탕", "🍲", "추어탕 전문점"),
-    ("육개장", "🌶️", "전통 육개장 전문점"),
-    ("콩나물국밥", "🌱", "콩나물국밥 전문점"),
-    ("황태해장국", "🐟", "황태해장국 전문점"),
-    ("선지해장국", "🥘", "선지해장국 전문점"),
-    ("도가니탕", "🥣", "도가니탕 전문점"),
-    ("백반", "🍱", "백반 가정식"),
-    ("제육볶음", "🔥", "제육볶음 정식"),
-    ("오징어볶음", "🦑", "오징어볶음 백반"),
-    ("낙지볶음", "🐙", "낙지볶음 전문점"),
-    ("쭈꾸미볶음", "🐙", "쭈꾸미 전문점"),
-    ("돌솥비빔밥", "🍳", "비빔밥 전문점"),
-    ("보리밥정식", "🌾", "보리밥 정식"),
-    ("쌈밥정식", "🥬", "쌈밥 정식"),
-    ("생선구이백반", "🐟", "생선구이 백반"),
-    ("닭갈비", "🍗", "닭갈비 전문점"),
-    ("찜닭", "🥔", "찜닭 전문점"),
-    ("코다리조림", "🐟", "코다리조림 전문점"),
-    ("간장게장백반", "🦀", "게장 정식"),
-    ("칼국수", "🍜", "칼국수 전문점"),
-    ("수제비", "🥣", "수제비 전문점"),
-    ("막국수", "🥢", "막국수 전문점"),
-    ("냉면", "🧊", "함흥 평양 냉면 전문점"),
-    ("잔치국수", "🍜", "잔치국수 멸치국수 전문점"),
-    ("비빔국수", "🌶️", "비빔국수 전문점"),
-    ("소바", "🥢", "메밀소바 모밀 전문점"),
-    ("죽", "🥣", "죽 전문점"),
-    ("돈까스", "🍱", "돈까스 카츠 전문점"),
-    ("초밥", "🍣", "스시 초밥 전문점"),
-    ("일본라멘", "🍜", "일본라멘 전문점"),
-    ("우동", "🍢", "사누키 우동 전문점"),
-    ("사케동", "🍣", "연어덮밥 사케동"),
-    ("가츠동", "🍛", "돈부리 덮밥 전문점"),
-    ("텐동", "🍤", "텐동 전문점"),
-    ("회덮밥", "🥗", "활어 회덮밥"),
-    ("카레라이스", "🍛", "일본카레 전문점"),
-    ("짜장면", "🥢", "짜장면"),
-    ("짬뽕", "🔥", "짬뽕"),
-    ("볶음밥", "🍚", "중화 볶음밥"),
-    ("마파두부밥", "🍛", "마파두부"),
-    ("마라탕", "🌶️", "마라탕 전문점"),
-    ("파스타", "🍝", "파스타 레스토랑"),
-    ("피자", "🍕", "화덕피자"),
-    ("수제버거", "🍔", "수제버거 전문점"),
-    ("스테이크덮밥", "🥩", "스테이크 덮밥"),
-    ("리조또", "🧀", "이탈리안 리조또"),
-    ("쌀국수", "🍜", "베트남 쌀국수"),
-    ("팟타이", "🥢", "태국음식 팟타이"),
-    ("나시고랭", "🍳", "인도네시아 나시고랭"),
-    ("타코", "🌮", "멕시칸 타코"),
-    ("포케", "🥗", "하와이안 포케"),
-    ("샌드위치", "🥪", "수제 샌드위치"),
-    ("떡볶이", "🍢", "떡볶이 전문점"),
-    ("김밥", "🍙", "김밥 전문점")
+    ("김치찌개", "🥘", "김치찌개 전문점", "한식"),
+    ("된장찌개", "🍲", "된장찌개 백반", "한식"),
+    ("순두부찌개", "🥚", "순두부찌개 전문점", "한식"),
+    ("부대찌개", "🥓", "부대찌개 전문점", "한식"),
+    ("청국장", "🍲", "청국장 전문점", "한식"),
+    ("동태탕", "🐟", "동태탕 전문점", "한식"),
+    ("국밥", "🥣", "국밥 전문점", "한식"),
+    ("뼈해장국", "🍖", "뼈해장국", "한식"),
+    ("설렁탕", "🥣", "설렁탕 전문점", "한식"),
+    ("곰탕", "🥩", "곰탕 전문점", "한식"),
+    ("갈비탕", "🍖", "갈비탕 전문점", "한식"),
+    ("삼계탕", "🍗", "삼계탕 전문점", "한식"),
+    ("추어탕", "🍲", "추어탕 전문점", "한식"),
+    ("육개장", "🌶️", "전통 육개장 전문점", "한식"),
+    ("콩나물국밥", "🌱", "콩나물국밥 전문점", "한식"),
+    ("황태해장국", "🐟", "황태해장국 전문점", "한식"),
+    ("선지해장국", "🥘", "선지해장국 전문점", "한식"),
+    ("도가니탕", "🥣", "도가니탕 전문점", "한식"),
+    ("백반", "🍱", "백반 가정식", "한식"),
+    ("제육볶음", "🔥", "제육볶음 정식", "한식"),
+    ("오징어볶음", "🦑", "오징어볶음 백반", "한식"),
+    ("낙지볶음", "🐙", "낙지볶음 전문점", "한식"),
+    ("쭈꾸미볶음", "🐙", "쭈꾸미 전문점", "한식"),
+    ("돌솥비빔밥", "🍳", "비빔밥 전문점", "한식"),
+    ("보리밥정식", "🌾", "보리밥 정식", "한식"),
+    ("쌈밥정식", "🥬", "쌈밥 정식", "한식"),
+    ("생선구이백반", "🐟", "생선구이 백반", "한식"),
+    ("닭갈비", "🍗", "닭갈비 전문점", "한식"),
+    ("찜닭", "🥔", "찜닭 전문점", "한식"),
+    ("코다리조림", "🐟", "코다리조림 전문점", "한식"),
+    ("간장게장백반", "🦀", "게장 정식", "한식"),
+    ("칼국수", "🍜", "칼국수 전문점", "한식"),
+    ("수제비", "🥣", "수제비 전문점", "한식"),
+    ("막국수", "🥢", "막국수 전문점", "한식"),
+    ("냉면", "🧊", "함흥 평양 냉면 전문점", "한식"),
+    ("잔치국수", "🍜", "잔치국수 멸치국수 전문점", "한식"),
+    ("비빔국수", "🌶️", "비빔국수 전문점", "한식"),
+    ("죽", "🥣", "죽 전문점", "한식"),
+    ("떡볶이", "🍢", "떡볶이 전문점", "한식"),
+    ("김밥", "🍙", "김밥 전문점", "한식"),
+    ("짜장면", "🥢", "짜장면", "중식"),
+    ("짬뽕", "🔥", "짬뽕", "중식"),
+    ("볶음밥", "🍚", "중화 볶음밥", "중식"),
+    ("마파두부밥", "🍛", "마파두부", "중식"),
+    ("마라탕", "🌶️", "마라탕 전문점", "중식"),
+    ("소바", "🥢", "메밀소바 모밀 전문점", "일식"),
+    ("돈까스", "🍱", "돈까스 카츠 전문점", "일식"),
+    ("초밥", "🍣", "스시 초밥 전문점", "일식"),
+    ("일본라멘", "🍜", "일본라멘 전문점", "일식"),
+    ("우동", "🍢", "사누키 우동 전문점", "일식"),
+    ("사케동", "🍣", "연어덮밥 사케동", "일식"),
+    ("가츠동", "🍛", "돈부리 덮밥 전문점", "일식"),
+    ("텐동", "🍤", "텐동 전문점", "일식"),
+    ("회덮밥", "🥗", "활어 회덮밥", "일식"),
+    ("카레라이스", "🍛", "일본카레 전문점", "일식"),
+    ("파스타", "🍝", "파스타 레스토랑", "양식"),
+    ("피자", "🍕", "화덕피자", "양식"),
+    ("수제버거", "🍔", "수제버거 전문점", "양식"),
+    ("스테이크덮밥", "🥩", "스테이크 덮밥", "양식"),
+    ("리조또", "🧀", "이탈리안 리조또", "양식"),
+    ("샌드위치", "🥪", "수제 샌드위치", "양식"),
+    ("쌀국수", "🍜", "베트남 쌀국수", "동남아식"),
+    ("팟타이", "🥢", "태국음식 팟타이", "동남아식"),
+    ("나시고랭", "🍳", "인도네시아 나시고랭", "동남아식"),
+    ("인도커리", "🍛", "인도커리 난 전문점", "인도식"),
+    ("타코", "🌮", "멕시칸 타코", "멕시코식"),
+    ("브리또", "🌯", "멕시칸 브리또", "멕시코식"),
+    ("포케", "🥗", "하와이안 포케", "퓨전식"),
+    ("퓨전파스타", "🍝", "퓨전 양식당", "퓨전식")
 ]
 
 MOOD_DATA = {
-    "🥳 기분좋음": ("양식·일식·특식", ["파스타", "피자", "수제버거", "초밥", "돈까스", "텐동", "스테이크덮밥", "타코", "사케동", "리조또", "팟타이", "나시고랭"]),
+    "🥳 기분좋음": ("양식·일식·특식", ["파스타", "피자", "수제버거", "초밥", "돈까스", "텐동", "스테이크덮밥", "타코", "사케동", "리조또", "팟타이", "나시고랭", "인도커리", "브리또", "퓨전파스타"]),
     "🤯 스트레스": ("화끈·얼큰·매콤", ["짬뽕", "마라탕", "떡볶이", "낙지볶음", "쭈꾸미볶음", "제육볶음", "닭갈비", "육개장", "비빔국수", "부대찌개", "김치찌개"]),
-    "☀️ 날씨좋음": ("피크닉·야외·테라스", ["김밥", "샌드위치", "포케", "수제버거", "타코", "초밥", "피자", "파스타", "사케동", "텐동", "돈까스", "돌솥비빔밥"]),
+    "☀️ 날씨좋음": ("피크닉·야외·테라스", ["김밥", "샌드위치", "포케", "수제버거", "타코", "초밥", "피자", "파스타", "사케동", "텐동", "돈까스", "돌솥비빔밥", "브리또"]),
     "☔ 흐림·비": ("따끈한 국물·면 요리", ["칼국수", "수제비", "김치찌개", "부대찌개", "일본라멘", "우동", "쌀국수", "짬뽕", "동태탕", "순두부찌개", "잔치국수"]),
     "😴 피곤·보양": ("든든한 보양 뚝배기", ["삼계탕", "갈비탕", "추어탕", "도가니탕", "설렁탕", "곰탕", "국밥", "뼈해장국", "백반", "보리밥정식"]),
     "🫠 입맛없음": ("산뜻·시원한 별미", ["막국수", "냉면", "소바", "포케", "비빔국수", "회덮밥", "돌솥비빔밥", "샌드위치", "간장게장백반", "쌈밥정식"]),
@@ -334,10 +340,6 @@ def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_na
 
 # --- 실시간 웹 검색 스크래핑 기반 14:00 이후 오픈 식당 필터링 ---
 def is_dinner_only_restaurant(place_name: str, address: str) -> bool:
-    """
-    실시간 웹 스니펫 검색을 통해 오픈 시작 시간이 14:00 이후인 매장을 탐지.
-    14시 이후 오픈(15:00, 16:30, 17:00 등) 시 True 반환 (탈락)
-    """
     clean_pname = place_name.split()[0]
     region_chunk = " ".join(address.split()[:2]) if address else ""
     query = f"{region_chunk} {clean_pname} 영업시간".strip()
@@ -351,7 +353,6 @@ def is_dinner_only_restaurant(place_name: str, address: str) -> bool:
         res = requests.get(url, headers=headers, timeout=0.8)
         if res.status_code == 200:
             text = res.text
-            # 패턴 1: 24시간 형식 (예: 16:30 ~ , 17:00 오픈)
             time_matches = re.findall(r"(\d{1,2}):(\d{2})\s*(?:~|-|에|오픈|영업)", text)
             for h_str, _ in time_matches:
                 h = int(h_str)
@@ -360,7 +361,6 @@ def is_dinner_only_restaurant(place_name: str, address: str) -> bool:
                 if 9 <= h <= 13:
                     return False
 
-            # 패턴 2: 한글 오후 표기 (예: 오후 4시, 오후 5시 30분)
             pm_matches = re.findall(r"오후\s*(\d{1,2})(?::(\d{2})|시)", text)
             for match in pm_matches:
                 h = int(match[0])
@@ -482,7 +482,6 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
             
             candidates.sort(key=lambda x: x["priority_score"])
 
-            # 웹 정보를 스크래핑해 14:00 이후 오픈 매장을 1위 후보에서 배제
             if candidates:
                 valid_top = None
                 for i in range(min(4, len(candidates))):
@@ -517,7 +516,6 @@ if qp.get("action") == "gps" and "lat" in qp and "lng" in qp:
 
 # --- 화면 레이아웃 상단부 ---
 st.markdown("<h1 style='color: #2E1C10; font-size: 26px; font-weight: 800; margin: 0 0 4px 0;'>🍱 오늘 점심 뭐 먹지?</h1>", unsafe_allow_html=True)
-# 1. 상단 안내 문구 변경
 st.markdown("<div style='color: #8C827A; font-size: 13px; margin-bottom: 16px;'>고민되는 점심 메뉴와 검증된 주변 밥집을 랜덤으로 골라드립니다.</div>", unsafe_allow_html=True)
 
 if not has_key:
@@ -631,6 +629,56 @@ else:
     radius_km = 1.8
     radius_display_text = "지역 인근"
 
+# --- 3. 음식 종류 선택 (9개 분류 버튼식 그리드) ---
+st.markdown("<div class='cuisine-wrapper'>", unsafe_allow_html=True)
+st.markdown("<div style='margin: 12px 0 6px 0; font-size: 13.5px; font-weight: 600; color: #4A4036;'>🍽️ 음식 종류</div>", unsafe_allow_html=True)
+
+cu1, cu2, cu3, cu4 = st.columns(4)
+current_cuisine = st.session_state.selected_cuisine
+
+with cu1:
+    if st.button("한식", key="cbtn_korean", type="primary" if current_cuisine == "한식" else "secondary", use_container_width=True):
+        st.session_state.selected_cuisine = "한식"
+        st.rerun()
+with cu2:
+    if st.button("중식", key="cbtn_chinese", type="primary" if current_cuisine == "중식" else "secondary", use_container_width=True):
+        st.session_state.selected_cuisine = "중식"
+        st.rerun()
+with cu3:
+    if st.button("일식", key="cbtn_japanese", type="primary" if current_cuisine == "일식" else "secondary", use_container_width=True):
+        st.session_state.selected_cuisine = "일식"
+        st.rerun()
+with cu4:
+    if st.button("양식", key="cbtn_western", type="primary" if current_cuisine == "양식" else "secondary", use_container_width=True):
+        st.session_state.selected_cuisine = "양식"
+        st.rerun()
+
+cu5, cu6, cu7, cu8 = st.columns(4)
+with cu5:
+    if st.button("동남아식", key="cbtn_asian", type="primary" if current_cuisine == "동남아식" else "secondary", use_container_width=True):
+        st.session_state.selected_cuisine = "동남아식"
+        st.rerun()
+with cu6:
+    if st.button("인도식", key="cbtn_indian", type="primary" if current_cuisine == "인도식" else "secondary", use_container_width=True):
+        st.session_state.selected_cuisine = "인도식"
+        st.rerun()
+with cu7:
+    if st.button("멕시코식", key="cbtn_mexican", type="primary" if current_cuisine == "멕시코식" else "secondary", use_container_width=True):
+        st.session_state.selected_cuisine = "멕시코식"
+        st.rerun()
+with cu8:
+    if st.button("퓨전식", key="cbtn_fusion", type="primary" if current_cuisine == "퓨전식" else "secondary", use_container_width=True):
+        st.session_state.selected_cuisine = "퓨전식"
+        st.rerun()
+
+# 마지막 줄: 모두 (종류 구분 없음) - 1열 전폭 배치
+if st.button("모두 (종류 구분 없음)", key="cbtn_all", type="primary" if current_cuisine == "모두" else "secondary", use_container_width=True):
+    st.session_state.selected_cuisine = "모두"
+    st.rerun()
+
+st.markdown("</div>", unsafe_allow_html=True)
+
+# 경고 안내문 표시 영역
 region_warning_spot = st.empty()
 spin_triggered = False
 selected_candidates = []
@@ -650,7 +698,22 @@ def show_location_warning():
         unsafe_allow_html=True
     )
 
-# --- 3. 룰렛 방식 선택 ---
+def show_cuisine_warning():
+    region_warning_spot.markdown(
+        """
+        <div style="display: flex; justify-content: center; align-items: center; gap: 8px;
+                    width: 100%; height: 44px; margin: 4px 0 10px 0;
+                    background-color: #FFFDF7; border: 1.5px solid #F7D488; border-radius: 12px;">
+            <span style="font-size: 16px;">⚠️</span>
+            <span style="color: #6C4D0A; font-size: 13.5px; font-weight: 700;">
+                음식 종류를 선택해 주세요!
+            </span>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+# --- 4. 룰렛 방식 선택 ---
 st.markdown("<div style='margin-bottom: 6px; font-size: 14px; font-weight: 700; color: #3E3228;'>🎯 룰렛 방식 선택</div>", unsafe_allow_html=True)
 
 with st.container(border=True):
@@ -669,10 +732,16 @@ with st.container(border=True):
     if st.button("🎲 랜덤 룰렛 돌리기", use_container_width=True, type="primary", key="btn_trigger_random"):
         if not region.strip() and not st.session_state.gps_coords:
             show_location_warning()
+        elif not st.session_state.selected_cuisine:
+            show_cuisine_warning()
         else:
             region_warning_spot.empty()
-            # '죽' 메뉴는 속편한식사에서만 나오도록 일반 룰렛에서 제외
-            selected_candidates = [f for f in DEFAULT_FOODS if f[0] != "죽"]
+            # 음식 종류 필터링 적용 (죽은 속편한식사에서만 나오도록 일반 룰렛 제외)
+            cu = st.session_state.selected_cuisine
+            if cu == "모두":
+                selected_candidates = [f for f in DEFAULT_FOODS if f[0] != "죽"]
+            else:
+                selected_candidates = [f for f in DEFAULT_FOODS if f[3] == cu and f[0] != "죽"]
             spin_triggered = True
 
 st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
@@ -706,17 +775,27 @@ with st.container(border=True):
     if selected_mood:
         if not region.strip() and not st.session_state.gps_coords:
             show_location_warning()
+        elif not st.session_state.selected_cuisine:
+            show_cuisine_warning()
         else:
             region_warning_spot.empty()
             _, allowed_names = MOOD_DATA[selected_mood]
-            filtered = [f for f in DEFAULT_FOODS if f[0] in allowed_names]
-            selected_candidates = filtered if filtered else DEFAULT_FOODS
+            cu = st.session_state.selected_cuisine
+            if cu == "모두":
+                filtered = [f for f in DEFAULT_FOODS if f[0] in allowed_names]
+            else:
+                filtered = [f for f in DEFAULT_FOODS if f[0] in allowed_names and f[3] == cu]
+            
+            # 해당 기분과 음식 종류 교집합이 없을 경우 해당 음식 카테고리 전체 풀을 대체 사용
+            if not filtered:
+                filtered = [f for f in DEFAULT_FOODS if (cu == "모두" or f[3] == cu)]
+            selected_candidates = filtered
             spin_triggered = True
 
 card_spot = st.empty()
 detail_spot = st.empty()
 
-# --- 4. 룰렛 실행 및 고속 탐색 로직 ---
+# --- 5. 룰렛 실행 및 고속 탐색 로직 ---
 if spin_triggered and selected_candidates:
     detail_spot.empty()
 
@@ -735,7 +814,7 @@ if spin_triggered and selected_candidates:
         random.shuffle(shuffled)
 
         with st.spinner("점심 전문 식당을 필터링하는 중..."):
-            for m_name, m_emoji, m_kw in shuffled[:5]:
+            for m_name, m_emoji, m_kw, _ in shuffled[:6]:
                 found = kakao_search_places(c_lat, c_lng, m_name, m_kw, radius_km=radius_km)
                 if found:
                     final_menu = (m_name, m_emoji)
@@ -743,9 +822,13 @@ if spin_triggered and selected_candidates:
                     break
 
             if not places:
-                fallback_found = kakao_search_places(c_lat, c_lng, "백반", "백반 가정식", radius_km=radius_km)
+                # 선택된 음식 종류에 맞춘 Fallback 검색
+                cu = st.session_state.selected_cuisine
+                fallback_kw = "백반 가정식" if cu in ["한식", "모두"] else f"{cu} 전문점"
+                fallback_menu = "백반·가정식" if cu in ["한식", "모두"] else f"{cu} 밥집"
+                fallback_found = kakao_search_places(c_lat, c_lng, fallback_menu, fallback_kw, radius_km=radius_km)
                 if fallback_found:
-                    final_menu = ("백반·가정식", "🍱")
+                    final_menu = (fallback_menu, "🍱")
                     places = fallback_found
 
         if final_menu and places:
@@ -777,9 +860,9 @@ if spin_triggered and selected_candidates:
                 "id": st.session_state.spin_count
             }
         else:
-            region_warning_spot.warning(f"⚠️ 설정하신 반경 내에 순수 점심 식당을 찾지 못했습니다. 탐색 반경을 넓혀보세요!")
+            region_warning_spot.warning(f"⚠️ 설정하신 조건({st.session_state.selected_cuisine}) 내에 순수 점심 식당을 찾지 못했습니다. 반경을 넓히거나 다른 종류를 선택해 보세요!")
 
-# --- 5. 결과 화면 출력 ---
+# --- 6. 결과 화면 출력 ---
 has_valid_location = bool(region.strip() or st.session_state.gps_coords)
 res = st.session_state.saved_result
 
@@ -875,7 +958,7 @@ if has_valid_location and res is not None and res.get("places"):
                     )
 
         st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
-        st.markdown("<h3 style='margin-bottom: 2px; font-size: 16px; font-weight: 800; color: #2E1C10;'>🗺️️ 식당 위치 지도</h3>", unsafe_allow_html=True)
+        st.markdown("<h3 style='margin-bottom: 2px; font-size: 16px; font-weight: 800; color: #2E1C10;'>🗺️ 식당 위치 지도</h3>", unsafe_allow_html=True)
         st.caption("🔴 빨간 핀: 1픽 매장 / 🔵 파란 핀: 주변 후보")
 
         m = folium.Map(location=[top_pick["lat"], top_pick["lng"]], zoom_start=15, control_scale=True)
