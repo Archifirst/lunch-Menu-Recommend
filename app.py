@@ -13,12 +13,6 @@ st.set_page_config(page_title="오늘 점심 뭐 먹지?", page_icon="🍱", lay
 st.markdown(
     """
     <style>
-    /* Streamlit 전역 테마 색상 변수 강제 고정 */
-    :root, .stApp, [data-testid="stAppViewContainer"] {
-        --primary-color: #E86A3E !important;
-        --primary: #E86A3E !important;
-    }
-
     /* 전체 배경 및 폰트 */
     .stApp {
         background-color: #FAF8F5;
@@ -27,14 +21,9 @@ st.markdown(
     
     /* 상단바와 타이틀 사이 간격 넉넉하게 확보 */
     .block-container {
-        padding-top: 4.0rem !important;
+        padding-top: 3.6rem !important;
         padding-bottom: 3.6rem !important;
         max-width: 620px !important;
-    }
-
-    /* [핵심] Streamlit 내부 버티컬 블록들의 불필요한 누적 갭(gap) 제거 */
-    .block-container > div[data-testid="stVerticalBlock"] {
-        gap: 0px !important;
     }
 
     /* 통일된 소제목 헤더 스타일 */
@@ -62,18 +51,17 @@ st.markdown(
         box-shadow: 0 0 0 2px rgba(232, 106, 62, 0.15) !important;
     }
 
-    /* 개별 박스(Border Container) 카드 스타일 및 하단 마진 통일 (14px) */
+    /* 개별 박스(Border Container) 카드 스타일 및 하단 마진 복원 */
     div[data-testid="stVerticalBlockBorderWrapper"] {
         border-radius: 18px !important;
         border: 1.8px solid #EAE3DB !important;
         background-color: #FFFFFF !important;
         box-shadow: 0 3px 12px rgba(0, 0, 0, 0.02) !important;
         padding: 16px 16px 16px 16px !important;
-        margin-top: 0px !important;
-        margin-bottom: 14px !important;
+        margin-bottom: 12px !important;
     }
 
-    /* 박스 내부(Border Wrapper 내부)의 옵션 버튼 공통 높이 및 스타일 */
+    /* 박스 내부 옵션 버튼 기본 높이 */
     div[data-testid="stVerticalBlockBorderWrapper"] div.stButton > button {
         height: 40px !important;
         border-radius: 11px !important;
@@ -81,52 +69,8 @@ st.markdown(
         white-space: nowrap !important;
     }
     
-    /* 선택된 옵션 버튼: '내 위치 찾기'와 동일한 오렌지 (#E86A3E) */
-    button[data-testid*="primary"],
-    button[kind="primary"],
-    .stButton > button[data-testid*="primary"],
-    div[data-testid="stVerticalBlockBorderWrapper"] button[data-testid*="primary"],
-    div[data-testid="stVerticalBlockBorderWrapper"] button[kind="primary"],
-    div[data-testid="stVerticalBlockBorderWrapper"] div.stButton > button[kind="primary"] {
-        background-color: #E86A3E !important;
-        background: #E86A3E !important;
-        border: none !important;
-        border-color: transparent !important;
-        color: #FFFFFF !important;
-        font-size: 13.5px !important;
-        font-weight: 700 !important;
-        box-shadow: 0 2px 8px rgba(232, 106, 62, 0.25) !important;
-    }
-
-    button[data-testid*="primary"]:hover,
-    button[kind="primary"]:hover,
-    .stButton > button[data-testid*="primary"]:hover,
-    div[data-testid="stVerticalBlockBorderWrapper"] button[data-testid*="primary"]:hover,
-    div[data-testid="stVerticalBlockBorderWrapper"] button[kind="primary"]:hover {
-        background-color: #D65A2F !important;
-        background: #D65A2F !important;
-        border-color: transparent !important;
-        color: #FFFFFF !important;
-        transform: translateY(-1px);
-    }
-
-    button[data-testid*="primary"] *,
-    div[data-testid="stVerticalBlockBorderWrapper"] button[kind="primary"] * {
-        color: #FFFFFF !important;
-    }
-
-    button[data-testid*="primary"]:focus,
-    button[data-testid*="primary"]:active {
-        background-color: #E86A3E !important;
-        background: #E86A3E !important;
-        border-color: #E86A3E !important;
-        box-shadow: 0 0 0 2px rgba(232, 106, 62, 0.3) !important;
-    }
-    
     /* 선택되지 않은 기본 옵션 버튼 */
-    div[data-testid="stVerticalBlockBorderWrapper"] button[kind="secondary"],
-    div[data-testid="stVerticalBlockBorderWrapper"] button[data-testid*="secondary"],
-    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid*="secondary"] > button {
+    div[data-testid="stVerticalBlockBorderWrapper"] button[kind="secondary"] {
         border: 1.2px solid #EDE4DC !important;
         background: #FFFFFF !important;
         background-color: #FFFFFF !important;
@@ -136,8 +80,7 @@ st.markdown(
         padding: 6px 8px !important;
         box-shadow: 0 1px 4px rgba(0,0,0,0.02) !important;
     }
-    div[data-testid="stVerticalBlockBorderWrapper"] button[kind="secondary"]:hover,
-    div[data-testid="stVerticalBlockBorderWrapper"] button[data-testid*="secondary"]:hover {
+    div[data-testid="stVerticalBlockBorderWrapper"] button[kind="secondary"]:hover {
         border-color: #E86A3E !important;
         color: #E86A3E !important;
         background: #FFFDF9 !important;
@@ -166,7 +109,7 @@ st.markdown(
     }
 
     /* ============================================================
-       [메인 룰렛 버튼: 박스 간격 14px 정밀 일치 및 스타일]
+       [메인 룰렛 버튼: 안정적인 크기 및 상하 간격]
        ============================================================ */
     @keyframes roulettePulse {
         0% {
@@ -183,10 +126,10 @@ st.markdown(
         }
     }
 
-    /* 주차 박스 하단과 룰렛 버튼 사이, 룰렛 버튼과 추천 결과 카드 사이 마진을 정확히 14px로 통일 */
+    /* 룰렛 버튼 감싸는 컨테이너 */
     div.block-container > div[data-testid="stVerticalBlock"] > div.stElementContainer:not(div[data-testid="stVerticalBlockBorderWrapper"] *) div.stButton {
-        margin-top: 0px !important;
-        margin-bottom: 14px !important;
+        margin-top: 6px !important;
+        margin-bottom: 8px !important;
     }
 
     div.block-container > div[data-testid="stVerticalBlock"] > div.stElementContainer:not(div[data-testid="stVerticalBlockBorderWrapper"] *) div.stButton > button {
@@ -204,7 +147,7 @@ st.markdown(
         justify-content: center !important;
     }
 
-    /* 버튼 내부 텍스트 18px 및 적당한 Bold(700) */
+    /* 버튼 내부 텍스트 */
     div.block-container > div[data-testid="stVerticalBlock"] > div.stElementContainer:not(div[data-testid="stVerticalBlockBorderWrapper"] *) div.stButton > button p,
     div.block-container > div[data-testid="stVerticalBlock"] > div.stElementContainer:not(div[data-testid="stVerticalBlockBorderWrapper"] *) div.stButton > button span {
         font-size: 18px !important;
@@ -226,7 +169,7 @@ st.markdown(
         gap: 8px;
         width: 100%;
         height: 44px;
-        margin: 0 0 14px 0;
+        margin: 6px 0 12px 0;
         background-color: #FFFDF7;
         border: 1.5px solid #F7D488;
         border-radius: 12px;
@@ -283,7 +226,7 @@ if qp.get("action") == "gps" and "lat" in qp and "lng" in qp:
         pass
     st.query_params.clear()
 
-# --- 정밀 필터링 키워드 정의 (술집/야간포차 대폭 강화) ---
+# --- 필터링 키워드 정의 ---
 EXCLUDED_CATEGORIES = [
     "술집", "주점", "호프", "포차", "이자카야", "바(BAR)", "요리주점", "와인바",
     "칵테일바", "민속주점", "맥주", "룸살롱", "단란주점", "유흥주점", "라이브카페", 
@@ -347,9 +290,8 @@ KNOWN_FRANCHISE_BRANDS = [
 
 TONKATSU_NAME_INDICATORS = ["돈까스", "돈가스", "카츠", "카쯔", "가츠", "돈카츠", "포크커틀릿"]
 
-# 특정 단어가 상호명에 반드시 포함되어야 하는 엄격한 전문점 규칙
 STRICT_SPECIALTY_NAME_RULES = {
-    "닭갈비": ["닭갈비"],  # 닭갈비 선택 시 통닭/치킨/삼계탕 차단
+    "닭갈비": ["닭갈비"],
     "칼국수": ["칼국수"],
     "막국수": ["막국수"],
     "국밥": ["국밥", "순대", "순댓국", "돼지국밥", "따로국밥", "소머리국밥"],
@@ -437,10 +379,8 @@ def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_na
     clean_name = place_name.replace(" ", "").upper()
     cat_full = category_name.replace(" ", "")
 
-    # 1. 술집 카테고리 완전 배제
     if any(ex in cat_full for ex in EXCLUDED_CATEGORIES):
         return False
-    # 2. 술집/주점 상호명 완전 배제
     if any(bad in clean_name for bad in [k.upper() for k in EXCLUDED_NAME_KEYWORDS]):
         return False
     if any(jeon in clean_name for jeon in JEON_KEYWORDS):
@@ -448,7 +388,6 @@ def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_na
     if any(c in cat_full for c in ["전,빈대떡", "빈대떡"]):
         return False
 
-    # 3. 점심 부적합(고깃집, 구이류, 곱창, 치킨 등) 배제
     if any(non in cat_full for non in NON_LUNCH_CATEGORIES):
         if not (menu_name == "닭갈비" and "닭요리" in cat_full):
             return False
@@ -457,10 +396,8 @@ def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_na
         if "구이" in clean_name and menu_name != "생선구이백반":
             return False
         if any(bad in clean_name for bad in [k.upper() for k in MEAT_SHOP_KEYWORDS]):
-            # 닭갈비 메뉴일 때는 통닭/치킨 상호는 무조건 탈락
             return False
 
-    # 4. 잡다한 분식 프랜차이즈 배제
     if menu_name not in ["김밥", "떡볶이"]:
         if any(brand in clean_name for brand in MULTI_MENU_FRANCHISES):
             return False
@@ -484,7 +421,6 @@ def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_na
         if any(pho in clean_name for pho in VIETNAMESE_NOODLE_KEYWORDS):
             return False
 
-    # 5. [중요] 닭갈비 등 특정 전문점 상호 규칙 검증
     if menu_name in STRICT_SPECIALTY_NAME_RULES:
         required_words = STRICT_SPECIALTY_NAME_RULES[menu_name]
         if not any(req in clean_name for req in required_words):
@@ -702,8 +638,8 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
     return []
 
 # --- 화면 상단 제목 및 설명 ---
-st.markdown("<h1 style='color: #2E1C10; font-size: 28px; font-weight: 800; margin: 0 0 10px 0; letter-spacing: -0.6px;'>🍱 오늘 점심 뭐 먹지?</h1>", unsafe_allow_html=True)
-st.markdown("<div style='color: #8C827A; font-size: 13.5px; margin-bottom: 22px; line-height: 1.5;'>고민되는 점심 메뉴와 검증된 주변 밥집을 랜덤으로 골라드립니다.</div>", unsafe_allow_html=True)
+st.markdown("<h1 style='color: #2E1C10; font-size: 28px; font-weight: 800; margin: 0 0 8px 0; letter-spacing: -0.6px;'>🍱 오늘 점심 뭐 먹지?</h1>", unsafe_allow_html=True)
+st.markdown("<div style='color: #8C827A; font-size: 13.5px; margin-bottom: 18px; line-height: 1.5;'>고민되는 점심 메뉴와 검증된 주변 밥집을 랜덤으로 골라드립니다.</div>", unsafe_allow_html=True)
 
 if not has_key:
     st.warning("⚠️ **API 키 설정 필요**: `.streamlit/secrets.toml` 또는 Cloud Secrets에 `KAKAO_REST_KEY`를 설정해주세요.")
@@ -823,7 +759,7 @@ else:
     radius_km = 1.8
     radius_display_text = "지역 인근"
 
-# --- 3. 음식 종류 선택 (개별 박스: 하단 내부 여백 완벽 밀착) ---
+# --- 3. 음식 종류 선택 (개별 박스) ---
 with st.container(border=True):
     st.markdown("<div class='section-title'>🍽️ 음식 종류</div>", unsafe_allow_html=True)
 
@@ -969,7 +905,7 @@ def show_cuisine_warning():
         unsafe_allow_html=True
     )
 
-# --- 6. 메인 룰렛 버튼 (상하 14px 균일 간격 & 18px 700 볼드) ---
+# --- 6. 메인 룰렛 버튼 ---
 if st.button("🎲 오늘 점심 랜덤 룰렛 돌리기!", use_container_width=True, type="primary", key="btn_trigger_random"):
     if not region.strip() and not st.session_state.gps_coords:
         show_location_warning()
@@ -1041,7 +977,7 @@ if spin_triggered and selected_candidates:
                 temp = random.choice(selected_candidates)
                 card_spot.markdown(
                     f"""
-                    <div style="text-align: center; margin: 0 0 14px 0; padding: 20px 18px; 
+                    <div style="text-align: center; margin: 0 0 12px 0; padding: 20px 18px; 
                                 background: #FFFDF9; border-radius: 20px; border: 1.5px solid #F5D5B8; 
                                 box-shadow: 0 4px 16px rgba(245, 213, 184, 0.35);">
                         <div style="font-size: 54px; line-height: 1; margin-bottom: 6px;">{temp[1]}</div>
@@ -1067,13 +1003,13 @@ if spin_triggered and selected_candidates:
         else:
             region_warning_spot.warning(f"⚠️ 설정하신 조건 내에 만족하는 식당을 찾지 못했습니다. 반경을 넓히거나 가격/주차 옵션을 조정해 보세요!")
 
-# --- 8. 결과 화면 출력 (상단 외부 여백을 14px로 일치) ---
+# --- 8. 결과 화면 출력 ---
 has_valid_location = bool(region.strip() or st.session_state.gps_coords)
 res = st.session_state.saved_result
 
 if has_valid_location and res is not None and res.get("places"):
     card_html = (
-        f'<div style="text-align: center; margin: 0 0 14px 0; padding: 24px 20px; '
+        f'<div style="text-align: center; margin: 0 0 12px 0; padding: 24px 20px; '
         f'background: #FFFDF9; border-radius: 22px; border: 1.5px solid #F5D5B8; '
         f'box-shadow: 0 4px 18px rgba(245, 213, 184, 0.35);">'
         f'<div style="font-size: 68px; line-height: 1; margin-bottom: 8px;">{res["emoji"]}</div>'
@@ -1102,7 +1038,7 @@ if has_valid_location and res is not None and res.get("places"):
             parking_badge = '<span style="font-size: 11px; background: #E8F4EA; color: #2E7D32; padding: 2px 7px; border-radius: 6px; font-weight: 700;">🅿️ 주차 편리</span>'
 
         top_pick_html = (
-            f'<div style="margin-bottom: 20px; padding: 22px 18px; '
+            f'<div style="margin-bottom: 16px; padding: 22px 18px; '
             f'background: #FFFDF9; border-radius: 22px; border: 1.5px solid #F5D5B8; '
             f'box-shadow: 0 4px 18px rgba(245, 213, 184, 0.35); text-align: center;">'
             f'<div style="display: flex; justify-content: center; align-items: center; gap: 6px; margin-bottom: 8px; flex-wrap: wrap;">'
