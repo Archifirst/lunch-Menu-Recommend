@@ -154,6 +154,13 @@ EVENING_RAW_FISH_KEYWORDS = [
     "물회마차", "포차회", "바다마차", "해물포차", "해산물포차", "참치정육점"
 ]
 
+# 아시안 쌀국수 프랜차이즈 및 상호 키워드 (잔치국수 검색 시 철저 배제)
+VIETNAMESE_NOODLE_KEYWORDS = [
+    "쌀국수", "포(PHO)", "PHO", "분짜", "반미", "포보", "미분당", "에머이",
+    "사이공", "반포식스", "포메인", "포베이", "까몬", "더포", "낭만쌀국수",
+    "아시아문", "팟타이", "포앤", "반쎄오", "월남쌈"
+]
+
 MULTI_MENU_FRANCHISES = [
     "국수나무", "미소야", "역전우동", "한솥", "도시락",
     "김밥천국", "고봉민", "김가네", "얌샘", "싸다김밥", "종로김밥", 
@@ -179,10 +186,11 @@ STRICT_SPECIALTY_NAME_RULES = {
     "뼈해장국": ["해장국", "감자탕", "뼈"],
     "초밥": ["스시", "초밥"],
     "김밥": ["김밥"],
-    "죽": ["죽"]
+    "죽": ["죽"],
+    "잔치국수": ["잔치국수", "국수집", "할매국수", "멸치국수", "국수마을", "국수나라", "국수전문", "국수"]
 }
 
-# 기본 메뉴 목록 ('순대국' -> '국밥'으로 통일)
+# 기본 메뉴 목록 ('잔치국수' 검색어 정밀화)
 DEFAULT_FOODS = [
     ("김치찌개", "🥘", "김치찌개 전문점"),
     ("된장찌개", "🍲", "된장찌개 백반"),
@@ -219,7 +227,7 @@ DEFAULT_FOODS = [
     ("수제비", "🥣", "수제비 전문점"),
     ("막국수", "🥢", "막국수 전문점"),
     ("냉면", "🧊", "함흥 평양 냉면 전문점"),
-    ("잔치국수", "🍜", "국수 전문점"),
+    ("잔치국수", "🍜", "잔치국수 멸치국수 전문점"),
     ("비빔국수", "🌶️", "비빔국수 전문점"),
     ("소바", "🥢", "메밀소바 모밀 전문점"),
     ("죽", "🥣", "죽 전문점"),
@@ -271,7 +279,7 @@ ROW_PAIRS = [
     ("🤢 속편한식사", "🍻 시원한 해장")
 ]
 
-# --- 식당 검증 엔진 (술집/주점 완벽 배제) ---
+# --- 식당 검증 엔진 (술집/주점 및 잔치국수 시 쌀국수 철저 배제) ---
 def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_name: str) -> bool:
     clean_name = place_name.replace(" ", "").upper()
     cat_full = category_name.replace(" ", "")
@@ -319,7 +327,16 @@ def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_na
         if not is_tonkatsu:
             return False
 
-    # 8. 단품 전문점 상호 검사
+    # 8. 잔치국수 전용 베트남/아시안 쌀국수 엄격 차단 필터
+    if menu_name == "잔치국수":
+        # 아시아음식, 베트남음식, 태국음식 카테고리 즉시 탈락
+        if any(asian in cat_full for asian in ["아시아음식", "베트남", "태국", "동남아"]):
+            return False
+        # 상호에 쌀국수, 분짜, PHO 등 포함 시 탈락
+        if any(pho in clean_name for pho in VIETNAMESE_NOODLE_KEYWORDS):
+            return False
+
+    # 9. 단품 전문점 상호 규칙 검사
     if menu_name in STRICT_SPECIALTY_NAME_RULES:
         required_words = STRICT_SPECIALTY_NAME_RULES[menu_name]
         if not any(req in clean_name for req in required_words):
@@ -359,11 +376,9 @@ def quick_verify_lunch_hour(place_id: str) -> bool:
                     if end_h < start_h:
                         end_h += 24.0
                     
-                    # 14:30 이후 오픈하는 곳(오후/야간 전용 매장)은 무조건 탈락
                     if start_h >= 14.5:
                         return False
                     
-                    # 점심 시간대(11:30~13:30)에 열려있는지 확인
                     if start_h <= 12.5 and end_h >= 13.0:
                         is_lunch_available = True
                         break
@@ -393,6 +408,11 @@ def calculate_priority(place: dict, menu_name: str) -> float:
         score -= 2.0
     if menu_name == "국밥" and any(k in p_name for k in ["국밥", "순대", "순댓국", "돼지국밥"]):
         score -= 2.5
+    if menu_name == "잔치국수":
+        if any(k in p_name for k in ["잔치국수", "멸치국수", "할매국수"]):
+            score -= 3.0
+        elif "국수" in p_name:
+            score -= 1.5
     return score
 
 # --- 카카오 공식 API 통신 함수 ---
