@@ -144,7 +144,7 @@ PRESET_RADIUS = {
     "직접 입력": None
 }
 
-# 세션 상태 초기화 및 기존 잔여 세션 키 자동 보정 (KeyError 완벽 방어)
+# 세션 상태 초기화 및 보정
 if "selected_radius_preset" not in st.session_state or st.session_state.selected_radius_preset not in PRESET_RADIUS:
     st.session_state.selected_radius_preset = "근거리"
 if "custom_radius_val" not in st.session_state:
@@ -703,7 +703,6 @@ if should_show_radius:
         radius_km = float(manual_radius)
         radius_display_text = f"직접 입력 {radius_km:.1f}km"
     else:
-        # KeyError 방지를 위한 .get() 안전 처리 (기본 1.8km)
         radius_km = PRESET_RADIUS.get(st.session_state.selected_radius_preset, 1.8)
         radius_display_text = f"{st.session_state.selected_radius_preset} ({radius_km}km)"
 
@@ -977,29 +976,27 @@ if spin_triggered and selected_candidates:
         else:
             region_warning_spot.warning(f"⚠️ 설정하신 조건 내에 만족하는 식당을 찾지 못했습니다. 반경을 넓히거나 가격/주차 옵션을 조정해 보세요!")
 
-# --- 7. 결과 화면 출력 ---
+# --- 7. 결과 화면 출력 (HTML 마크다운 파싱 오류 완벽 해결) ---
 has_valid_location = bool(region.strip() or st.session_state.gps_coords)
 res = st.session_state.saved_result
 
 if has_valid_location and res is not None and res.get("places"):
-    card_spot.markdown(
-        f"""
-        <div style="text-align: center; margin: 18px 0 16px 0; padding: 24px 20px; 
-                    background: #FFFDF9; border-radius: 22px; border: 1.5px solid #F5D5B8; 
-                    box-shadow: 0 4px 18px rgba(245, 213, 184, 0.35);">
-            <div style="font-size: 68px; line-height: 1; margin-bottom: 8px;">{res['emoji']}</div>
-            <div style="display: flex; justify-content: center; align-items: center; gap: 8px; width: 100%; margin: 4px 0;">
-                <span style="font-size: 22px;">🎉</span>
-                <span style="color: #2E1C10; font-size: 26px; font-weight: 800; letter-spacing: -0.5px;">{res['menu']} 당첨!</span>
-                <span style="font-size: 22px;">🎉</span>
-            </div>
-            <div style="color: #7A6F66; font-size: 13px; font-weight: 500; margin-top: 4px;">
-                점심 메뉴 추천 결과 ({res['radius_text']})
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True
+    card_html = (
+        f'<div style="text-align: center; margin: 18px 0 16px 0; padding: 24px 20px; '
+        f'background: #FFFDF9; border-radius: 22px; border: 1.5px solid #F5D5B8; '
+        f'box-shadow: 0 4px 18px rgba(245, 213, 184, 0.35);">'
+        f'<div style="font-size: 68px; line-height: 1; margin-bottom: 8px;">{res["emoji"]}</div>'
+        f'<div style="display: flex; justify-content: center; align-items: center; gap: 8px; width: 100%; margin: 4px 0;">'
+        f'<span style="font-size: 22px;">🎉</span>'
+        f'<span style="color: #2E1C10; font-size: 26px; font-weight: 800; letter-spacing: -0.5px;">{res["menu"]} 당첨!</span>'
+        f'<span style="font-size: 22px;">🎉</span>'
+        f'</div>'
+        f'<div style="color: #7A6F66; font-size: 13px; font-weight: 500; margin-top: 4px;">'
+        f'점심 메뉴 추천 결과 ({res["radius_text"]})'
+        f'</div>'
+        f'</div>'
     )
+    card_spot.markdown(card_html, unsafe_allow_html=True)
 
     with detail_spot.container():
         places = res["places"]
@@ -1011,36 +1008,30 @@ if has_valid_location and res is not None and res.get("places"):
 
         parking_badge = ""
         if top_pick.get("has_parking", False):
-            parking_badge = '<span style="font-size: 11px; background: #E8F4EA; color: #2E7D32; padding: 2px 7px; border-radius: 6px; font-weight: 700;">🅿️️ 주차 편리</span>'
+            parking_badge = '<span style="font-size: 11px; background: #E8F4EA; color: #2E7D32; padding: 2px 7px; border-radius: 6px; font-weight: 700;">🅿 주차 편리</span>'
 
-        st.markdown(
-            f"""
-            <div style="margin-bottom: 20px; padding: 22px 18px; 
-                        background: #FFFDF9; border-radius: 22px; border: 1.5px solid #F5D5B8; 
-                        box-shadow: 0 4px 18px rgba(245, 213, 184, 0.35); text-align: center;">
-                <div style="display: flex; justify-content: center; align-items: center; gap: 6px; margin-bottom: 8px; flex-wrap: wrap;">
-                    <span style="font-size: 12.5px; color: #E86A3E; font-weight: 700;">⭐ 오늘의 1픽 추천 밥집</span>
-                    <span style="font-size: 11px; background: {tag_bg}; color: {tag_color}; padding: 2px 7px; border-radius: 6px; font-weight: 700;">
-                        {tag_text}
-                    </span>
-                    <span style="font-size: 11px; background: #F3ECE4; color: #6E5F55; padding: 2px 7px; border-radius: 6px; font-weight: 600;">
-                        {top_pick.get('category', '식당')}
-                    </span>
-                    {parking_badge}
-                </div>
-                <div style="margin: 4px 0;">
-                    <a href="{top_pick.get('place_url', '#')}" target="_blank" 
-                       style="text-decoration: none; color: #2E1C10; font-size: 23px; font-weight: 900; display: inline-block;">
-                        {top_pick['name']}
-                    </a>
-                </div>
-                <div style="font-size: 13px; color: #7A6F66; margin-top: 4px;">
-                    📍 {top_pick['address']} (약 {top_pick['dist']}km)
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True
+        # 들여쓰기로 인한 코드블록 변환 방지를 위해 좌측 공백 제거(한 줄 구성)
+        top_pick_html = (
+            f'<div style="margin-bottom: 20px; padding: 22px 18px; '
+            f'background: #FFFDF9; border-radius: 22px; border: 1.5px solid #F5D5B8; '
+            f'box-shadow: 0 4px 18px rgba(245, 213, 184, 0.35); text-align: center;">'
+            f'<div style="display: flex; justify-content: center; align-items: center; gap: 6px; margin-bottom: 8px; flex-wrap: wrap;">'
+            f'<span style="font-size: 12.5px; color: #E86A3E; font-weight: 700;">⭐ 오늘의 1픽 추천 밥집</span>'
+            f'<span style="font-size: 11px; background: {tag_bg}; color: {tag_color}; padding: 2px 7px; border-radius: 6px; font-weight: 700;">{tag_text}</span>'
+            f'<span style="font-size: 11px; background: #F3ECE4; color: #6E5F55; padding: 2px 7px; border-radius: 6px; font-weight: 600;">{top_pick.get("category", "식당")}</span>'
+            f'{parking_badge}'
+            f'</div>'
+            f'<div style="margin: 4px 0;">'
+            f'<a href="{top_pick.get("place_url", "#")}" target="_blank" style="text-decoration: none; color: #2E1C10; font-size: 23px; font-weight: 900; display: inline-block;">'
+            f'{top_pick["name"]}'
+            f'</a>'
+            f'</div>'
+            f'<div style="font-size: 13px; color: #7A6F66; margin-top: 4px;">'
+            f'📍 {top_pick["address"]} (약 {top_pick["dist"]}km)'
+            f'</div>'
+            f'</div>'
         )
+        st.markdown(top_pick_html, unsafe_allow_html=True)
 
         if len(places) > 1:
             st.markdown(f"<div style='font-size: 14px; font-weight: 700; color: #2E1C10; margin-bottom: 8px;'>근처 다른 후보 ({len(places)-1}곳)</div>", unsafe_allow_html=True)
@@ -1053,29 +1044,19 @@ if has_valid_location and res is not None and res.get("places"):
                 target_col = col_left if idx % 2 != 0 else col_right
 
                 with target_col:
-                    st.markdown(
-                        f"""
-                        <div style="display: flex; justify-content: space-between; align-items: center; 
-                                    background: #FFFFFF; border: 1px solid #ECE7E1; border-radius: 12px; 
-                                    padding: 9px 12px; margin-bottom: 8px;">
-                            <div style="display: flex; align-items: center; gap: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                                <span style="display: inline-flex; justify-content: center; align-items: center; width: 18px; height: 18px; background: #F3EFEA; color: #555; border-radius: 5px; font-size: 11px; font-weight: 700;">
-                                    {idx}
-                                </span>
-                                <a href="{p.get('place_url', '#')}" target="_blank" style="text-decoration: none; color: #111; font-size: 13px; font-weight: 700; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                                    {p['name']}
-                                </a>
-                                <span style="font-size: 10px; background: #F7F5F2; color: #777; padding: 2px 5px; border-radius: 4px;">
-                                    {p_tag}·{short_cat}
-                                </span>
-                            </div>
-                            <div style="font-size: 11.5px; color: #666; font-weight: 500; margin-left: 6px; white-space: nowrap;">
-                                {p['dist']}km
-                            </div>
-                        </div>
-                        """,
-                        unsafe_allow_html=True
+                    cand_html = (
+                        f'<div style="display: flex; justify-content: space-between; align-items: center; '
+                        f'background: #FFFFFF; border: 1px solid #ECE7E1; border-radius: 12px; '
+                        f'padding: 9px 12px; margin-bottom: 8px;">'
+                        f'<div style="display: flex; align-items: center; gap: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">'
+                        f'<span style="display: inline-flex; justify-content: center; align-items: center; width: 18px; height: 18px; background: #F3EFEA; color: #555; border-radius: 5px; font-size: 11px; font-weight: 700;">{idx}</span>'
+                        f'<a href="{p.get("place_url", "#")}" target="_blank" style="text-decoration: none; color: #111; font-size: 13px; font-weight: 700; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{p["name"]}</a>'
+                        f'<span style="font-size: 10px; background: #F7F5F2; color: #777; padding: 2px 5px; border-radius: 4px;">{p_tag}·{short_cat}</span>'
+                        f'</div>'
+                        f'<div style="font-size: 11.5px; color: #666; font-weight: 500; margin-left: 6px; white-space: nowrap;">{p["dist"]}km</div>'
+                        f'</div>'
                     )
+                    st.markdown(cand_html, unsafe_allow_html=True)
 
         st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
         st.markdown("<h3 style='margin-bottom: 2px; font-size: 16px; font-weight: 800; color: #2E1C10;'>🗺️ 식당 위치 지도</h3>", unsafe_allow_html=True)
