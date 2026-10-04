@@ -62,7 +62,7 @@ st.markdown(
         transform-origin: top center;
     }
 
-    /* 룰렛 방식 전체 묶음 박스 간격 */
+    /* 룰렛 묶음 박스 간격 */
     div[data-testid="stVerticalBlockBorderWrapper"] {
         border-radius: 18px !important;
         border: 1.8px solid #EAE3DB !important;
@@ -235,6 +235,7 @@ STRICT_SPECIALTY_NAME_RULES = {
     "육개장": ["육개장", "육대장", "혜장국"]
 }
 
+# 기본 메뉴 목록 (카테고리 정보 포함)
 DEFAULT_FOODS = [
     ("김치찌개", "🥘", "김치찌개 전문점", "한식"),
     ("된장찌개", "🍲", "된장찌개 백반", "한식"),
@@ -305,24 +306,6 @@ DEFAULT_FOODS = [
     ("브리또", "🌯", "멕시칸 브리또", "멕시코식"),
     ("포케", "🥗", "하와이안 포케", "퓨전식"),
     ("퓨전파스타", "🍝", "퓨전 양식당", "퓨전식")
-]
-
-MOOD_DATA = {
-    "🥳 기분좋음": ("양식·일식·특식", ["파스타", "피자", "수제버거", "초밥", "돈까스", "텐동", "스테이크덮밥", "타코", "사케동", "리조또", "팟타이", "나시고랭", "인도커리", "브리또", "퓨전파스타"]),
-    "🤯 스트레스": ("화끈·얼큰·매콤", ["짬뽕", "마라탕", "떡볶이", "낙지볶음", "쭈꾸미볶음", "제육볶음", "닭갈비", "육개장", "비빔국수", "부대찌개", "김치찌개"]),
-    "☀️ 날씨좋음": ("피크닉·야외·테라스", ["김밥", "샌드위치", "포케", "수제버거", "타코", "초밥", "피자", "파스타", "사케동", "텐동", "돈까스", "돌솥비빔밥", "브리또"]),
-    "☔ 흐림·비": ("따끈한 국물·면 요리", ["칼국수", "수제비", "김치찌개", "부대찌개", "일본라멘", "우동", "쌀국수", "짬뽕", "동태탕", "순두부찌개", "잔치국수"]),
-    "😴 피곤·보양": ("든든한 보양 뚝배기", ["삼계탕", "갈비탕", "추어탕", "도가니탕", "설렁탕", "곰탕", "국밥", "뼈해장국", "백반", "보리밥정식"]),
-    "🫠 입맛없음": ("산뜻·시원한 별미", ["막국수", "냉면", "소바", "포케", "비빔국수", "회덮밥", "돌솥비빔밥", "샌드위치", "간장게장백반", "쌈밥정식"]),
-    "🤢 속편한식사": ("순한 국·가정식·죽", ["죽", "순두부찌개", "콩나물국밥", "황태해장국", "보리밥정식", "된장찌개", "백반", "설렁탕", "청국장", "수제비"]),
-    "🍻 시원한 해장": ("속풀이 국물", ["국밥", "황태해장국", "콩나물국밥", "뼈해장국", "선지해장국", "동태탕", "육개장", "짬뽕", "쌀국수", "김치찌개"])
-}
-
-ROW_PAIRS = [
-    ("🥳 기분좋음", "🤯 스트레스"),
-    ("☀️️ 날씨좋음", "☔ 흐림·비"),
-    ("😴 피곤·보양", "🫠 입맛없음"),
-    ("🤢 속편한식사", "🍻 시원한 해장")
 ]
 
 # --- 식당 텍스트 및 카테고리 정밀 검증 엔진 ---
@@ -780,15 +763,15 @@ def show_cuisine_warning():
         unsafe_allow_html=True
     )
 
-# --- 4. 룰렛 방식 선택 섹션 ---
-st.markdown("<div class='section-title'>🎯 룰렛 방식 선택</div>", unsafe_allow_html=True)
+# --- 4. 룰렛 돌리기 섹션 (단일 룰렛 구성) ---
+st.markdown("<div class='section-title'>🎯 룰렛 돌리기</div>", unsafe_allow_html=True)
 
 with st.container(border=True):
     st.markdown(
         """
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
             <div>
-                <div style="font-size: 15.5px; font-weight: 800; color: #2E1C10;">🎲 완전 랜덤 룰렛</div>
+                <div style="font-size: 15.5px; font-weight: 800; color: #2E1C10;">🎲 점심 메뉴 룰렛</div>
                 <div style="font-size: 12.5px; color: #8C827A; margin-top: 1px;">무작위로 점심 메뉴와 밥집을 추천해 드립니다!</div>
             </div>
             <span style="font-size: 22px;">🎰</span>
@@ -808,53 +791,6 @@ with st.container(border=True):
                 selected_candidates = [f for f in DEFAULT_FOODS if f[0] != "죽"]
             else:
                 selected_candidates = [f for f in DEFAULT_FOODS if f[3] == cu and f[0] != "죽"]
-            spin_triggered = True
-
-st.markdown("<div style='height: 2px;'></div>", unsafe_allow_html=True)
-
-with st.container(border=True):
-    st.markdown(
-        """
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <div>
-                <div style="font-size: 15.5px; font-weight: 800; color: #2E1C10;">✨ 기분 & 상황별 맞춤 룰렛</div>
-                <div style="font-size: 12.5px; color: #8C827A; margin-top: 1px;">오늘의 기분과 상황에 딱 맞는 메뉴를 추천해 드립니다!</div>
-            </div>
-            <span style="font-size: 22px;">🔮</span>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-    
-    selected_mood = None
-    for left_k, right_k in ROW_PAIRS:
-        col_left, col_right = st.columns(2)
-        with col_left:
-            desc_l, _ = MOOD_DATA.get(left_k, ("추천 메뉴", []))
-            if st.button(f"{left_k} ({desc_l})", use_container_width=True, key=f"btn_{left_k}"):
-                selected_mood = left_k
-        with col_right:
-            desc_r, _ = MOOD_DATA.get(right_k, ("추천 메뉴", []))
-            if st.button(f"{right_k} ({desc_r})", use_container_width=True, key=f"btn_{right_k}"):
-                selected_mood = right_k
-
-    if selected_mood:
-        if not region.strip() and not st.session_state.gps_coords:
-            show_location_warning()
-        elif not st.session_state.selected_cuisine:
-            show_cuisine_warning()
-        else:
-            region_warning_spot.empty()
-            _, allowed_names = MOOD_DATA.get(selected_mood, ("", []))
-            cu = st.session_state.selected_cuisine
-            if cu == "모두":
-                filtered = [f for f in DEFAULT_FOODS if f[0] in allowed_names]
-            else:
-                filtered = [f for f in DEFAULT_FOODS if f[0] in allowed_names and f[3] == cu]
-            
-            if not filtered:
-                filtered = [f for f in DEFAULT_FOODS if (cu == "모두" or f[3] == cu)]
-            selected_candidates = filtered
             spin_triggered = True
 
 card_spot = st.empty()
@@ -1022,7 +958,7 @@ if has_valid_location and res is not None and res.get("places"):
                     )
 
         st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
-        st.markdown("<h3 style='margin-bottom: 2px; font-size: 16px; font-weight: 800; color: #2E1C10;'>🗺️ 식당 위치 지도</h3>", unsafe_allow_html=True)
+        st.markdown("<h3 style='margin-bottom: 2px; font-size: 16px; font-weight: 800; color: #2E1C10;'>🗺️️ 식당 위치 지도</h3>", unsafe_allow_html=True)
         st.caption("🔴 빨간 핀: 1픽 매장 / 🔵 파란 핀: 주변 후보")
 
         m = folium.Map(location=[top_pick["lat"], top_pick["lng"]], zoom_start=15, control_scale=True)
