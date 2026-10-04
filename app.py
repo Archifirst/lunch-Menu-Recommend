@@ -13,9 +13,7 @@ st.set_page_config(page_title="오늘 점심 뭐 먹지?", page_icon="🍱", lay
 st.markdown(
     """
     <style>
-    /* ============================================================
-       [핵심] Streamlit 전역 테마 색상 변수를 '내 위치 찾기' 주황색(#E86A3E)으로 고정
-       ============================================================ */
+    /* Streamlit 전역 테마 색상 변수 강제 고정 */
     :root, .stApp, [data-testid="stAppViewContainer"] {
         --primary-color: #E86A3E !important;
         --primary: #E86A3E !important;
@@ -77,9 +75,7 @@ st.markdown(
         white-space: nowrap !important;
     }
     
-    /* ============================================================
-       [선택된 옵션 버튼: '내 위치 찾기'와 100% 동일한 #E86A3E 강제 적용]
-       ============================================================ */
+    /* 선택된 옵션 버튼 */
     button[data-testid*="primary"],
     button[kind="primary"],
     .stButton > button[data-testid*="primary"],
@@ -103,6 +99,7 @@ st.markdown(
     div[data-testid="stVerticalBlockBorderWrapper"] button[kind="primary"]:hover {
         background-color: #D65A2F !important;
         background: #D65A2F !important;
+        border-color: transparent !important;
         color: #FFFFFF !important;
         transform: translateY(-1px);
     }
@@ -163,57 +160,57 @@ st.markdown(
     }
 
     /* ============================================================
-       [메인 룰렛 버튼: 박스 2배(84px) & 텍스트 1.5배(24px, 900 볼드)]
+       [메인 룰렛 버튼: 박스 간격 14px 통일 & 텍스트 18px 700 볼드 조절]
        ============================================================ */
     @keyframes roulettePulse {
         0% {
             transform: scale(1);
-            box-shadow: 0 6px 20px rgba(232, 106, 62, 0.45), 0 0 0 0 rgba(232, 106, 62, 0.6);
+            box-shadow: 0 4px 16px rgba(232, 106, 62, 0.35), 0 0 0 0 rgba(232, 106, 62, 0.5);
         }
         50% {
-            transform: scale(1.02);
-            box-shadow: 0 10px 30px rgba(232, 106, 62, 0.65), 0 0 0 12px rgba(232, 106, 62, 0);
+            transform: scale(1.015);
+            box-shadow: 0 8px 24px rgba(232, 106, 62, 0.5), 0 0 0 8px rgba(232, 106, 62, 0);
         }
         100% {
             transform: scale(1);
-            box-shadow: 0 6px 20px rgba(232, 106, 62, 0.45), 0 0 0 0 rgba(232, 106, 62, 0);
+            box-shadow: 0 4px 16px rgba(232, 106, 62, 0.35), 0 0 0 0 rgba(232, 106, 62, 0);
         }
     }
 
-    /* 박스 바깥 독립 버튼 = 룰렛 버튼 */
+    /* 메뉴 추천 박스 간격(14px)과 완벽 일치 */
     div.block-container > div[data-testid="stVerticalBlock"] > div.stElementContainer:not(div[data-testid="stVerticalBlockBorderWrapper"] *) div.stButton {
-        margin-top: 16px !important;
-        margin-bottom: 16px !important;
+        margin-top: 14px !important;
+        margin-bottom: 14px !important;
     }
 
     div.block-container > div[data-testid="stVerticalBlock"] > div.stElementContainer:not(div[data-testid="stVerticalBlockBorderWrapper"] *) div.stButton > button {
-        height: 84px !important;
-        min-height: 84px !important;
+        height: 64px !important;
+        min-height: 64px !important;
         background: linear-gradient(135deg, #FF7B47 0%, #E85A2A 50%, #D84A1A 100%) !important;
         color: #FFFFFF !important;
         border: none !important;
-        border-radius: 20px !important;
-        animation: roulettePulse 2.0s infinite ease-in-out !important;
+        border-radius: 16px !important;
+        animation: roulettePulse 2.2s infinite ease-in-out !important;
         cursor: pointer !important;
-        box-shadow: 0 6px 20px rgba(232, 106, 62, 0.45) !important;
+        box-shadow: 0 4px 16px rgba(232, 106, 62, 0.35) !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
     }
 
-    /* 버튼 내부 텍스트 24px Ultra Bold */
+    /* 버튼 내부 텍스트 18px 및 적당한 Bold(700) */
     div.block-container > div[data-testid="stVerticalBlock"] > div.stElementContainer:not(div[data-testid="stVerticalBlockBorderWrapper"] *) div.stButton > button p,
     div.block-container > div[data-testid="stVerticalBlock"] > div.stElementContainer:not(div[data-testid="stVerticalBlockBorderWrapper"] *) div.stButton > button span {
-        font-size: 24px !important;
-        font-weight: 900 !important;
-        letter-spacing: -0.5px !important;
+        font-size: 18px !important;
+        font-weight: 700 !important;
+        letter-spacing: -0.4px !important;
         color: #FFFFFF !important;
         line-height: 1.2 !important;
     }
 
     div.block-container > div[data-testid="stVerticalBlock"] > div.stElementContainer:not(div[data-testid="stVerticalBlockBorderWrapper"] *) div.stButton > button:hover {
         background: linear-gradient(135deg, #FF662A 0%, #D64716 100%) !important;
-        transform: scale(1.02) !important;
+        transform: scale(1.015) !important;
     }
 
     .warning-box {
@@ -955,7 +952,7 @@ def show_cuisine_warning():
         unsafe_allow_html=True
     )
 
-# --- 6. 메인 룰렛 버튼 ---
+# --- 6. 메인 룰렛 버튼 (상하 14px 균일 간격 & 18px 700 볼드) ---
 if st.button("🎲 오늘 점심 랜덤 룰렛 돌리기!", use_container_width=True, type="primary", key="btn_trigger_random"):
     if not region.strip() and not st.session_state.gps_coords:
         show_location_warning()
@@ -1027,7 +1024,7 @@ if spin_triggered and selected_candidates:
                 temp = random.choice(selected_candidates)
                 card_spot.markdown(
                     f"""
-                    <div style="text-align: center; margin: 16px 0 16px 0; padding: 20px 18px; 
+                    <div style="text-align: center; margin: 14px 0 14px 0; padding: 20px 18px; 
                                 background: #FFFDF9; border-radius: 20px; border: 1.5px solid #F5D5B8; 
                                 box-shadow: 0 4px 16px rgba(245, 213, 184, 0.35);">
                         <div style="font-size: 54px; line-height: 1; margin-bottom: 6px;">{temp[1]}</div>
@@ -1053,13 +1050,13 @@ if spin_triggered and selected_candidates:
         else:
             region_warning_spot.warning(f"⚠️ 설정하신 조건 내에 만족하는 식당을 찾지 못했습니다. 반경을 넓히거나 가격/주차 옵션을 조정해 보세요!")
 
-# --- 8. 결과 화면 출력 (상단 외부 여백 16px 유지) ---
+# --- 8. 결과 화면 출력 (상단 외부 여백 14px로 일치) ---
 has_valid_location = bool(region.strip() or st.session_state.gps_coords)
 res = st.session_state.saved_result
 
 if has_valid_location and res is not None and res.get("places"):
     card_html = (
-        f'<div style="text-align: center; margin: 16px 0 16px 0; padding: 24px 20px; '
+        f'<div style="text-align: center; margin: 14px 0 14px 0; padding: 24px 20px; '
         f'background: #FFFDF9; border-radius: 22px; border: 1.5px solid #F5D5B8; '
         f'box-shadow: 0 4px 18px rgba(245, 213, 184, 0.35);">'
         f'<div style="font-size: 68px; line-height: 1; margin-bottom: 8px;">{res["emoji"]}</div>'
