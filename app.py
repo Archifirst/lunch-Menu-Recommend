@@ -61,25 +61,29 @@ st.markdown(
         margin-bottom: 14px !important;
     }
 
-    /* 박스 내부(Border Wrapper 내부)의 옵션 버튼들만 40px로 제한 */
+    /* 박스 내부(Border Wrapper 내부)의 옵션 버튼 스타일 */
     div[data-testid="stVerticalBlockBorderWrapper"] div.stButton > button {
         height: 40px !important;
         border-radius: 11px !important;
         transition: all 0.15s ease !important;
         white-space: nowrap !important;
     }
+    
+    /* 선택된 버튼: '내 위치 찾기'와 동일한 주황색 (#E86A3E) */
     div[data-testid="stVerticalBlockBorderWrapper"] div.stButton > button[kind="primary"] {
         background-color: #E86A3E !important;
         color: white !important;
         border: none !important;
         font-size: 13.5px !important;
         font-weight: 700 !important;
-        box-shadow: 0 2px 7px rgba(232, 106, 62, 0.22) !important;
+        box-shadow: 0 2px 8px rgba(232, 106, 62, 0.25) !important;
     }
     div[data-testid="stVerticalBlockBorderWrapper"] div.stButton > button[kind="primary"]:hover {
         background-color: #D65A2F !important;
         transform: translateY(-1px);
     }
+    
+    /* 선택되지 않은 기본 버튼 */
     div[data-testid="stVerticalBlockBorderWrapper"] div.stButton > button[kind="secondary"] {
         border: 1.2px solid #EDE4DC !important;
         background-color: #FFFFFF !important;
@@ -111,7 +115,7 @@ st.markdown(
     }
 
     /* ============================================================
-       [메인 룰렛 버튼: 박스 외부에 단독 배치된 버튼 완전 공략]
+       [메인 룰렛 버튼: 박스 2배(84px) & 텍스트 1.5배(24px, 900 볼드)]
        ============================================================ */
     @keyframes roulettePulse {
         0% {
@@ -128,7 +132,7 @@ st.markdown(
         }
     }
 
-    /* 박스(border wrapper) 바깥에 위치한 독립 버튼 = 룰렛 버튼 */
+    /* 박스 바깥 독립 버튼 = 룰렛 버튼 */
     div.block-container > div[data-testid="stVerticalBlock"] > div.stElementContainer:not(div[data-testid="stVerticalBlockBorderWrapper"] *) div.stButton {
         margin-top: 16px !important;
         margin-bottom: 16px !important;
@@ -149,7 +153,7 @@ st.markdown(
         justify-content: center !important;
     }
 
-    /* 버튼 내부 텍스트 24px Ultra Bold 강제 적용 */
+    /* 버튼 내부 텍스트 24px Ultra Bold */
     div.block-container > div[data-testid="stVerticalBlock"] > div.stElementContainer:not(div[data-testid="stVerticalBlockBorderWrapper"] *) div.stButton > button p,
     div.block-container > div[data-testid="stVerticalBlock"] > div.stElementContainer:not(div[data-testid="stVerticalBlockBorderWrapper"] *) div.stButton > button span {
         font-size: 24px !important;
@@ -635,7 +639,7 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
         pass
     return []
 
-# --- 화면 상단 제목 및 설명 (넉넉한 상단 여백 및 조화로운 간격) ---
+# --- 화면 상단 제목 및 설명 (여백 넉넉하게 확보) ---
 st.markdown("<h1 style='color: #2E1C10; font-size: 28px; font-weight: 800; margin: 0 0 10px 0; letter-spacing: -0.6px;'>🍱 오늘 점심 뭐 먹지?</h1>", unsafe_allow_html=True)
 st.markdown("<div style='color: #8C827A; font-size: 13.5px; margin-bottom: 22px; line-height: 1.5;'>고민되는 점심 메뉴와 검증된 주변 밥집을 랜덤으로 골라드립니다.</div>", unsafe_allow_html=True)
 
@@ -903,7 +907,7 @@ def show_cuisine_warning():
         unsafe_allow_html=True
     )
 
-# --- 6. 메인 룰렛 버튼 (네이티브 st.button + 단독 외부 버튼으로 100% 크기 적용 및 정상 동작) ---
+# --- 6. 메인 룰렛 버튼 ---
 if st.button("🎲 오늘 점심 랜덤 룰렛 돌리기!", use_container_width=True, type="primary", key="btn_trigger_random"):
     if not region.strip() and not st.session_state.gps_coords:
         show_location_warning()
@@ -1058,7 +1062,8 @@ if has_valid_location and res is not None and res.get("places"):
         st.markdown(top_pick_html, unsafe_allow_html=True)
 
         if len(places) > 1:
-            st.markdown(f"<div style='font-size: 14px; font-weight: 700; color: #2E1C10; margin-bottom: 8px;'>근처 다른 후보 ({len(places)-1}곳)</div>", unsafe_allow_html=True)
+            # 근처 다른 후보 타이틀에 어울리는 이모티콘(📍) 추가
+            st.markdown(f"<div style='font-size: 14.5px; font-weight: 700; color: #2E1C10; margin-bottom: 8px;'>📍 근처 다른 후보 ({len(places)-1}곳)</div>", unsafe_allow_html=True)
             other_candidates = places[1:11]
             col_left, col_right = st.columns(2)
 
