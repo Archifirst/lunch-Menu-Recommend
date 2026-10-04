@@ -115,7 +115,7 @@ PRESET_RADIUS = {
     "직접 입력": None
 }
 
-# --- 필터링 상수 정의 ---
+# --- 정밀 필터링 키워드 정의 ---
 EXCLUDED_CATEGORIES = [
     "술집", "주점", "호프", "포차", "이자카야", "바(BAR)", "요리주점", "와인바",
     "칵테일바", "민속주점", "맥주", "룸살롱", "단란주점", "유흥주점", "라이브카페", 
@@ -190,6 +190,7 @@ STRICT_SPECIALTY_NAME_RULES = {
     "육개장": ["육개장", "육대장", "혜장국"]
 }
 
+# 기본 메뉴 목록
 DEFAULT_FOODS = [
     ("김치찌개", "🥘", "김치찌개 전문점"),
     ("된장찌개", "🍲", "된장찌개 백반"),
@@ -277,20 +278,24 @@ ROW_PAIRS = [
     ("🤢 속편한식사", "🍻 시원한 해장")
 ]
 
-# --- 식당 텍스트 필터링 엔진 ---
+# --- 2. 식당 텍스트 및 카테고리 정밀 검증 엔진 ---
 def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_name: str) -> bool:
     clean_name = place_name.replace(" ", "").upper()
     cat_full = category_name.replace(" ", "")
 
+    # [1단계] 주점/술집/카페 카테고리 강력 차단
     if any(ex in cat_full for ex in EXCLUDED_CATEGORIES):
         return False
+    # [2단계] 술집 상호 키워드 차단
     if any(bad in clean_name for bad in [k.upper() for k in EXCLUDED_NAME_KEYWORDS]):
         return False
+    # [3단계] 전집/주막 배제
     if any(jeon in clean_name for jeon in JEON_KEYWORDS):
         return False
     if any(c in cat_full for c in ["전,빈대떡", "빈대떡"]):
         return False
 
+    # [4단계] 고깃집 배제 (단, 닭갈비 메뉴는 허용)
     if any(non in cat_full for non in NON_LUNCH_CATEGORIES):
         if not (menu_name == "닭갈비" and "닭요리" in cat_full):
             return False
@@ -301,119 +306,38 @@ def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_na
         if any(bad in clean_name for bad in [k.upper() for k in MEAT_SHOP_KEYWORDS]):
             return False
 
+    # [5단계] 분식 및 다메뉴 체인 필터링
     if menu_name not in ["김밥", "떡볶이"]:
         if any(brand in clean_name for brand in MULTI_MENU_FRANCHISES):
             return False
         if "분식" in cat_full and not any(k in cat_full for k in ["일식", "양식", "한식", "중식", "아시아음식"]):
             return False
 
+    # [6단계] 초밥/횟집 필터링
     if menu_name == "초밥":
         if any(fish in clean_name for fish in EVENING_RAW_FISH_KEYWORDS):
             return False
         if "회" in cat_full and not any(k in clean_name for k in ["스시", "초밥"]):
             return False
 
+    # [7단계] 돈까스 특화
     if menu_name == "돈까스":
         is_tonkatsu = any(k in clean_name for k in TONKATSU_NAME_INDICATORS) or any(c in cat_full for c in ["돈가스", "돈까스"])
         if not is_tonkatsu:
             return False
 
+    # [8단계] 잔치국수 전용 베트남/아시안 쌀국수 차단
     if menu_name == "잔치국수":
         if any(asian in cat_full for asian in ["아시아음식", "베트남", "태국", "동남아"]):
             return False
         if any(pho in clean_name for pho in VIETNAMESE_NOODLE_KEYWORDS):
             return False
 
+    # [9단계] 단품 전문점 상호 규칙 (국밥, 육개장, 칼국수, 죽 등)
     if menu_name in STRICT_SPECIALTY_NAME_RULES:
         required_words = STRICT_SPECIALTY_NAME_RULES[menu_name]
         if not any(req in clean_name for req in required_words):
             return False
-
-    return True
-
-# --- [네이버 지도 교차 검증] 14시 이후 오픈 식당 엄격 차단 엔진 ---
-def verify_naver_lunch_hour(place_name: str, address: str) -> bool:
-    """네이버 플레이스 모바일 검색을 호출해 오픈 시간이 14:00 이후인 식당을 100% 탈락시킴"""
-    try:
-        clean_pname = place_name.split()[0]
-        # 검색 정확도를 위해 시/구/동 일부 주소 결합
-        addr_chunk = " ".join(address.split()[:2]) if address else ""
-        query = f"{addr_chunk} {clean_pname}".strip()
-        
-        url = "https://m.map.naver.com/search2/searchMore.naver"
-        params = {
-            "query": query,
-            "page": 1,
-            "displayCount": 2,
-            "type": "SITE",
-            "siteSort": "1"
-        }
-        headers = {
-            "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1",
-            "Referer": "https://m.map.naver.com/"
-        }
-        res = requests.get(url, params=params, headers=headers, timeout=1.2)
-        if res.status_code != 200:
-            return True
-            
-        data = res.json()
-        site_list = data.get("result", {}).get("site", {}).get("list", [])
-        if not site_list:
-            return True
-            
-        target = site_list[0]
-        biz_hour_text = target.get("bizhour", "") or target.get("context", "")
-        
-        if biz_hour_text:
-            # 예: "16:30에 영업 시작", "17:00 ~ 02:00", "오후 5시 오픈" 등 탐지
-            time_matches = re.findall(r"(\d{1,2}):(\d{2})", biz_hour_text)
-            if time_matches:
-                start_h = int(time_matches[0][0]) + int(time_matches[0][1]) / 60.0
-                if start_h >= 14.0:
-                    return False
-            
-            # 한글 표기 분석 (예: 오후 4시, 17시 등)
-            pm_matches = re.findall(r"(?:오후\s*|밤\s*)(\d{1,2})시", biz_hour_text)
-            if pm_matches:
-                h = int(pm_matches[0])
-                if h < 12:
-                    h += 12
-                if h >= 14:
-                    return False
-        return True
-    except Exception:
-        return True
-
-def is_valid_lunch_time_cross_check(place_id: str, place_name: str, address: str) -> bool:
-    """카카오 1차 검증 + 네이버 지도 교차 검증을 통해 14시 이후 오픈 매장을 철저히 배제"""
-    # 1. 카카오맵 상세 정보 1차 확인
-    if place_id:
-        url = f"https://place.map.kakao.com/main/v/{place_id}"
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            "Referer": "https://map.kakao.com/"
-        }
-        try:
-            res = requests.get(url, headers=headers, timeout=0.8)
-            if res.status_code == 200:
-                data = res.json()
-                period_list = data.get("basicInfo", {}).get("openHour", {}).get("periodList", [])
-                if period_list:
-                    for period in period_list:
-                        for t in period.get("timeList", []):
-                            time_se = t.get("timeSE", "")
-                            times = re.findall(r"(\d{1,2}):(\d{2})", time_se)
-                            if len(times) >= 2:
-                                start_h = int(times[0][0]) + int(times[0][1]) / 60.0
-                                # 14시 이후 오픈(14.0 이상)인 곳은 무조건 탈락
-                                if start_h >= 14.0:
-                                    return False
-        except Exception:
-            pass
-
-    # 2. [네이버 지도 교차 검증] 네이버 플레이스를 통한 2차 검증
-    if not verify_naver_lunch_hour(place_name, address):
-        return False
 
     return True
 
@@ -523,18 +447,6 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
                 candidates.append(p_dict)
             
             candidates.sort(key=lambda x: x["priority_score"])
-            
-            # 14시 이후 오픈 식당 네이버 교차 검증 적용 (상위 5곳 검사)
-            if candidates:
-                valid_top = None
-                for i in range(min(5, len(candidates))):
-                    cand = candidates[i]
-                    if is_valid_lunch_time_cross_check(cand["id"], cand["name"], cand["address"]):
-                        valid_top = candidates.pop(i)
-                        break
-                if valid_top:
-                    candidates.insert(0, valid_top)
-            
             return candidates
     except Exception:
         pass
@@ -711,6 +623,7 @@ with st.container(border=True):
             show_location_warning()
         else:
             region_warning_spot.empty()
+            # '죽' 메뉴는 속편한식사에서만 나오도록 일반 룰렛에서 제외
             selected_candidates = [f for f in DEFAULT_FOODS if f[0] != "죽"]
             spin_triggered = True
 
@@ -755,7 +668,7 @@ with st.container(border=True):
 card_spot = st.empty()
 detail_spot = st.empty()
 
-# --- 4. 룰렛 실행 및 탐색 로직 ---
+# --- 4. 룰렛 실행 및 고속 탐색 로직 ---
 if spin_triggered and selected_candidates:
     detail_spot.empty()
 
@@ -773,7 +686,7 @@ if spin_triggered and selected_candidates:
         shuffled = selected_candidates.copy()
         random.shuffle(shuffled)
 
-        with st.spinner("주변 점심 전문점을 엄선하는 중... (네이버 교차 검증 중)"):
+        with st.spinner("점심 전문 식당을 필터링하는 중..."):
             for m_name, m_emoji, m_kw in shuffled[:5]:
                 found = kakao_search_places(c_lat, c_lng, m_name, m_kw, radius_km=radius_km)
                 if found:
@@ -873,6 +786,12 @@ if has_valid_location and res is not None and res.get("places"):
                 <div style="font-size: 13px; color: #7A6F66; margin-top: 4px;">
                     📍 {top_pick['address']} (약 {top_pick['dist']}km)
                 </div>
+                <div style="margin-top: 10px;">
+                    <a href="{top_pick.get('place_url', '#')}" target="_blank" 
+                       style="display: inline-block; padding: 5px 12px; background: #FFF4EE; border: 1px solid #F5D5B8; border-radius: 8px; color: #E86A3E; font-size: 12px; font-weight: 700; text-decoration: none;">
+                        🕒 영업시간·메뉴 확인 (카카오맵) ↗
+                    </a>
+                </div>
             </div>
             """,
             unsafe_allow_html=True
@@ -881,7 +800,7 @@ if has_valid_location and res is not None and res.get("places"):
         if len(places) > 1:
             st.markdown(f"<div style='font-size: 14px; font-weight: 700; color: #2E1C10; margin-bottom: 8px;'>근처 다른 후보 ({len(places)-1}곳)</div>", unsafe_allow_html=True)
             other_candidates = places[1:11]
-            col_left, col_right = st.columns(2)
+            col_left, col_right = col1, col2 = st.columns(2)
 
             for idx, p in enumerate(other_candidates, start=1):
                 p_tag = "개인" if p.get("is_personal", True) else "체인"
@@ -905,8 +824,13 @@ if has_valid_location and res is not None and res.get("places"):
                                     {p_tag}·{short_cat}
                                 </span>
                             </div>
-                            <div style="font-size: 11.5px; color: #666; font-weight: 500; margin-left: 6px; white-space: nowrap;">
-                                {p['dist']}km
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <span style="font-size: 11.5px; color: #666; font-weight: 500; white-space: nowrap;">
+                                    {p['dist']}km
+                                </span>
+                                <a href="{p.get('place_url', '#')}" target="_blank" style="text-decoration: none; font-size: 12px; color: #999;" title="상세 정보">
+                                    ℹ️
+                                </a>
                             </div>
                         </div>
                         """,
