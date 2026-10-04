@@ -57,7 +57,7 @@ st.markdown(
         0% { opacity: 0; transform: translateY(-6px) scale(0.99); }
         100% { opacity: 1; transform: translateY(0) scale(1); }
     }
-    .radius-wrapper, .cuisine-wrapper {
+    .radius-wrapper, .cuisine-wrapper, .price-wrapper, .parking-wrapper {
         animation: smoothSlideDown 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         transform-origin: top center;
     }
@@ -144,6 +144,10 @@ if "custom_radius_val" not in st.session_state:
     st.session_state.custom_radius_val = 2.0
 if "selected_cuisine" not in st.session_state:
     st.session_state.selected_cuisine = None
+if "selected_price" not in st.session_state:
+    st.session_state.selected_price = "상관 없음"
+if "selected_parking" not in st.session_state:
+    st.session_state.selected_parking = "상관 없음"
 if "saved_result" not in st.session_state:
     st.session_state.saved_result = None
 if "spin_count" not in st.session_state:
@@ -250,7 +254,7 @@ DEFAULT_FOODS = [
     ("갈비탕", "🍖", "갈비탕 전문점", "한식"),
     ("삼계탕", "🍗", "삼계탕 전문점", "한식"),
     ("추어탕", "🍲", "추어탕 전문점", "한식"),
-    ("육개장", "🌶️", "전통 육개장 전문점", "한식"),
+    ("육개장", "🌶️️", "전통 육개장 전문점", "한식"),
     ("콩나물국밥", "🌱", "콩나물국밥 전문점", "한식"),
     ("황태해장국", "🐟", "황태해장국 전문점", "한식"),
     ("선지해장국", "🥘", "선지해장국 전문점", "한식"),
@@ -461,15 +465,18 @@ def kakao_reverse_geocode(lat: float, lng: float) -> str:
         pass
     return "내 위치"
 
-def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: str, radius_km: float = 1.8):
+def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: str, radius_km: float = 1.8, parking_filter: bool = False):
     if not KAKAO_REST_KEY:
         return []
     url = "https://dapi.kakao.com/v2/local/search/keyword.json"
     headers = {"Authorization": f"KakaoAK {KAKAO_REST_KEY}"}
     radius_meters = int(radius_km * 1000)
 
+    # 주차 가능 선택 시 쿼리에 주차 키워드 결합
+    final_query = f"{search_query} 주차" if parking_filter else search_query
+
     params = {
-        "query": search_query,
+        "query": final_query,
         "category_group_code": "FD6",
         "x": str(lng),
         "y": str(lat),
@@ -664,7 +671,7 @@ else:
 
 # --- 3. 음식 종류 선택 섹션 ---
 st.markdown("<div class='cuisine-wrapper'>", unsafe_allow_html=True)
-st.markdown("<div class='section-title'>🍽️ 음식 종류</div>", unsafe_allow_html=True)
+st.markdown("<div class='section-title'>🍽️️ 음식 종류</div>", unsafe_allow_html=True)
 
 cu1, cu2, cu3, cu4 = st.columns(4)
 current_cuisine = st.session_state.selected_cuisine
@@ -732,6 +739,72 @@ if st.button("모두 (종류 구분 없음)", key="cbtn_all", type="primary" if 
 
 st.markdown("</div>", unsafe_allow_html=True)
 
+# --- 4. 금액대 설정 섹션 ---
+st.markdown("<div class='price-wrapper'>", unsafe_allow_html=True)
+st.markdown("<div class='section-title'>💰 금액대</div>", unsafe_allow_html=True)
+
+pr1, pr2, pr3 = st.columns(3)
+current_price = st.session_state.selected_price
+
+with pr1:
+    if st.button("1만원 이하", key="pbtn_under10", type="primary" if current_price == "1만원 이하" else "secondary", use_container_width=True):
+        if st.session_state.selected_price != "1만원 이하":
+            st.session_state.selected_price = "1만원 이하"
+            st.session_state.saved_result = None
+            st.rerun()
+with pr2:
+    if st.button("1~2만원", key="pbtn_10to20", type="primary" if current_price == "1~2만원" else "secondary", use_container_width=True):
+        if st.session_state.selected_price != "1~2만원":
+            st.session_state.selected_price = "1~2만원"
+            st.session_state.saved_result = None
+            st.rerun()
+with pr3:
+    if st.button("2만원 이상", key="pbtn_over20", type="primary" if current_price == "2만원 이상" else "secondary", use_container_width=True):
+        if st.session_state.selected_price != "2만원 이상":
+            st.session_state.selected_price = "2만원 이상"
+            st.session_state.saved_result = None
+            st.rerun()
+
+st.markdown("<div style='height: 5px;'></div>", unsafe_allow_html=True)
+
+if st.button("상관 없음", key="pbtn_any", type="primary" if current_price == "상관 없음" else "secondary", use_container_width=True):
+    if st.session_state.selected_price != "상관 없음":
+        st.session_state.selected_price = "상관 없음"
+        st.session_state.saved_result = None
+        st.rerun()
+
+st.markdown("</div>", unsafe_allow_html=True)
+
+# --- 5. 주차 여부 섹션 ---
+st.markdown("<div class='parking-wrapper'>", unsafe_allow_html=True)
+st.markdown("<div class='section-title'>🚗 주차 여부</div>", unsafe_allow_html=True)
+
+pk1, pk2 = st.columns(2)
+current_parking = st.session_state.selected_parking
+
+with pk1:
+    if st.button("주차 가능", key="pkbtn_yes", type="primary" if current_parking == "주차 가능" else "secondary", use_container_width=True):
+        if st.session_state.selected_parking != "주차 가능":
+            st.session_state.selected_parking = "주차 가능"
+            st.session_state.saved_result = None
+            st.rerun()
+with pk2:
+    if st.button("주차 불가", key="pkbtn_no", type="primary" if current_parking == "주차 불가" else "secondary", use_container_width=True):
+        if st.session_state.selected_parking != "주차 불가":
+            st.session_state.selected_parking = "주차 불가"
+            st.session_state.saved_result = None
+            st.rerun()
+
+st.markdown("<div style='height: 5px;'></div>", unsafe_allow_html=True)
+
+if st.button("상관 없음", key="pkbtn_any", type="primary" if current_parking == "상관 없음" else "secondary", use_container_width=True):
+    if st.session_state.selected_parking != "상관 없음":
+        st.session_state.selected_parking = "상관 없음"
+        st.session_state.saved_result = None
+        st.rerun()
+
+st.markdown("</div>", unsafe_allow_html=True)
+
 # 경고 안내문 표시 영역
 region_warning_spot = st.empty()
 spin_triggered = False
@@ -763,7 +836,7 @@ def show_cuisine_warning():
         unsafe_allow_html=True
     )
 
-# --- 4. 룰렛 돌리기 섹션 (단일 룰렛 구성) ---
+# --- 6. 룰렛 돌리기 섹션 (단일 룰렛 구성) ---
 st.markdown("<div class='section-title'>🎯 룰렛 돌리기</div>", unsafe_allow_html=True)
 
 with st.container(border=True):
@@ -796,7 +869,7 @@ with st.container(border=True):
 card_spot = st.empty()
 detail_spot = st.empty()
 
-# --- 5. 룰렛 실행 및 고속 탐색 로직 ---
+# --- 7. 룰렛 실행 및 고속 탐색 로직 ---
 if spin_triggered and selected_candidates:
     detail_spot.empty()
 
@@ -814,9 +887,11 @@ if spin_triggered and selected_candidates:
         shuffled = selected_candidates.copy()
         random.shuffle(shuffled)
 
+        parking_filter = (st.session_state.selected_parking == "주차 가능")
+
         with st.spinner("점심 전문 식당을 필터링하는 중..."):
             for m_name, m_emoji, m_kw, _ in shuffled[:6]:
-                found = kakao_search_places(c_lat, c_lng, m_name, m_kw, radius_km=radius_km)
+                found = kakao_search_places(c_lat, c_lng, m_name, m_kw, radius_km=radius_km, parking_filter=parking_filter)
                 if found:
                     final_menu = (m_name, m_emoji)
                     places = found
@@ -826,7 +901,7 @@ if spin_triggered and selected_candidates:
                 cu = st.session_state.selected_cuisine
                 fallback_kw = "백반 가정식" if cu in ["한식", "모두"] else f"{cu} 전문점"
                 fallback_menu = "백반·가정식" if cu in ["한식", "모두"] else f"{cu} 밥집"
-                fallback_found = kakao_search_places(c_lat, c_lng, fallback_menu, fallback_kw, radius_km=radius_km)
+                fallback_found = kakao_search_places(c_lat, c_lng, fallback_menu, fallback_kw, radius_km=radius_km, parking_filter=parking_filter)
                 if fallback_found:
                     final_menu = (fallback_menu, "🍱")
                     places = fallback_found
@@ -860,9 +935,9 @@ if spin_triggered and selected_candidates:
                 "id": st.session_state.spin_count
             }
         else:
-            region_warning_spot.warning(f"⚠️ 설정하신 조건({st.session_state.selected_cuisine}) 내에 순수 점심 식당을 찾지 못했습니다. 반경을 넓히거나 다른 종류를 선택해 보세요!")
+            region_warning_spot.warning(f"⚠️ 설정하신 조건({st.session_state.selected_cuisine} / {st.session_state.selected_parking}) 내에 순수 점심 식당을 찾지 못했습니다. 반경을 넓히거나 다른 조건을 선택해 보세요!")
 
-# --- 6. 결과 화면 출력 ---
+# --- 8. 결과 화면 출력 ---
 has_valid_location = bool(region.strip() or st.session_state.gps_coords)
 res = st.session_state.saved_result
 
@@ -958,7 +1033,7 @@ if has_valid_location and res is not None and res.get("places"):
                     )
 
         st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
-        st.markdown("<h3 style='margin-bottom: 2px; font-size: 16px; font-weight: 800; color: #2E1C10;'>🗺️️ 식당 위치 지도</h3>", unsafe_allow_html=True)
+        st.markdown("<h3 style='margin-bottom: 2px; font-size: 16px; font-weight: 800; color: #2E1C10;'>🗺️ 식당 위치 지도</h3>", unsafe_allow_html=True)
         st.caption("🔴 빨간 핀: 1픽 매장 / 🔵 파란 핀: 주변 후보")
 
         m = folium.Map(location=[top_pick["lat"], top_pick["lng"]], zoom_start=15, control_scale=True)
