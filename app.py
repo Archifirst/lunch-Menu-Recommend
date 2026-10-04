@@ -13,20 +13,22 @@ st.set_page_config(page_title="오늘 점심 뭐 먹지?", page_icon="🍱", lay
 st.markdown(
     """
     <style>
-    /* 전체 배경 및 폰트 */
+    :root, .stApp, [data-testid="stAppViewContainer"] {
+        --primary-color: #E86A3E !important;
+        --primary: #E86A3E !important;
+    }
+
     .stApp {
         background-color: #FAF8F5;
         font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo", sans-serif;
     }
     
-    /* 상단바와 타이틀 사이 간격 넉넉하게 확보 */
     .block-container {
-        padding-top: 3.6rem !important;
+        padding-top: 4.0rem !important;
         padding-bottom: 3.6rem !important;
         max-width: 620px !important;
     }
 
-    /* 통일된 소제목 헤더 스타일 */
     .section-title {
         font-size: 14.5px !important;
         font-weight: 700 !important;
@@ -39,7 +41,6 @@ st.markdown(
         gap: 6px;
     }
 
-    /* 입력창 디자인 */
     div[data-baseweb="input"] {
         border-radius: 12px !important;
         border: 1.5px solid #E6DFD5 !important;
@@ -51,17 +52,15 @@ st.markdown(
         box-shadow: 0 0 0 2px rgba(232, 106, 62, 0.15) !important;
     }
 
-    /* 개별 박스(Border Container) 카드 스타일 및 하단 마진 복원 */
     div[data-testid="stVerticalBlockBorderWrapper"] {
         border-radius: 18px !important;
         border: 1.8px solid #EAE3DB !important;
         background-color: #FFFFFF !important;
         box-shadow: 0 3px 12px rgba(0, 0, 0, 0.02) !important;
         padding: 16px 16px 16px 16px !important;
-        margin-bottom: 12px !important;
+        margin-bottom: 14px !important;
     }
 
-    /* 박스 내부 옵션 버튼 기본 높이 */
     div[data-testid="stVerticalBlockBorderWrapper"] div.stButton > button {
         height: 40px !important;
         border-radius: 11px !important;
@@ -69,8 +68,50 @@ st.markdown(
         white-space: nowrap !important;
     }
     
-    /* 선택되지 않은 기본 옵션 버튼 */
-    div[data-testid="stVerticalBlockBorderWrapper"] button[kind="secondary"] {
+    button[data-testid*="primary"],
+    button[kind="primary"],
+    .stButton > button[data-testid*="primary"],
+    div[data-testid="stVerticalBlockBorderWrapper"] button[data-testid*="primary"],
+    div[data-testid="stVerticalBlockBorderWrapper"] button[kind="primary"],
+    div[data-testid="stVerticalBlockBorderWrapper"] div.stButton > button[kind="primary"] {
+        background-color: #E86A3E !important;
+        background: #E86A3E !important;
+        border: none !important;
+        border-color: transparent !important;
+        color: #FFFFFF !important;
+        font-size: 13.5px !important;
+        font-weight: 700 !important;
+        box-shadow: 0 2px 8px rgba(232, 106, 62, 0.25) !important;
+    }
+
+    button[data-testid*="primary"]:hover,
+    button[kind="primary"]:hover,
+    .stButton > button[data-testid*="primary"]:hover,
+    div[data-testid="stVerticalBlockBorderWrapper"] button[data-testid*="primary"]:hover,
+    div[data-testid="stVerticalBlockBorderWrapper"] button[kind="primary"]:hover {
+        background-color: #D65A2F !important;
+        background: #D65A2F !important;
+        border-color: transparent !important;
+        color: #FFFFFF !important;
+        transform: translateY(-1px);
+    }
+
+    button[data-testid*="primary"] *,
+    div[data-testid="stVerticalBlockBorderWrapper"] button[kind="primary"] * {
+        color: #FFFFFF !important;
+    }
+
+    button[data-testid*="primary"]:focus,
+    button[data-testid*="primary"]:active {
+        background-color: #E86A3E !important;
+        background: #E86A3E !important;
+        border-color: #E86A3E !important;
+        box-shadow: 0 0 0 2px rgba(232, 106, 62, 0.3) !important;
+    }
+    
+    div[data-testid="stVerticalBlockBorderWrapper"] button[kind="secondary"],
+    div[data-testid="stVerticalBlockBorderWrapper"] button[data-testid*="secondary"],
+    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid*="secondary"] > button {
         border: 1.2px solid #EDE4DC !important;
         background: #FFFFFF !important;
         background-color: #FFFFFF !important;
@@ -80,7 +121,8 @@ st.markdown(
         padding: 6px 8px !important;
         box-shadow: 0 1px 4px rgba(0,0,0,0.02) !important;
     }
-    div[data-testid="stVerticalBlockBorderWrapper"] button[kind="secondary"]:hover {
+    div[data-testid="stVerticalBlockBorderWrapper"] button[kind="secondary"]:hover,
+    div[data-testid="stVerticalBlockBorderWrapper"] button[data-testid*="secondary"]:hover {
         border-color: #E86A3E !important;
         color: #E86A3E !important;
         background: #FFFDF9 !important;
@@ -94,12 +136,10 @@ st.markdown(
         color: #E86A3E !important;
     }
 
-    /* 컬럼 좌우 간격 */
     div[data-testid="stColumn"] {
         padding: 0 3px !important;
     }
 
-    /* 음식 종류 '모두' 버튼 간격 제어 */
     div[data-testid="stVerticalBlockBorderWrapper"] div.stButton:not([data-testid="stColumn"] *) {
         margin-top: 6px !important;
         margin-bottom: 0px !important;
@@ -108,9 +148,6 @@ st.markdown(
         margin-bottom: 0px !important;
     }
 
-    /* ============================================================
-       [메인 룰렛 버튼: 안정적인 크기 및 상하 간격]
-       ============================================================ */
     @keyframes roulettePulse {
         0% {
             transform: scale(1);
@@ -126,10 +163,9 @@ st.markdown(
         }
     }
 
-    /* 룰렛 버튼 감싸는 컨테이너 */
     div.block-container > div[data-testid="stVerticalBlock"] > div.stElementContainer:not(div[data-testid="stVerticalBlockBorderWrapper"] *) div.stButton {
-        margin-top: 6px !important;
-        margin-bottom: 8px !important;
+        margin-top: 14px !important;
+        margin-bottom: 14px !important;
     }
 
     div.block-container > div[data-testid="stVerticalBlock"] > div.stElementContainer:not(div[data-testid="stVerticalBlockBorderWrapper"] *) div.stButton > button {
@@ -147,7 +183,6 @@ st.markdown(
         justify-content: center !important;
     }
 
-    /* 버튼 내부 텍스트 */
     div.block-container > div[data-testid="stVerticalBlock"] > div.stElementContainer:not(div[data-testid="stVerticalBlockBorderWrapper"] *) div.stButton > button p,
     div.block-container > div[data-testid="stVerticalBlock"] > div.stElementContainer:not(div[data-testid="stVerticalBlockBorderWrapper"] *) div.stButton > button span {
         font-size: 18px !important;
@@ -169,7 +204,7 @@ st.markdown(
         gap: 8px;
         width: 100%;
         height: 44px;
-        margin: 6px 0 12px 0;
+        margin: 6px 0 14px 0;
         background-color: #FFFDF7;
         border: 1.5px solid #F7D488;
         border-radius: 12px;
@@ -179,7 +214,6 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# 1. API Key 보안 처리
 has_key = "KAKAO_REST_KEY" in st.secrets and bool(st.secrets["KAKAO_REST_KEY"].strip())
 KAKAO_REST_KEY = st.secrets["KAKAO_REST_KEY"].strip() if has_key else ""
 
@@ -190,7 +224,6 @@ PRESET_RADIUS = {
     "직접 입력": None
 }
 
-# 세션 상태 초기화 및 보정
 if "selected_radius_preset" not in st.session_state or st.session_state.selected_radius_preset not in PRESET_RADIUS:
     st.session_state.selected_radius_preset = "근거리"
 if "custom_radius_val" not in st.session_state:
@@ -210,7 +243,6 @@ if "gps_coords" not in st.session_state:
 if "region_input_val" not in st.session_state:
     st.session_state.region_input_val = ""
 
-# --- 브라우저 GPS 수신 처리 ---
 qp = st.query_params
 if qp.get("action") == "gps" and "lat" in qp and "lng" in qp:
     try:
@@ -226,12 +258,13 @@ if qp.get("action") == "gps" and "lat" in qp and "lng" in qp:
         pass
     st.query_params.clear()
 
-# --- 필터링 키워드 정의 ---
+# --- 정밀 필터링 키워드 정의 ---
 EXCLUDED_CATEGORIES = [
     "술집", "주점", "호프", "포차", "이자카야", "바(BAR)", "요리주점", "와인바",
     "칵테일바", "민속주점", "맥주", "룸살롱", "단란주점", "유흥주점", "라이브카페", 
     "나이트클럽", "오뎅바", "꼬치구이전문점", "선술집", "해물주점", "실내포차",
-    "포장마차", "와인", "위스키", "펍", "선술", "선술집", "감성주점", "카페", "디저트", "제과,베이커리"
+    "포장마차", "와인", "위스키", "펍", "선술", "감성주점", "카페", "디저트", "제과,베이커리",
+    "실비집", "대포집", "맥줏집"
 ]
 
 EXCLUDED_NAME_KEYWORDS = [
@@ -239,8 +272,7 @@ EXCLUDED_NAME_KEYWORDS = [
     "BEER", "라운지", "BAR", "노래방", "포장마차", "야시장", "소주", "오뎅바",
     "막걸리", "동동주", "생맥주", "달빛", "심야", "야식", "올나잇", "주막", "동동",
     "탁주", "양조장", "브루어리", "BREW", "탭룸", "살롱", "가라오케", "선술집",
-    "대포", "대포집", "통닭발", "껍데기", "연탄구이", "원조골뱅이", "골뱅이", "노가리",
-    "닭발", "짝태", "먹태", "야채곱창", "밤", "새벽"
+    "대포", "대포집", "통닭발", "껍데기", "연탄구이", "원조골뱅이", "실비집", "실비"
 ]
 
 JEON_KEYWORDS = [
@@ -249,16 +281,16 @@ JEON_KEYWORDS = [
 ]
 
 NON_LUNCH_CATEGORIES = [
-    "육류,고기", "육류,고기구이", "삼겹살", "곱창,막창", "양꼬치", "조개구이",
+    "육류,고기구이", "삼겹살", "곱창,막창", "양꼬치", "조개구이",
     "치킨", "닭요리 > 치킨", "닭꼬치", "꼬치구이", "전,빈대떡", "닭발"
 ]
 
 MEAT_SHOP_KEYWORDS = [
-    "축산", "정육", "식육", "마장", "화로", "연탄", "숯불", "솥뚜껑",
+    "축산", "정육", "식육", "마장", "화로", "연탄", "솥뚜껑",
     "뒷고기", "주먹고기", "생고기", "생삼겹", "대패", "삼겹", "오겹",
     "곱창", "막창", "대창", "특양", "양꼬치", "양갈비", "갈매기", "뽈살",
-    "야키니쿠", "우삼겹", "냉삼", "생갈비", "소갈비", "돼지갈비", "통닭발",
-    "불닭발", "조개구이", "장어구이", "야키토리", "쿠시카츠", "닭강정", "치킨"
+    "야키니쿠", "우삼겹", "냉삼", "생갈비", "통닭발", "불닭발", "조개구이",
+    "장어구이", "야키토리", "쿠시카츠", "닭강정"
 ]
 
 EVENING_RAW_FISH_KEYWORDS = [
@@ -290,8 +322,9 @@ KNOWN_FRANCHISE_BRANDS = [
 
 TONKATSU_NAME_INDICATORS = ["돈까스", "돈가스", "카츠", "카쯔", "가츠", "돈카츠", "포크커틀릿"]
 
+# 특정 단품 메뉴 엄격 필터: 상호명에 반드시 키워드가 들어가야 함
 STRICT_SPECIALTY_NAME_RULES = {
-    "닭갈비": ["닭갈비"],
+    "닭갈비": ["닭갈비"],  # 닭 관련 잡탕 요리(치킨, 닭도리탕, 닭발, 찜닭) 원천 차단
     "칼국수": ["칼국수"],
     "막국수": ["막국수"],
     "국밥": ["국밥", "순대", "순댓국", "돼지국밥", "따로국밥", "소머리국밥"],
@@ -379,6 +412,7 @@ def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_na
     clean_name = place_name.replace(" ", "").upper()
     cat_full = category_name.replace(" ", "")
 
+    # 1. 술집, 주점, 유흥업소 즉시 차단
     if any(ex in cat_full for ex in EXCLUDED_CATEGORIES):
         return False
     if any(bad in clean_name for bad in [k.upper() for k in EXCLUDED_NAME_KEYWORDS]):
@@ -388,6 +422,7 @@ def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_na
     if any(c in cat_full for c in ["전,빈대떡", "빈대떡"]):
         return False
 
+    # 2. 저녁 구이/술안주 카테고리 차단
     if any(non in cat_full for non in NON_LUNCH_CATEGORIES):
         if not (menu_name == "닭갈비" and "닭요리" in cat_full):
             return False
@@ -396,6 +431,13 @@ def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_na
         if "구이" in clean_name and menu_name != "생선구이백반":
             return False
         if any(bad in clean_name for bad in [k.upper() for k in MEAT_SHOP_KEYWORDS]):
+            return False
+
+    # 3. 닭갈비 선택 시 엄격 필터: 상호명에 반드시 '닭갈비'가 들어가야 하며, 잡다한 닭요리 배제
+    if menu_name == "닭갈비":
+        if "닭갈비" not in clean_name:
+            return False
+        if any(bad_chick in clean_name for bad_chick in ["치킨", "통닭", "찜닭", "삼계탕", "닭한마리", "닭발", "닭도리", "닭볶음"]):
             return False
 
     if menu_name not in ["김밥", "떡볶이"]:
@@ -421,6 +463,7 @@ def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_na
         if any(pho in clean_name for pho in VIETNAMESE_NOODLE_KEYWORDS):
             return False
 
+    # 등록된 단품 엄격 규칙 점검
     if menu_name in STRICT_SPECIALTY_NAME_RULES:
         required_words = STRICT_SPECIALTY_NAME_RULES[menu_name]
         if not any(req in clean_name for req in required_words):
@@ -428,6 +471,7 @@ def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_na
 
     return True
 
+# 실시간 검색 스크래핑 기반 저녁/심야 전용 매장 엄격 필터링 (14시 이후 오픈 매장 및 안주 술집 제외)
 @st.cache_data(ttl=3600, show_spinner=False)
 def is_dinner_only_restaurant(place_name: str, address: str) -> bool:
     clean_pname = place_name.split()[0]
@@ -443,7 +487,14 @@ def is_dinner_only_restaurant(place_name: str, address: str) -> bool:
         res = requests.get(url, headers=headers, timeout=1.2)
         if res.status_code == 200:
             text = res.text
-            time_matches = re.findall(r"(\d{1,2}):(\d{2})\s*(?:~|-|에|오픈|영업)", text)
+            
+            # 본문에 술집/안주/주점/야간 관련 단어가 짙게 깔려있는 경우 탈락
+            night_words = ["술집", "요리주점", "안주", "이자카야", "호프", "맥주집", "심야식당", "야간영업"]
+            if sum(1 for nw in night_words if nw in text) >= 2:
+                return True
+
+            # 24시간 형식 (예: 17:00 오픈, 16:30~)
+            time_matches = re.findall(r"(\d{1,2}):(\d{2})\s*(?:~|-|에|오픈|영업|시작)", text)
             for h_str, _ in time_matches:
                 h = int(h_str)
                 if 14 <= h <= 23:
@@ -451,6 +502,7 @@ def is_dinner_only_restaurant(place_name: str, address: str) -> bool:
                 if 9 <= h <= 13:
                     return False
 
+            # 오후 형식 (예: 오후 5시 오픈, 오후 17시)
             pm_matches = re.findall(r"오후\s*(\d{1,2})(?::(\d{2})|시)", text)
             for match in pm_matches:
                 h = int(match[0])
@@ -498,12 +550,12 @@ def calculate_priority(place: dict, menu_name: str, has_parking: bool = False, n
     place["is_personal"] = not is_franchise
     score += (2.5 if is_franchise else -0.5)
 
+    if menu_name == "닭갈비" and "닭갈비" in p_name:
+        score -= 3.0
     if menu_name == "돈까스" and any(k in p_name for k in TONKATSU_NAME_INDICATORS):
         score -= 2.0
     if menu_name == "초밥" and any(k in p_name for k in ["스시", "초밥"]):
         score -= 2.5
-    if menu_name == "닭갈비" and "닭갈비" in p_name:
-        score -= 3.0
     if menu_name == "죽" and "죽" in p_name:
         score -= 2.0
     if menu_name == "국밥" and any(k in p_name for k in ["국밥", "순대", "순댓국", "돼지국밥"]):
@@ -591,6 +643,8 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
             for d in docs:
                 p_name = d.get("place_name", "")
                 cat_name = d.get("category_name", "")
+                
+                # 1차 정밀 메뉴/업종 필터링
                 if not is_valid_specialized_restaurant(menu_name, p_name, cat_name):
                     continue
                 
@@ -621,30 +675,26 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
             else:
                 candidates.sort(key=lambda x: x["priority_score"])
 
-            if candidates:
-                valid_top = None
-                for i in range(min(4, len(candidates))):
-                    cand = candidates[i]
-                    if is_dinner_only_restaurant(cand["name"], cand["address"]):
-                        continue
-                    valid_top = candidates.pop(i)
-                    break
-                if valid_top:
-                    candidates.insert(0, valid_top)
+            # 2차 14시 이후 오픈/술집 철저 스크리닝
+            filtered_candidates = []
+            for cand in candidates:
+                if is_dinner_only_restaurant(cand["name"], cand["address"]):
+                    continue
+                filtered_candidates.append(cand)
 
-            return candidates
+            return filtered_candidates
     except Exception:
         pass
     return []
 
-# --- 화면 상단 제목 및 설명 ---
-st.markdown("<h1 style='color: #2E1C10; font-size: 28px; font-weight: 800; margin: 0 0 8px 0; letter-spacing: -0.6px;'>🍱 오늘 점심 뭐 먹지?</h1>", unsafe_allow_html=True)
-st.markdown("<div style='color: #8C827A; font-size: 13.5px; margin-bottom: 18px; line-height: 1.5;'>고민되는 점심 메뉴와 검증된 주변 밥집을 랜덤으로 골라드립니다.</div>", unsafe_allow_html=True)
+# --- 화면 상단 헤더 ---
+st.markdown("<h1 style='color: #2E1C10; font-size: 28px; font-weight: 800; margin: 0 0 10px 0; letter-spacing: -0.6px;'>🍱 오늘 점심 뭐 먹지?</h1>", unsafe_allow_html=True)
+st.markdown("<div style='color: #8C827A; font-size: 13.5px; margin-bottom: 22px; line-height: 1.5;'>고민되는 점심 메뉴와 검증된 주변 밥집을 랜덤으로 골라드립니다.</div>", unsafe_allow_html=True)
 
 if not has_key:
     st.warning("⚠️ **API 키 설정 필요**: `.streamlit/secrets.toml` 또는 Cloud Secrets에 `KAKAO_REST_KEY`를 설정해주세요.")
 
-# --- 1. 위치 입력 (개별 박스) ---
+# --- 1. 위치 입력 ---
 with st.container(border=True):
     st.markdown("<div class='section-title'>📍 위치</div>", unsafe_allow_html=True)
     col_input, col_gps = st.columns([3.5, 1.2], vertical_alignment="center")
@@ -689,7 +739,7 @@ with st.container(border=True):
             unsafe_allow_html=True
         )
 
-# --- 2. 탐색 반경 (개별 박스: 균등 4칸) ---
+# --- 2. 탐색 반경 ---
 clean_region = region.strip()
 is_admin_region = False
 
@@ -759,7 +809,7 @@ else:
     radius_km = 1.8
     radius_display_text = "지역 인근"
 
-# --- 3. 음식 종류 선택 (개별 박스) ---
+# --- 3. 음식 종류 선택 ---
 with st.container(border=True):
     st.markdown("<div class='section-title'>🍽️ 음식 종류</div>", unsafe_allow_html=True)
 
@@ -823,7 +873,7 @@ with st.container(border=True):
             st.session_state.saved_result = None
             st.rerun()
 
-# --- 4. 음식 가격(식사 기준) 선택 (개별 박스) ---
+# --- 4. 음식 가격 선택 ---
 with st.container(border=True):
     st.markdown("<div class='section-title'>💵 음식 가격(식사 기준)</div>", unsafe_allow_html=True)
 
@@ -855,9 +905,9 @@ with st.container(border=True):
                 st.session_state.saved_result = None
                 st.rerun()
 
-# --- 5. 주차 가능 여부 선택 (개별 박스) ---
+# --- 5. 주차 가능 여부 선택 ---
 with st.container(border=True):
-    st.markdown("<div class='section-title'>🅿️ 주차 가능 여부</div>", unsafe_allow_html=True)
+    st.markdown("<div class='section-title'>🅿️️ 주차 가능 여부</div>", unsafe_allow_html=True)
     pk1, pk2 = st.columns(2)
     current_parking = st.session_state.selected_parking
 
@@ -874,7 +924,7 @@ with st.container(border=True):
                 st.session_state.saved_result = None
                 st.rerun()
 
-# 경고 안내문 표시 영역
+# 경고 안내문
 region_warning_spot = st.empty()
 spin_triggered = False
 selected_candidates = []
@@ -977,7 +1027,7 @@ if spin_triggered and selected_candidates:
                 temp = random.choice(selected_candidates)
                 card_spot.markdown(
                     f"""
-                    <div style="text-align: center; margin: 0 0 12px 0; padding: 20px 18px; 
+                    <div style="text-align: center; margin: 14px 0 14px 0; padding: 20px 18px; 
                                 background: #FFFDF9; border-radius: 20px; border: 1.5px solid #F5D5B8; 
                                 box-shadow: 0 4px 16px rgba(245, 213, 184, 0.35);">
                         <div style="font-size: 54px; line-height: 1; margin-bottom: 6px;">{temp[1]}</div>
@@ -1009,7 +1059,7 @@ res = st.session_state.saved_result
 
 if has_valid_location and res is not None and res.get("places"):
     card_html = (
-        f'<div style="text-align: center; margin: 0 0 12px 0; padding: 24px 20px; '
+        f'<div style="text-align: center; margin: 14px 0 14px 0; padding: 24px 20px; '
         f'background: #FFFDF9; border-radius: 22px; border: 1.5px solid #F5D5B8; '
         f'box-shadow: 0 4px 18px rgba(245, 213, 184, 0.35);">'
         f'<div style="font-size: 68px; line-height: 1; margin-bottom: 8px;">{res["emoji"]}</div>'
@@ -1038,7 +1088,7 @@ if has_valid_location and res is not None and res.get("places"):
             parking_badge = '<span style="font-size: 11px; background: #E8F4EA; color: #2E7D32; padding: 2px 7px; border-radius: 6px; font-weight: 700;">🅿️ 주차 편리</span>'
 
         top_pick_html = (
-            f'<div style="margin-bottom: 16px; padding: 22px 18px; '
+            f'<div style="margin-bottom: 20px; padding: 22px 18px; '
             f'background: #FFFDF9; border-radius: 22px; border: 1.5px solid #F5D5B8; '
             f'box-shadow: 0 4px 18px rgba(245, 213, 184, 0.35); text-align: center;">'
             f'<div style="display: flex; justify-content: center; align-items: center; gap: 6px; margin-bottom: 8px; flex-wrap: wrap;">'
