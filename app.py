@@ -137,8 +137,15 @@ st.markdown(
 has_key = "KAKAO_REST_KEY" in st.secrets and bool(st.secrets["KAKAO_REST_KEY"].strip())
 KAKAO_REST_KEY = st.secrets["KAKAO_REST_KEY"].strip() if has_key else ""
 
-# 세션 상태 초기화
-if "selected_radius_preset" not in st.session_state:
+PRESET_RADIUS = {
+    "인근": 0.7,
+    "근거리": 1.8,
+    "원거리": 3.5,
+    "직접 입력": None
+}
+
+# 세션 상태 초기화 및 기존 잔여 세션 키 자동 보정 (KeyError 완벽 방어)
+if "selected_radius_preset" not in st.session_state or st.session_state.selected_radius_preset not in PRESET_RADIUS:
     st.session_state.selected_radius_preset = "근거리"
 if "custom_radius_val" not in st.session_state:
     st.session_state.custom_radius_val = 2.0
@@ -156,13 +163,6 @@ if "gps_coords" not in st.session_state:
     st.session_state.gps_coords = None
 if "region_input_val" not in st.session_state:
     st.session_state.region_input_val = ""
-
-PRESET_RADIUS = {
-    "인근": 0.7,
-    "근거리": 1.8,
-    "원거리": 3.5,
-    "직접 입력": None
-}
 
 # --- 정밀 필터링 키워드 정의 ---
 EXCLUDED_CATEGORIES = [
@@ -404,15 +404,12 @@ def is_dinner_only_restaurant(place_name: str, address: str) -> bool:
 
 # --- 인근 주차장(300m 이내) 보유 여부 검증 함수 ---
 def has_nearby_parking(lat: float, lng: float, place_name: str) -> bool:
-    """식당 자체 주차장 힌트가 있거나 인근 300m 이내에 주차장(PK6)이 있는지 조회"""
-    # 1. 상호명 힌트
     if any(k in place_name for k in ["주차", "타워", "빌딩", "스퀘어", "몰", "프라자", "센터"]):
         return True
     
     if not KAKAO_REST_KEY:
         return False
 
-    # 2. 카카오 카테고리 검색(PK6: 주차장) 반경 300m 확인
     url = "https://dapi.kakao.com/v2/local/search/category.json"
     headers = {"Authorization": f"KakaoAK {KAKAO_REST_KEY}"}
     params = {
@@ -456,7 +453,6 @@ def calculate_priority(place: dict, menu_name: str, has_parking: bool = False, n
         if any(k in p_name for k in ["육개장", "육대장"]):
             score -= 3.0
 
-    # 주차장 필요 시 우선순위 가중치
     if need_parking:
         score -= (3.5 if has_parking else 0.0)
 
@@ -505,8 +501,10 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
     headers = {"Authorization": f"KakaoAK {KAKAO_REST_KEY}"}
     radius_meters = int(radius_km * 1000)
 
+    query_text = f"{search_query} 주차" if need_parking else search_query
+
     params = {
-        "query": search_query,
+        "query": query_text,
         "category_group_code": "FD6",
         "x": str(lng),
         "y": str(lat),
@@ -517,10 +515,14 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
 
     try:
         res = requests.get(url, headers=headers, params=params, timeout=3.0)
-        if res.status_code == 200:
-            docs = res.json().get("documents", [])
+        docs = res.json().get("documents", []) if res.status_code == 200 else []
+        if not docs and need_parking:
+            params["query"] = search_query
+            res = requests.get(url, headers=headers, params=params, timeout=3.0)
+            docs = res.json().get("documents", []) if res.status_code == 200 else []
+
+        if docs:
             candidates = []
-            
             for d in docs:
                 p_name = d.get("place_name", "")
                 cat_name = d.get("category_name", "")
@@ -531,7 +533,6 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
                 p_lat = float(d.get("y"))
                 p_lng = float(d.get("x"))
                 
-                # 주차 가능 여부 판별 (상호 자체 or 인근 주차장 여부)
                 parking_available = False
                 if need_parking:
                     parking_available = has_nearby_parking(p_lat, p_lng, p_name)
@@ -550,7 +551,6 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
                 p_dict["priority_score"] = calculate_priority(p_dict, menu_name, has_parking=parking_available, need_parking=need_parking)
                 candidates.append(p_dict)
             
-            # 주차 필요 시 주차 가능한 곳을 최우선 정렬
             if need_parking:
                 candidates.sort(key=lambda x: (not x["has_parking"], x["priority_score"]))
             else:
@@ -703,7 +703,8 @@ if should_show_radius:
         radius_km = float(manual_radius)
         radius_display_text = f"직접 입력 {radius_km:.1f}km"
     else:
-        radius_km = PRESET_RADIUS[st.session_state.selected_radius_preset]
+        # KeyError 방지를 위한 .get() 안전 처리 (기본 1.8km)
+        radius_km = PRESET_RADIUS.get(st.session_state.selected_radius_preset, 1.8)
         radius_display_text = f"{st.session_state.selected_radius_preset} ({radius_km}km)"
 
     st.markdown("</div>", unsafe_allow_html=True)
@@ -889,17 +890,14 @@ with st.container(border=True):
             cu = st.session_state.selected_cuisine
             pr = st.session_state.selected_price
 
-            # 가격대 매핑
             price_map = {"1만원 이하": "low", "1~2만원": "mid", "2만원 이상": "high"}
             target_pr = price_map.get(pr, None)
 
-            # 1차 필터링: 음식 종류
             if cu == "모두":
                 candidates_pool = [f for f in DEFAULT_FOODS if f[0] != "죽"]
             else:
                 candidates_pool = [f for f in DEFAULT_FOODS if f[3] == cu and f[0] != "죽"]
 
-            # 2차 필터링: 가격대 (금액 상관 없음이 아닐 경우)
             if target_pr:
                 price_filtered = [f for f in candidates_pool if f[4] == target_pr]
                 selected_candidates = price_filtered if price_filtered else candidates_pool
