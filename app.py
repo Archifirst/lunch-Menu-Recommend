@@ -94,17 +94,26 @@ st.markdown(
         transform: translateY(-1px);
     }
 
+    /* 컬럼 좌우 간격 통일 */
     div[data-testid="stColumn"] {
         padding: 0 3px !important;
     }
 
-    /* 음식 종류 세로 간격 및 최하단 '모두' 버튼 여백 정밀 제어 */
-    .cuisine-grid div[data-testid="stVerticalBlock"] > div:has(button[key^="cbtn_"]) {
-        margin-bottom: -10px !important;
+    /* 음식 종류 버튼 간격 미세 조정 */
+    div:has(> div.stButton > button[key="cbtn_korean"]) {
+        margin-bottom: -6px !important;
     }
-    .cuisine-all-btn > div > div > div.stButton > button {
+    div:has(> div.stButton > button[key="cbtn_asian"]) {
+        margin-bottom: -6px !important;
+    }
+
+    /* 음식 종류 '모두' 버튼 상·하단 마진 제어로 박스 하단 내부 간격 통일 */
+    div.stButton:has(> button[key="cbtn_all"]) {
         margin-top: 6px !important;
-        margin-bottom: -4px !important; /* 바닥 패딩과 닿는 불필요 여백 제거 */
+        margin-bottom: 0px !important;
+    }
+    div.stButton:has(> button[key="cbtn_all"]) > button {
+        margin-bottom: 0px !important;
     }
 
     /* ============================================================
@@ -125,15 +134,15 @@ st.markdown(
         }
     }
 
-    /* 룰렛 버튼 상하 간격을 균일하게 16px로 제어 */
+    /* 상하 간격을 균일하게 16px로 제어 */
     .hero-spin-box {
         margin-top: 16px !important;
         margin-bottom: 16px !important;
     }
 
     .hero-spin-box div.stButton > button {
-        height: 84px !important;                 /* 기본 40px 대비 2배 이상 */
-        font-size: 24px !important;               /* 일반 14px 대비 약 1.5~1.7배 */
+        height: 84px !important;                 /* 기본(40px) 대비 2배 이상 */
+        font-size: 24px !important;               /* 일반 폰트(14px) 대비 약 1.5~1.7배 */
         font-weight: 900 !important;              /* 볼드 적용 */
         letter-spacing: -0.5px !important;
         background: linear-gradient(135deg, #FF7B47 0%, #E85A2A 50%, #D84A1A 100%) !important;
@@ -200,7 +209,7 @@ if "gps_coords" not in st.session_state:
 if "region_input_val" not in st.session_state:
     st.session_state.region_input_val = ""
 
-# --- 필터링 키워드 정의 ---
+# 필터링 키워드 정의
 EXCLUDED_CATEGORIES = [
     "술집", "주점", "호프", "포차", "이자카야", "바(BAR)", "요리주점", "와인바",
     "칵테일바", "민속주점", "맥주", "룸살롱", "단란주점", "유흥주점", "라이브카페", 
@@ -402,6 +411,7 @@ def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_na
     return True
 
 # --- 실시간 검색 기반 14시 이후 오픈 식당 필터링 ---
+@st.cache_data(ttl=3600, show_spinner=False)
 def is_dinner_only_restaurant(place_name: str, address: str) -> bool:
     clean_pname = place_name.split()[0]
     region_chunk = " ".join(address.split()[:2]) if address else ""
@@ -495,6 +505,7 @@ def calculate_priority(place: dict, menu_name: str, has_parking: bool = False, n
     return score
 
 # --- 카카오 공식 API 통신 함수 ---
+@st.cache_data(ttl=86400, show_spinner=False)
 def kakao_get_coordinates(query: str):
     if not KAKAO_REST_KEY:
         return None, None
@@ -511,6 +522,7 @@ def kakao_get_coordinates(query: str):
         pass
     return None, None
 
+@st.cache_data(ttl=86400, show_spinner=False)
 def kakao_reverse_geocode(lat: float, lng: float) -> str:
     if not KAKAO_REST_KEY:
         return "내 위치"
@@ -544,7 +556,7 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
         "category_group_code": "FD6",
         "x": str(lng),
         "y": str(lat),
-        "radius": min(radius_meters, 20000),
+        "radius": max(200, min(radius_meters, 20000)),
         "sort": "distance",
         "size": 15
     }
@@ -749,7 +761,6 @@ else:
 # --- 3. 음식 종류 선택 (개별 박스: 하단 내부 여백 완벽 밀착) ---
 with st.container(border=True):
     st.markdown("<div class='section-title'>🍽️ 음식 종류</div>", unsafe_allow_html=True)
-    st.markdown("<div class='cuisine-grid'>", unsafe_allow_html=True)
 
     cu1, cu2, cu3, cu4 = st.columns(4)
     current_cuisine = st.session_state.selected_cuisine
@@ -805,14 +816,11 @@ with st.container(border=True):
                 st.session_state.saved_result = None
                 st.rerun()
 
-    st.markdown("<div class='cuisine-all-btn'>", unsafe_allow_html=True)
     if st.button("모두 (종류 구분 없음)", key="cbtn_all", type="primary" if current_cuisine == "모두" else "secondary", use_container_width=True):
         if st.session_state.selected_cuisine != "모두":
             st.session_state.selected_cuisine = "모두"
             st.session_state.saved_result = None
             st.rerun()
-    st.markdown("</div>", unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
 
 # --- 4. 음식 가격(식사 기준) 선택 (개별 박스) ---
 with st.container(border=True):
