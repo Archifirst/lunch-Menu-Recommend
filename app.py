@@ -154,7 +154,6 @@ EVENING_RAW_FISH_KEYWORDS = [
     "물회마차", "포차회", "바다마차", "해물포차", "해산물포차", "참치정육점"
 ]
 
-# 아시안 쌀국수 프랜차이즈 및 상호 키워드 (잔치국수 검색 시 철저 배제)
 VIETNAMESE_NOODLE_KEYWORDS = [
     "쌀국수", "포(PHO)", "PHO", "분짜", "반미", "포보", "미분당", "에머이",
     "사이공", "반포식스", "포메인", "포베이", "까몬", "더포", "낭만쌀국수",
@@ -179,6 +178,7 @@ KNOWN_FRANCHISE_BRANDS = [
 
 TONKATSU_NAME_INDICATORS = ["돈까스", "돈가스", "카츠", "카쯔", "가츠", "돈카츠", "포크커틀릿"]
 
+# 순수 단품 전문점 상호 검증 규칙 (육개장 전문점 추가)
 STRICT_SPECIALTY_NAME_RULES = {
     "칼국수": ["칼국수"],
     "막국수": ["막국수"],
@@ -187,10 +187,11 @@ STRICT_SPECIALTY_NAME_RULES = {
     "초밥": ["스시", "초밥"],
     "김밥": ["김밥"],
     "죽": ["죽"],
-    "잔치국수": ["잔치국수", "국수집", "할매국수", "멸치국수", "국수마을", "국수나라", "국수전문", "국수"]
+    "잔치국수": ["잔치국수", "국수집", "할매국수", "멸치국수", "국수마을", "국수나라", "국수전문", "국수"],
+    "육개장": ["육개장", "육대장", "혜장국"]
 }
 
-# 기본 메뉴 목록 ('잔치국수' 검색어 정밀화)
+# 기본 메뉴 목록 ('육개장' 검색어 정밀화)
 DEFAULT_FOODS = [
     ("김치찌개", "🥘", "김치찌개 전문점"),
     ("된장찌개", "🍲", "된장찌개 백반"),
@@ -205,7 +206,7 @@ DEFAULT_FOODS = [
     ("갈비탕", "🍖", "갈비탕 전문점"),
     ("삼계탕", "🍗", "삼계탕 전문점"),
     ("추어탕", "🍲", "추어탕 전문점"),
-    ("육개장", "🌶️", "육개장 전문점"),
+    ("육개장", "🌶️", "전통 육개장 전문점"),
     ("콩나물국밥", "🌱", "콩나물국밥 전문점"),
     ("황태해장국", "🐟", "황태해장국 전문점"),
     ("선지해장국", "🥘", "선지해장국 전문점"),
@@ -279,7 +280,7 @@ ROW_PAIRS = [
     ("🤢 속편한식사", "🍻 시원한 해장")
 ]
 
-# --- 식당 검증 엔진 (술집/주점 및 잔치국수 시 쌀국수 철저 배제) ---
+# --- 식당 검증 엔진 ---
 def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_name: str) -> bool:
     clean_name = place_name.replace(" ", "").upper()
     cat_full = category_name.replace(" ", "")
@@ -329,14 +330,12 @@ def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_na
 
     # 8. 잔치국수 전용 베트남/아시안 쌀국수 엄격 차단 필터
     if menu_name == "잔치국수":
-        # 아시아음식, 베트남음식, 태국음식 카테고리 즉시 탈락
         if any(asian in cat_full for asian in ["아시아음식", "베트남", "태국", "동남아"]):
             return False
-        # 상호에 쌀국수, 분짜, PHO 등 포함 시 탈락
         if any(pho in clean_name for pho in VIETNAMESE_NOODLE_KEYWORDS):
             return False
 
-    # 9. 단품 전문점 상호 규칙 검사
+    # 9. 단품 전문점 상호 규칙 검사 (육개장, 국밥, 칼국수 등)
     if menu_name in STRICT_SPECIALTY_NAME_RULES:
         required_words = STRICT_SPECIALTY_NAME_RULES[menu_name]
         if not any(req in clean_name for req in required_words):
@@ -413,6 +412,9 @@ def calculate_priority(place: dict, menu_name: str) -> float:
             score -= 3.0
         elif "국수" in p_name:
             score -= 1.5
+    if menu_name == "육개장":
+        if any(k in p_name for k in ["육개장", "육대장"]):
+            score -= 3.0
     return score
 
 # --- 카카오 공식 API 통신 함수 ---
