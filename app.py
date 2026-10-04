@@ -7,8 +7,12 @@ import re
 import folium
 from streamlit_folium import st_folium
 
-# API Key 보안 처리
-KAKAO_REST_KEY = st.secrets.get("KAKAO_REST_KEY", "bb9c8bfabfc3d5a4c0dbdb3312d8ca30").strip()
+# 1. API Key 보안 처리 (.streamlit/secrets.toml 필수)
+if "KAKAO_REST_KEY" not in st.secrets:
+    st.error("⚠️ `.streamlit/secrets.toml` 파일에 KAKAO_REST_KEY를 설정해주세요.")
+    st.stop()
+
+KAKAO_REST_KEY = st.secrets["KAKAO_REST_KEY"].strip()
 
 st.set_page_config(page_title="오늘 점심 뭐 먹지?", page_icon="🍱", layout="centered")
 
@@ -16,17 +20,14 @@ st.set_page_config(page_title="오늘 점심 뭐 먹지?", page_icon="🍱", lay
 st.markdown(
     """
     <style>
-    /* 전체 배경 및 폰트 렌더링 + 상단 여유 간격 부여 */
     .stApp {
         background-color: #FAF8F5;
         font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo", sans-serif;
     }
     .block-container {
-        padding-top: 3.2rem !important;
+        padding-top: 3.0rem !important;
         padding-bottom: 2.8rem !important;
     }
-    
-    /* 입력창 디자인 */
     div[data-baseweb="input"] {
         border-radius: 12px !important;
         border: 1.5px solid #E6DFD5 !important;
@@ -37,25 +38,15 @@ st.markdown(
         border-color: #E86A3E !important;
         box-shadow: 0 0 0 2px rgba(232, 106, 62, 0.15) !important;
     }
-
-    /* 반경 선택창 부드럽게 위에서 내려오는 드롭다운 모션 */
     @keyframes smoothSlideDown {
-        0% {
-            opacity: 0;
-            transform: translateY(-10px) scale(0.98);
-        }
-        100% {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-        }
+        0% { opacity: 0; transform: translateY(-8px) scale(0.99); }
+        100% { opacity: 1; transform: translateY(0) scale(1); }
     }
     .radius-wrapper {
-        animation: smoothSlideDown 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        animation: smoothSlideDown 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         transform-origin: top center;
         margin-bottom: 6px;
     }
-
-    /* 룰렛 방식 전체 묶음 박스 */
     div[data-testid="stVerticalBlockBorderWrapper"] {
         border-radius: 18px !important;
         border: 1.8px solid #EAE3DB !important;
@@ -67,8 +58,6 @@ st.markdown(
     div[data-testid="stVerticalBlockBorderWrapper"]:hover {
         border-color: #F0A284 !important;
     }
-    
-    /* 메인 룰렛 돌리기 버튼 커스텀 */
     div.stButton > button[kind="primary"] {
         background-color: #E86A3E !important;
         color: white !important;
@@ -78,15 +67,12 @@ st.markdown(
         font-size: 15px !important;
         font-weight: 700 !important;
         box-shadow: 0 3px 10px rgba(232, 106, 62, 0.22) !important;
-        transition: all 0.2s ease !important;
+        transition: all 0.15s ease !important;
     }
     div.stButton > button[kind="primary"]:hover {
         background-color: #D65A2F !important;
-        box-shadow: 0 5px 14px rgba(232, 106, 62, 0.32) !important;
         transform: translateY(-1px);
     }
-    
-    /* 일반 보조 버튼 디자인 */
     div.stButton > button[kind="secondary"] {
         border-radius: 12px !important;
         border: 1.2px solid #EDE4DC !important;
@@ -96,18 +82,15 @@ st.markdown(
         font-weight: 600 !important;
         padding: 8px 10px !important;
         box-shadow: 0 2px 5px rgba(0,0,0,0.02) !important;
-        transition: all 0.2s ease !important;
+        transition: all 0.15s ease !important;
         white-space: nowrap !important;
     }
     div.stButton > button[kind="secondary"]:hover {
         border-color: #E86A3E !important;
         color: #E86A3E !important;
         background-color: #FFFDF9 !important;
-        box-shadow: 0 3px 10px rgba(232, 106, 62, 0.1) !important;
         transform: translateY(-1px);
     }
-    
-    /* 반경 토글 버튼 전용 높이 */
     div[data-testid="stColumn"] > div > div > div.stButton > button {
         height: 40px !important;
     }
@@ -116,7 +99,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# 세션 초기화
+# 세션 상태 초기화
 if "selected_radius_preset" not in st.session_state:
     st.session_state.selected_radius_preset = "🚲"
 if "saved_result" not in st.session_state:
@@ -127,8 +110,6 @@ if "gps_coords" not in st.session_state:
     st.session_state.gps_coords = None
 if "region_input_val" not in st.session_state:
     st.session_state.region_input_val = ""
-if "active_mode" not in st.session_state:
-    st.session_state.active_mode = "random"
 
 PRESET_RADIUS = {
     "🚶": 0.7,
@@ -137,51 +118,40 @@ PRESET_RADIUS = {
     "직접 입력": None
 }
 
-# --- 1. 유흥/주점/술집 업종 강력 제외 ---
+# --- 필터링 상수 정의 ---
 EXCLUDED_CATEGORIES = [
     "술집", "주점", "호프", "포차", "이자카야", "바(BAR)", "요리주점", "와인바",
     "칵테일바", "민속주점", "맥주", "룸살롱", "단란주점", "유흥주점", "라이브카페", 
-    "나이트클럽", "오뎅바", "꼬치구이전문점", "선술집", "선술", "해물주점"
+    "나이트클럽", "오뎅바", "꼬치구이전문점", "선술집", "해물주점", "카페", "디저트", "제과,베이커리"
 ]
 
 EXCLUDED_NAME_KEYWORDS = [
     "포차", "주점", "호프", "이자카야", "술집", "맥주", "와인", "펍", "PUB", "비어",
-    "BEER", "라운지", "BAR", "룸", "노래방", "포장마차", "야시장", "소주", "오뎅바",
-    "막걸리", "동동주", "생맥주", "달빛", "심야", "야식", "새벽", "올나잇", "통닭"
+    "BEER", "라운지", "BAR", "노래방", "포장마차", "야시장", "소주", "오뎅바",
+    "막걸리", "동동주", "생맥주", "달빛", "심야", "야식", "올나잇"
 ]
 
-# 전류 / 주막류 (행복한전이야기 등 '전이야기' 및 변형 상호 추가)
 JEON_KEYWORDS = [
-    "파전", "빈대떡", "모듬전", "부침개", "지짐이", "지짐", "전집", 
-    "전이야기", "전나라", "전마을", "전선생", "종로전", "원조전", "전골목", 
-    "주막", "탁주", "전사랑", "전세상", "전전문"
+    "파전", "빈대떡", "부침개", "지짐이", "전이야기", "전나라", "전마을", 
+    "전선생", "종로전", "원조전", "전골목", "주막", "전사랑", "전세상"
 ]
 
-# 카카오 실제 카테고리 기준 고깃집/구이 업종 강력 차단
 NON_LUNCH_CATEGORIES = [
     "육류,고기", "육류,고기구이", "삼겹살", "곱창,막창", "양꼬치", "조개구이",
     "치킨", "닭요리 > 치킨", "닭꼬치", "꼬치구이", "전,빈대떡", "닭발"
 ]
 
-# 고깃집 상호 단골 키워드
 MEAT_SHOP_KEYWORDS = [
     "축산", "정육", "식육", "마장", "가든", "화로", "연탄", "숯불", "솥뚜껑",
-    "뒷고기", "주먹고기", "생고기", "생삼겹", "대패", "차돌", "삼겹", "오겹", "목살",
-    "곱창", "막창", "대창", "특양", "양꼬치", "양갈비", "갈매기", "뽈살", "부속",
-    "야키니쿠", "우삼겹", "냉삼", "생갈비", "소갈비", "돼지갈비", "닭발", "통닭발",
-    "불닭발", "조개구이", "장어구이", "야키토리", "쿠시카츠", "치킨", "닭강정"
-]
-
-DRINK_SNACK_KEYWORDS = [
-    "황도", "과일안주", "과일화채", "화채", "마른안주", "먹태", "노가리", "한치", 
-    "쥐포", "육포", "골뱅이소면", "골뱅이무침", "두부김치", "어묵탕", "오뎅탕", 
-    "번데기탕", "모듬소시지", "소세지야채볶음", "견과류", "모둠견과", 
-    "나초", "모듬포", "문어숙회", "오징어숙회", "골뱅이"
+    "뒷고기", "주먹고기", "생고기", "생삼겹", "대패", "삼겹", "오겹",
+    "곱창", "막창", "대창", "특양", "양꼬치", "양갈비", "갈매기", "뽈살",
+    "야키니쿠", "우삼겹", "냉삼", "생갈비", "소갈비", "돼지갈비", "통닭발",
+    "불닭발", "조개구이", "장어구이", "야키토리", "쿠시카츠", "닭강정"
 ]
 
 EVENING_RAW_FISH_KEYWORDS = [
     "횟집", "회센타", "회센터", "수산", "회타운", "활어", "선어", "막회", "숙성회",
-    "모듬회", "물회마차", "포차회", "바다마차", "해물포차", "해산물포차", "참치정육점"
+    "물회마차", "포차회", "바다마차", "해물포차", "해산물포차", "참치정육점"
 ]
 
 MULTI_MENU_FRANCHISES = [
@@ -195,12 +165,12 @@ KNOWN_FRANCHISE_BRANDS = [
     "김밥천국", "고봉민", "김가네", "얌샘", "싸다김밥", "종로김밥", "선비꼬마김밥",
     "마녀김밥", "바르다김선생", "밥버거", "토마토김밥", "국수나무", "미소야", "역전우동",
     "한솥", "본죽", "신전떡볶이", "동대문엽기", "죠스떡볶이", "청년다방", "두끼",
-    "홍콩반점", "교동짬뽕", "백소정", "카츠젠", "봉구스", "롤링파스타", "서브웨이",
+    "홍콩반점", "교동짬뽕", "백소정", "카츠젠", "롤링파스타", "서브웨이",
     "맥도날드", "롯데리아", "버거킹", "노브랜드버거", "맘스터치", "KFC",
     "상무초밥", "쿠우쿠우", "스시로", "갓덴스시", "미카도스시"
 ]
 
-BUNSIK_ALLOW_MENUS = {"김밥", "떡볶이", "라면", "분식"}
+TONKATSU_NAME_INDICATORS = ["돈까스", "돈가스", "카츠", "카쯔", "가츠", "돈카츠", "포크커틀릿"]
 
 STRICT_SPECIALTY_NAME_RULES = {
     "칼국수": ["칼국수"],
@@ -211,136 +181,84 @@ STRICT_SPECIALTY_NAME_RULES = {
     "김밥": ["김밥"]
 }
 
-TONKATSU_NAME_INDICATORS = [
-    "돈까스", "돈가스", "카츠", "카쯔", "가츠", "돈카츠", "돈카쯔", "포크커틀릿"
-]
-
 DEFAULT_FOODS = [
-    ("김치찌개", "🥘", "김치찌개 전문점", ["찌개", "한식", "백반"]),
-    ("된장찌개", "🍲", "된장찌개 백반", ["찌개", "한식", "백반"]),
-    ("순두부찌개", "🥚", "순두부찌개 전문점", ["순두부", "찌개", "한식"]),
-    ("부대찌개", "🥓", "부대찌개 전문점", ["부대찌개", "찌개"]),
-    ("청국장", "🍲", "청국장 전문점", ["청국장", "한식", "백반"]),
-    ("동태탕", "🐟", "동태탕 전문점", ["동태탕", "찌개", "한식"]),
-    ("순대국", "🥣", "순대국 전문점", ["순대", "국밥", "한식"]),
-    ("뼈해장국", "🍖", "뼈해장국", ["감자탕", "해장국", "국밥"]),
-    ("설렁탕", "🥣", "설렁탕 전문점", ["설렁탕", "곰탕", "국밥"]),
-    ("곰탕", "🥩", "곰탕 전문점", ["곰탕", "설렁탕", "국밥"]),
-    ("갈비탕", "🍖", "갈비탕 전문점", ["갈비탕", "한식"]),
-    ("삼계탕", "🍗", "삼계탕 전문점", ["삼계탕", "한식"]),
-    ("추어탕", "🍲", "추어탕 전문점", ["추어탕", "한식"]),
-    ("육개장", "🌶️", "육개장 전문점", ["육개장", "국밥", "한식"]),
-    ("콩나물국밥", "🌱", "콩나물국밥 전문점", ["콩나물국밥", "국밥"]),
-    ("황태해장국", "🐟", "황태해장국 전문점", ["해장국", "한식"]),
-    ("선지해장국", "🥘", "선지해장국 전문점", ["해장국", "국밥"]),
-    ("도가니탕", "🥣", "도가니탕 전문점", ["도가니탕", "곰탕"]),
-    ("백반", "🍱", "백반 가정식", ["백반", "가정식", "한식", "기사식당"]),
-    ("제육볶음", "🔥", "제육볶음 정식", ["한식", "백반", "식당"]),
-    ("오징어볶음", "🦑", "오징어볶음 백반", ["한식", "백반"]),
-    ("낙지볶음", "🐙", "낙지볶음 전문점", ["낙지", "한식"]),
-    ("쭈꾸미볶음", "🐙", "쭈꾸미 전문점", ["쭈꾸미", "한식"]),
-    ("돌솥비빔밥", "🍳", "비빔밥 전문점", ["비빔밥", "한식"]),
-    ("보리밥정식", "🌾", "보리밥 정식", ["보리밥", "한식"]),
-    ("쌈밥정식", "🥬", "쌈밥 정식", ["쌈밥", "한식"]),
-    ("생선구이백반", "🐟", "생선구이 백반", ["생선구이", "백반"]),
-    ("닭갈비", "🍗", "닭갈비 전문점", ["닭갈비", "한식"]),
-    ("찜닭", "🥔", "찜닭 전문점", ["찜닭", "한식"]),
-    ("코다리조림", "🐟", "코다리조림 전문점", ["코다리", "한식"]),
-    ("간장게장백반", "🦀", "게장 정식", ["게장", "한식"]),
-    ("칼국수", "🍜", "칼국수 전문점", ["칼국수", "국수", "한식"]),
-    ("수제비", "🥣", "수제비 전문점", ["수제비", "칼국수", "한식"]),
-    ("막국수", "🥢", "막국수 전문점", ["막국수", "국수", "한식"]),
-    ("냉면", "🧊", "함흥 평양 냉면 전문점", ["냉면", "한식"]),
-    ("잔치국수", "🍜", "국수 전문점", ["국수", "한식"]),
-    ("비빔국수", "🌶️", "비빔국수 전문점", ["국수", "분식"]),
-    ("소바", "🥢", "메밀소바 모밀 전문점", ["일식", "소바"]),
-    ("전복죽", "🥣", "전복죽 전문점", ["죽", "한식"]),
-    ("돈까스", "🍱", "돈까스 카츠 전문점", ["돈가스", "일식", "경양식", "양식"]),
-    ("초밥", "🍣", "스시 초밥 전문점", ["일식", "초밥"]),
-    ("일본라멘", "🍜", "일본라멘 전문점", ["라멘", "일식"]),
-    ("우동", "🍢", "사누키 우동 전문점", ["우동", "일식"]),
-    ("사케동", "🍣", "연어덮밥 사케동", ["일식", "덮밥"]),
-    ("가츠동", "🍛", "돈부리 덮밥 전문점", ["일식", "덮밥"]),
-    ("텐동", "🍤", "텐동 전문점", ["텐동", "일식"]),
-    ("회덮밥", "🥗", "활어 회덮밥", ["일식", "한식"]),
-    ("카레라이스", "🍛", "일본카레 전문점", ["카레", "일식"]),
-    ("짜장면", "🥢", "짜장면", ["중식", "중화요리", "중국집"]),
-    ("짬뽕", "🔥", "짬뽕", ["중식", "중화요리", "중국집"]),
-    ("볶음밥", "🍚", "중화 볶음밥", ["중식", "중국집"]),
-    ("마파두부밥", "🍛", "마파두부", ["중식", "중화요리"]),
-    ("마라탕", "🌶️", "마라탕 전문점", ["중식", "마라탕"]),
-    ("파스타", "🍝", "파스타 레스토랑", ["양식", "이탈리안", "패밀리레스토랑"]),
-    ("피자", "🍕", "화덕피자", ["피자", "양식", "이탈리안"]),
-    ("수제버거", "🍔", "수제버거 전문점", ["햄버거", "패스트푸드"]),
-    ("스테이크덮밥", "🥩", "스테이크 덮밥", ["양식", "일식"]),
-    ("리조또", "🧀", "이탈리안 리조또", ["양식", "이탈리안"]),
-    ("쌀국수", "🍜", "베트남 쌀국수", ["아시아음식", "베트남음식", "쌀국수"]),
-    ("팟타이", "🥢", "태국음식 팟타이", ["아시아음식", "태국음식"]),
-    ("나시고랭", "🍳", "인도네시아 나시고랭", ["아시아음식"]),
-    ("타코", "🌮", "멕시칸 타코", ["남미음식", "멕시칸"]),
-    ("포케", "🥗", "하와이안 포케", ["샐러드", "다이어트"]),
-    ("샌드위치", "🥪", "수제 샌드위치", ["샌드위치", "샐러드"]),
-    ("떡볶이", "🍢", "떡볶이 전문점", ["분식", "떡볶이"]),
-    ("김밥", "🍙", "김밥 전문점", ["김밥"])
+    ("김치찌개", "🥘", "김치찌개 전문점"),
+    ("된장찌개", "🍲", "된장찌개 백반"),
+    ("순두부찌개", "🥚", "순두부찌개 전문점"),
+    ("부대찌개", "🥓", "부대찌개 전문점"),
+    ("청국장", "🍲", "청국장 전문점"),
+    ("동태탕", "🐟", "동태탕 전문점"),
+    ("순대국", "🥣", "순대국 전문점"),
+    ("뼈해장국", "🍖", "뼈해장국"),
+    ("설렁탕", "🥣", "설렁탕 전문점"),
+    ("곰탕", "🥩", "곰탕 전문점"),
+    ("갈비탕", "🍖", "갈비탕 전문점"),
+    ("삼계탕", "🍗", "삼계탕 전문점"),
+    ("추어탕", "🍲", "추어탕 전문점"),
+    ("육개장", "🌶️", "육개장 전문점"),
+    ("콩나물국밥", "🌱", "콩나물국밥 전문점"),
+    ("황태해장국", "🐟", "황태해장국 전문점"),
+    ("선지해장국", "🥘", "선지해장국 전문점"),
+    ("도가니탕", "🥣", "도가니탕 전문점"),
+    ("백반", "🍱", "백반 가정식"),
+    ("제육볶음", "🔥", "제육볶음 정식"),
+    ("오징어볶음", "🦑", "오징어볶음 백반"),
+    ("낙지볶음", "🐙", "낙지볶음 전문점"),
+    ("쭈꾸미볶음", "🐙", "쭈꾸미 전문점"),
+    ("돌솥비빔밥", "🍳", "비빔밥 전문점"),
+    ("보리밥정식", "🌾", "보리밥 정식"),
+    ("쌈밥정식", "🥬", "쌈밥 정식"),
+    ("생선구이백반", "🐟", "생선구이 백반"),
+    ("닭갈비", "🍗", "닭갈비 전문점"),
+    ("찜닭", "🥔", "찜닭 전문점"),
+    ("코다리조림", "🐟", "코다리조림 전문점"),
+    ("간장게장백반", "🦀", "게장 정식"),
+    ("칼국수", "🍜", "칼국수 전문점"),
+    ("수제비", "🥣", "수제비 전문점"),
+    ("막국수", "🥢", "막국수 전문점"),
+    ("냉면", "🧊", "함흥 평양 냉면 전문점"),
+    ("잔치국수", "🍜", "국수 전문점"),
+    ("비빔국수", "🌶️", "비빔국수 전문점"),
+    ("소바", "🥢", "메밀소바 모밀 전문점"),
+    ("전복죽", "🥣", "전복죽 전문점"),
+    ("돈까스", "🍱", "돈까스 카츠 전문점"),
+    ("초밥", "🍣", "스시 초밥 전문점"),
+    ("일본라멘", "🍜", "일본라멘 전문점"),
+    ("우동", "🍢", "사누키 우동 전문점"),
+    ("사케동", "🍣", "연어덮밥 사케동"),
+    ("가츠동", "🍛", "돈부리 덮밥 전문점"),
+    ("텐동", "🍤", "텐동 전문점"),
+    ("회덮밥", "🥗", "활어 회덮밥"),
+    ("카레라이스", "🍛", "일본카레 전문점"),
+    ("짜장면", "🥢", "짜장면"),
+    ("짬뽕", "🔥", "짬뽕"),
+    ("볶음밥", "🍚", "중화 볶음밥"),
+    ("마파두부밥", "🍛", "마파두부"),
+    ("마라탕", "🌶️", "마라탕 전문점"),
+    ("파스타", "🍝", "파스타 레스토랑"),
+    ("피자", "🍕", "화덕피자"),
+    ("수제버거", "🍔", "수제버거 전문점"),
+    ("스테이크덮밥", "🥩", "스테이크 덮밥"),
+    ("리조또", "🧀", "이탈리안 리조또"),
+    ("쌀국수", "🍜", "베트남 쌀국수"),
+    ("팟타이", "🥢", "태국음식 팟타이"),
+    ("나시고랭", "🍳", "인도네시아 나시고랭"),
+    ("타코", "🌮", "멕시칸 타코"),
+    ("포케", "🥗", "하와이안 포케"),
+    ("샌드위치", "🥪", "수제 샌드위치"),
+    ("떡볶이", "🍢", "떡볶이 전문점"),
+    ("김밥", "🍙", "김밥 전문점")
 ]
 
 MOOD_DATA = {
-    "🥳 기분좋음": (
-        "양식·일식·특식", 
-        [
-            "파스타", "피자", "수제버거", "초밥", "돈까스", "텐동", 
-            "스테이크덮밥", "타코", "사케동", "리조또", "팟타이", "나시고랭"
-        ]
-    ),
-    "🤯 스트레스": (
-        "화끈·얼큰·매콤", 
-        [
-            "짬뽕", "마라탕", "떡볶이", "낙지볶음", "쭈꾸미볶음", "제육볶음", 
-            "닭갈비", "육개장", "비빔국수", "부대찌개", "김치찌개"
-        ]
-    ),
-    "☀️ 날씨좋음": (
-        "피크닉·야외·테라스", 
-        [
-            "김밥", "샌드위치", "포케", "수제버거", "타코", "초밥", 
-            "피자", "파스타", "사케동", "텐동", "돈까스", "돌솥비빔밥"
-        ]
-    ),
-    "☔ 흐림·비": (
-        "따끈한 국물과 면 요리", 
-        [
-            "칼국수", "수제비", "김치찌개", "부대찌개", "일본라멘", "우동", 
-            "쌀국수", "짬뽕", "동태탕", "순두부찌개", "잔치국수"
-        ]
-    ),
-    "😴 피곤·보양": (
-        "든든한 국밥·보양 뚝배기", 
-        [
-            "삼계탕", "갈비탕", "추어탕", "도가니탕", "설렁탕", "곰탕", 
-            "순대국", "뼈해장국", "백반", "보리밥정식"
-        ]
-    ),
-    "🫠 입맛없음": (
-        "산뜻·시원한 별미", 
-        [
-            "막국수", "냉면", "소바", "포케", "비빔국수", "회덮밥", 
-            "돌솥비빔밥", "샌드위치", "간장게장백반", "쌈밥정식", "보리밥정식"
-        ]
-    ),
-    "🤢 속편한식사": (
-        "부드럽고 순한 국·죽", 
-        [
-            "전복죽", "순두부찌개", "콩나물국밥", "황태해장국", "보리밥정식", 
-            "된장찌개", "백반", "설렁탕", "청국장", "수제비"
-        ]
-    ),
-    "🍻 시원한 해장": (
-        "얼큰·시원 속풀이 국물", 
-        [
-            "황태해장국", "콩나물국밥", "뼈해장국", "선지해장국", "순대국", 
-            "동태탕", "육개장", "짬뽕", "쌀국수", "김치찌개", "부대찌개"
-        ]
-    )
+    "🥳 기분좋음": ("양식·일식·특식", ["파스타", "피자", "수제버거", "초밥", "돈까스", "텐동", "스테이크덮밥", "타코", "사케동", "리조또", "팟타이", "나시고랭"]),
+    "🤯 스트레스": ("화끈·얼큰·매콤", ["짬뽕", "마라탕", "떡볶이", "낙지볶음", "쭈꾸미볶음", "제육볶음", "닭갈비", "육개장", "비빔국수", "부대찌개", "김치찌개"]),
+    "☀️ 날씨좋음": ("피크닉·야외·테라스", ["김밥", "샌드위치", "포케", "수제버거", "타코", "초밥", "피자", "파스타", "사케동", "텐동", "돈까스", "돌솥비빔밥"]),
+    "☔ 흐림·비": ("따끈한 국물·면 요리", ["칼국수", "수제비", "김치찌개", "부대찌개", "일본라멘", "우동", "쌀국수", "짬뽕", "동태탕", "순두부찌개", "잔치국수"]),
+    "😴 피곤·보양": ("든든한 보양 뚝배기", ["삼계탕", "갈비탕", "추어탕", "도가니탕", "설렁탕", "곰탕", "순대국", "뼈해장국", "백반", "보리밥정식"]),
+    "🫠 입맛없음": ("산뜻·시원한 별미", ["막국수", "냉면", "소바", "포케", "비빔국수", "회덮밥", "돌솥비빔밥", "샌드위치", "간장게장백반", "쌈밥정식"]),
+    "🤢 속편한식사": ("순한 국·가정식", ["전복죽", "순두부찌개", "콩나물국밥", "황태해장국", "보리밥정식", "된장찌개", "백반", "설렁탕", "청국장", "수제비"]),
+    "🍻 시원한 해장": ("속풀이 국물", ["황태해장국", "콩나물국밥", "뼈해장국", "선지해장국", "순대국", "동태탕", "육개장", "짬뽕", "쌀국수", "김치찌개"])
 }
 
 ROW_PAIRS = [
@@ -350,146 +268,54 @@ ROW_PAIRS = [
     ("🤢 속편한식사", "🍻 시원한 해장")
 ]
 
-# --- 2. 점심시간(10:00~14:00) 영업 & 고깃집/주점/전집 엄격 배제 엔진 ---
-def verify_place_details(place_id: str, place_name: str, category_name: str) -> bool:
-    clean_pname = place_name.replace(" ", "").upper()
-    
-    # 1. 1차 상호명/카테고리 텍스트 기반 강력 배제
-    if any(k in clean_pname for k in EXCLUDED_NAME_KEYWORDS):
-        return False
-    if any(k in category_name for k in EXCLUDED_CATEGORIES):
-        return False
-    if any(jeon in clean_pname for jeon in JEON_KEYWORDS):
-        return False
-
-    # 고깃집 상호 키워드 검사 ('굽자'는 허용)
-    is_guip_exception = ("굽자" in place_name)
-    if not is_guip_exception:
-        if any(k in clean_pname for k in MEAT_SHOP_KEYWORDS):
-            return False
-
-    try:
-        url = f"https://place.map.kakao.com/main/v/{place_id}"
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Accept": "application/json, text/plain, */*",
-            "Referer": "https://map.kakao.com/"
-        }
-        res = requests.get(url, headers=headers, timeout=1.8)
-        
-        # 카카오 내부 API 조회 실패(403 차단 등) 시 Fallback 처리
-        if res.status_code != 200:
-            suspicious_words = ["고기", "돈", "육", "포크", "미트", "갈비", "삼겹", "구이", "포차", "주점", "식육", "정육", "전집", "이야기"]
-            if not is_guip_exception and any(w in clean_pname for w in suspicious_words):
-                return False
-            return True
-
-        data = res.json()
-
-        # 안주류 메뉴 검증
-        menu_info = data.get("menuInfo", {})
-        menu_list = menu_info.get("menuList", [])
-        for m in menu_list:
-            m_name = m.get("menu", "").replace(" ", "")
-            if any(snack in m_name for snack in DRINK_SNACK_KEYWORDS):
-                return False
-
-        # 영업시간 정밀 분석
-        basic_info = data.get("basicInfo", {})
-        open_hour_info = basic_info.get("openHour", {})
-        period_list = open_hour_info.get("periodList", [])
-        
-        has_time_data = False
-        is_lunch_available = False
-
-        if period_list:
-            for period in period_list:
-                time_list = period.get("timeList", [])
-                for t in time_list:
-                    time_se = t.get("timeSE", "")
-                    if not time_se:
-                        continue
-                    times = re.findall(r"(\d{1,2}):(\d{2})", time_se)
-                    if len(times) >= 2:
-                        has_time_data = True
-                        start_h = int(times[0][0]) + int(times[0][1]) / 60.0
-                        end_h = int(times[1][0]) + int(times[1][1]) / 60.0
-                        if end_h < start_h:
-                            end_h += 24.0
-                        
-                        # 오픈이 14:00 이후(15시, 17시 등)인 곳은 무조건 탈락
-                        if start_h <= 13.5 and end_h >= 12.0:
-                            is_lunch_available = True
-                            break
-                if is_lunch_available:
-                    break
-
-        # 영업시간이 등록되어 있는데 점심 미운영 식당이면 차단
-        if has_time_data and not is_lunch_available:
-            return False
-
-        return True
-    except Exception:
-        if not is_guip_exception and any(w in clean_pname for w in ["고기", "갈비", "돈", "육", "구이", "정육", "전집"]):
-            return False
-        return True
-
-
+# --- 식당 검증 및 우선순위 스코어링 엔진 ---
 def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_name: str) -> bool:
     clean_name = place_name.replace(" ", "").upper()
 
-    # 1. 유흥/주점/술집 카테고리 및 상호
+    # 1. 유흥/주점/술집/카페 배제
     if any(ex in category_name for ex in EXCLUDED_CATEGORIES):
         return False
     if any(bad in clean_name for bad in [k.upper() for k in EXCLUDED_NAME_KEYWORDS]):
         return False
 
-    # 2. 전집/주막 ('행복한전이야기' 등 '전이야기' 계열 포함)
+    # 2. 전집/주막 배제
     if any(jeon in clean_name for jeon in JEON_KEYWORDS):
         return False
     if any(c in category_name for c in ["전,빈대떡", "빈대떡", "민속주점"]):
         return False
 
-    # 3. 카페/디저트 제외
-    if any(c in category_name for c in ["카페", "디저트", "제과,베이커리"]):
-        return False
-
-    # 4. 고깃집 카테고리 완전 배제
+    # 3. 고깃집 배제 (단, 닭갈비 메뉴인 경우 허용)
     if any(non in category_name for non in NON_LUNCH_CATEGORIES):
         if not (menu_name == "닭갈비" and "닭요리" in category_name):
             return False
 
-    # 5. 고깃집 상호 키워드 검사 ('굽자'는 허용)
-    is_guip_exception = ("굽자" in place_name)
-    if not is_guip_exception:
-        if "구이" in clean_name:
+    if "굽자" not in place_name:
+        if "구이" in clean_name and menu_name != "생선구이백반":
             return False
         if any(bad in clean_name for bad in [k.upper() for k in MEAT_SHOP_KEYWORDS]):
             return False
 
-    # 6. 분식 및 프랜차이즈 필터링
-    if menu_name not in BUNSIK_ALLOW_MENUS:
+    # 4. 분식/프랜차이즈 필터링
+    if menu_name not in ["김밥", "떡볶이"]:
         if any(brand in clean_name for brand in MULTI_MENU_FRANCHISES):
             return False
         if "분식" in category_name and not any(k in category_name for k in ["일식", "양식", "한식", "중식", "아시아음식"]):
             return False
 
-    # 7. 초밥 / 횟집 필터링
+    # 5. 초밥 필터링
     if menu_name == "초밥":
         if any(fish in clean_name for fish in EVENING_RAW_FISH_KEYWORDS):
             return False
         if "해물,생선 > 회" in category_name and not any(k in clean_name for k in ["스시", "초밥"]):
             return False
 
-    # 8. 돈까스 특화
+    # 6. 돈까스 특화
     if menu_name == "돈까스":
-        is_tonkatsu_name = any(k in clean_name for k in TONKATSU_NAME_INDICATORS)
-        is_tonkatsu_category = any(c in category_name for c in ["돈가스", "돈까스"])
-        if not (is_tonkatsu_name or is_tonkatsu_category):
+        is_tonkatsu = any(k in clean_name for k in TONKATSU_NAME_INDICATORS) or any(c in category_name for c in ["돈가스", "돈까스"])
+        if not is_tonkatsu:
             return False
-        return True
 
-    # 9. 전문점 이름 규칙
+    # 7. 단품 전문점 상호 규칙
     if menu_name in STRICT_SPECIALTY_NAME_RULES:
         required_words = STRICT_SPECIALTY_NAME_RULES[menu_name]
         if not any(req in clean_name for req in required_words):
@@ -497,59 +323,60 @@ def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_na
 
     return True
 
+def quick_verify_lunch_hour(place_id: str) -> bool:
+    """1위 후보에 대해서만 0.8초 타임아웃으로 영업시간을 지연 검증 (실패 시 통과시킴)"""
+    if not place_id:
+        return True
+    url = f"https://place.map.kakao.com/main/v/{place_id}"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Referer": "https://map.kakao.com/"
+    }
+    try:
+        res = requests.get(url, headers=headers, timeout=0.8)
+        if res.status_code != 200:
+            return True
+        data = res.json()
+        period_list = data.get("basicInfo", {}).get("openHour", {}).get("periodList", [])
+        if not period_list:
+            return True
+        for period in period_list:
+            for t in period.get("timeList", []):
+                time_se = t.get("timeSE", "")
+                times = re.findall(r"(\d{1,2}):(\d{2})", time_se)
+                if len(times) >= 2:
+                    start_h = int(times[0][0]) + int(times[0][1]) / 60.0
+                    end_h = int(times[1][0]) + int(times[1][1]) / 60.0
+                    if end_h < start_h:
+                        end_h += 24.0
+                    # 14시 이후 오픈(저녁 전용) 매장 배제
+                    if start_h > 14.0:
+                        return False
+        return True
+    except Exception:
+        return True
 
-def calculate_restaurant_priority(place: dict, menu_name: str) -> float:
+def calculate_priority(place: dict, menu_name: str) -> float:
+    score = place["dist"]
     p_name = place["name"]
-    category = place["category"]
-    dist = place["dist"]
+    is_franchise = any(f_name in p_name for f_name in KNOWN_FRANCHISE_BRANDS) or any(p_name.strip().endswith(sfx) for sfx in ["점", "호점", "직영점"])
+    
+    place["is_personal"] = not is_franchise
+    score += (2.5 if is_franchise else -0.5)
 
-    score = dist
-
-    is_franchise = any(f_name in p_name for f_name in KNOWN_FRANCHISE_BRANDS)
-    if any(p_name.strip().endswith(sfx) for sfx in ["점", "호점", "직영점"]):
-        is_franchise = True
-
-    if is_franchise:
-        score += 3.0
-        place["is_personal"] = False
-    else:
-        score -= 0.5
-        place["is_personal"] = True
-
-    if menu_name == "돈까스":
-        if any(k in p_name for k in TONKATSU_NAME_INDICATORS):
-            score -= 2.5
-
-    if menu_name == "김밥":
-        is_gimbap_specialist = ("김밥" in p_name) or ("김밥" in category)
-        is_bunsik_general = ("분식" in category) and not is_gimbap_specialist
-        if is_gimbap_specialist:
-            score -= 2.0
-        elif is_bunsik_general:
-            score += 4.0
-
-    if menu_name == "초밥":
-        is_sushi_specialist = any(k in p_name for k in ["스시", "초밥", "SUSHI"]) or ("초밥" in category)
-        is_raw_fish = ("회" in category) or ("수산" in category) or ("회" in p_name)
-        if is_sushi_specialist:
-            score -= 3.5
-        elif is_raw_fish:
-            score += 3.0
-
-    if menu_name in ["칼국수", "막국수"]:
-        if menu_name in p_name:
-            score -= 2.5
-
+    if menu_name == "돈까스" and any(k in p_name for k in TONKATSU_NAME_INDICATORS):
+        score -= 2.0
+    if menu_name == "초밥" and any(k in p_name for k in ["스시", "초밥"]):
+        score -= 2.5
     return score
 
-
+# --- 카카오 공식 API 통신 함수 ---
 def kakao_get_coordinates(query: str):
     url = "https://dapi.kakao.com/v2/local/search/keyword.json"
     headers = {"Authorization": f"KakaoAK {KAKAO_REST_KEY}"}
     params = {"query": query.strip(), "size": 1}
-
     try:
-        res = requests.get(url, headers=headers, params=params, timeout=4.0)
+        res = requests.get(url, headers=headers, params=params, timeout=3.0)
         if res.status_code == 200:
             docs = res.json().get("documents", [])
             if docs:
@@ -558,12 +385,10 @@ def kakao_get_coordinates(query: str):
         pass
     return None, None
 
-
 def kakao_reverse_geocode(lat: float, lng: float) -> str:
     url = "https://dapi.kakao.com/v2/local/geo/coord2regioncode.json"
     headers = {"Authorization": f"KakaoAK {KAKAO_REST_KEY}"}
     params = {"x": str(lng), "y": str(lat)}
-
     try:
         res = requests.get(url, headers=headers, params=params, timeout=3.0)
         if res.status_code == 200:
@@ -576,7 +401,6 @@ def kakao_reverse_geocode(lat: float, lng: float) -> str:
     except Exception:
         pass
     return "내 위치"
-
 
 def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: str, radius_km: float = 1.8):
     url = "https://dapi.kakao.com/v2/local/search/keyword.json"
@@ -594,27 +418,20 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
     }
 
     try:
-        res = requests.get(url, headers=headers, params=params, timeout=4.0)
+        res = requests.get(url, headers=headers, params=params, timeout=3.0)
         if res.status_code == 200:
             docs = res.json().get("documents", [])
-            places = []
+            candidates = []
             
             for d in docs:
-                p_id = d.get("id", "")
                 p_name = d.get("place_name", "")
                 cat_name = d.get("category_name", "")
-
-                # 1차 카테고리/상호명 검증
                 if not is_valid_specialized_restaurant(menu_name, p_name, cat_name):
                     continue
-
-                # 2차 영업시간 및 점심 운영 여부 정밀 검증
-                if p_id and not verify_place_details(p_id, p_name, cat_name):
-                    continue
-
+                
                 dist_m = float(d.get("distance", 0))
-                place_dict = {
-                    "id": p_id,
+                p_dict = {
+                    "id": d.get("id", ""),
                     "name": p_name,
                     "category": cat_name.split(">")[-1].strip() if ">" in cat_name else cat_name,
                     "lat": float(d.get("y")),
@@ -623,26 +440,27 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
                     "address": d.get("road_address_name") or d.get("address_name", ""),
                     "place_url": d.get("place_url", "")
                 }
-
-                place_dict["priority_score"] = calculate_restaurant_priority(place_dict, menu_name)
-                places.append(place_dict)
-
-            places.sort(key=lambda x: x["priority_score"])
+                p_dict["priority_score"] = calculate_priority(p_dict, menu_name)
+                candidates.append(p_dict)
             
-            # 상위 10개 매장 내 무작위 셔플
-            if places:
-                top_candidates = places[:10]
-                remaining_candidates = places[10:]
-                random.shuffle(top_candidates)
-                places = top_candidates + remaining_candidates
-
-            return places
+            candidates.sort(key=lambda x: x["priority_score"])
+            
+            # 1위 후보에 대해서만 비동기급 빠른 영업시간 검증
+            if candidates:
+                valid_top = None
+                for i in range(min(3, len(candidates))):
+                    if quick_verify_lunch_hour(candidates[i]["id"]):
+                        valid_top = candidates.pop(i)
+                        break
+                if valid_top:
+                    candidates.insert(0, valid_top)
+            
+            return candidates
     except Exception:
         pass
     return []
 
-
-# 브라우저 GPS 수신 처리
+# --- 브라우저 GPS 수신 처리 ---
 qp = st.query_params
 if qp.get("action") == "gps" and "lat" in qp and "lng" in qp:
     try:
@@ -652,26 +470,24 @@ if qp.get("action") == "gps" and "lat" in qp and "lng" in qp:
             st.session_state.gps_coords = (lat_f, lng_f)
             detected_name = kakao_reverse_geocode(lat_f, lng_f)
             st.session_state.region_input_val = detected_name
-            st.toast(f"현재 위치: '{detected_name}' 감지 완료!", icon="✅")
+            st.toast(f"현재 위치 감지: '{detected_name}'", icon="📍")
     except Exception:
         pass
     st.query_params.clear()
 
-
 # --- 화면 레이아웃 상단부 ---
 st.markdown("<h1 style='color: #2E1C10; font-size: 26px; font-weight: 800; margin: 0 0 4px 0;'>🍱 오늘 점심 뭐 먹지?</h1>", unsafe_allow_html=True)
-st.markdown("<div style='color: #8C827A; font-size: 13px; margin-bottom: 16px;'>점심 메뉴를 고르기 어려우신 분들을 위해 랜덤으로 메뉴와 맛집을 찾아드립니다.</div>", unsafe_allow_html=True)
+st.markdown("<div style='color: #8C827A; font-size: 13px; margin-bottom: 16px;'>고민되는 점심 메뉴와 주변 밥집을 스마트하게 골라드립니다.</div>", unsafe_allow_html=True)
 
 # 1. 위치 입력창
 st.markdown("<div style='margin-bottom: 4px; font-size: 13.5px; font-weight: 600; color: #4A4036;'>📍 위치</div>", unsafe_allow_html=True)
-
 col_input, col_gps = st.columns([3.5, 1.2], vertical_alignment="center")
 
 with col_input:
     region = st.text_input(
         "위치입력",
         value=st.session_state.region_input_val,
-        placeholder="예시) 강남구, 서울역, 코엑스 등",
+        placeholder="예시) 역삼역, 판교 테크노밸리, 홍대입구",
         key="main_region_input",
         label_visibility="collapsed"
     )
@@ -695,19 +511,23 @@ with col_gps:
             } else {
                 alert('GPS를 지원하지 않는 브라우저입니다.');
             }
-        " style="width:100%; height:40px; background-color:#E86A3E; color:white; border:none; border-radius:12px; font-size:13px; font-weight:700; cursor:pointer; box-shadow: 0 2px 8px rgba(232, 106, 62, 0.2); transition: background-color 0.2s ease;">
+        " style="width:100%; height:40px; background-color:#E86A3E; color:white; border:none; border-radius:12px; font-size:13px; font-weight:700; cursor:pointer; box-shadow: 0 2px 8px rgba(232, 106, 62, 0.2);">
             내 위치 찾기
         </button>
         """,
         unsafe_allow_html=True
     )
 
-# 2. 건물/역 입력 시에만 반경 노출
+# 2. 정밀 행정구역 판별 정규식 (을지로3가, 종로5가, 거리/출구 오판단 수정)
 clean_region = region.strip()
 is_admin_region = False
 
 if clean_region:
-    if any(clean_region.endswith(sfx) for sfx in ["구", "동", "읍", "면", "리", "시", "군", "가"]):
+    # 역, 출구, 거리, 센터 등 명확한 스팟 키워드는 행정구역에서 제외
+    is_spot = bool(re.search(r"(역|출구|거리|센터|스퀘어|타워|빌딩|공원|마트|백화점)$", clean_region))
+    # 시, 군, 구, 읍, 면, 동 및 순수 행정단위 '가'(예: 종로1가) 판별
+    is_pure_admin = bool(re.search(r"([시군구읍면동]|\b\w+[0-9]*가)$", clean_region))
+    if is_pure_admin and not is_spot:
         is_admin_region = True
 
 should_show_radius = bool(clean_region and not is_admin_region)
@@ -718,28 +538,17 @@ if should_show_radius:
     c1, c2, c3, c4 = st.columns([1.0, 1.0, 1.0, 1.5], vertical_alignment="center")
 
     with c1:
-        btn_type = "primary" if st.session_state.selected_radius_preset == "🚶" else "secondary"
-        if st.button("🚶", key="rbtn_walk", type=btn_type, use_container_width=True):
+        if st.button("🚶 도보 (700m)", key="rbtn_walk", type="primary" if st.session_state.selected_radius_preset == "🚶" else "secondary", use_container_width=True):
             st.session_state.selected_radius_preset = "🚶"
-            st.rerun()
-
     with c2:
-        btn_type = "primary" if st.session_state.selected_radius_preset == "🚲" else "secondary"
-        if st.button("🚲", key="rbtn_bike", type=btn_type, use_container_width=True):
+        if st.button("🚲 자전거 (1.8km)", key="rbtn_bike", type="primary" if st.session_state.selected_radius_preset == "🚲" else "secondary", use_container_width=True):
             st.session_state.selected_radius_preset = "🚲"
-            st.rerun()
-
     with c3:
-        btn_type = "primary" if st.session_state.selected_radius_preset == "🚗" else "secondary"
-        if st.button("🚗", key="rbtn_car", type=btn_type, use_container_width=True):
+        if st.button("🚗 차량 (3.5km)", key="rbtn_car", type="primary" if st.session_state.selected_radius_preset == "🚗" else "secondary", use_container_width=True):
             st.session_state.selected_radius_preset = "🚗"
-            st.rerun()
-
     with c4:
-        btn_type = "primary" if st.session_state.selected_radius_preset == "직접 입력" else "secondary"
-        if st.button("직접 입력", key="rbtn_custom", type=btn_type, use_container_width=True):
+        if st.button("직접 입력", key="rbtn_custom", type="primary" if st.session_state.selected_radius_preset == "직접 입력" else "secondary", use_container_width=True):
             st.session_state.selected_radius_preset = "직접 입력"
-            st.rerun()
 
     selected_preset = st.session_state.selected_radius_preset
     if selected_preset == "직접 입력":
@@ -756,8 +565,6 @@ else:
     radius_display_text = "지역 인근"
 
 region_warning_spot = st.empty()
-st.markdown("<div style='height: 6px;'></div>", unsafe_allow_html=True)
-
 spin_triggered = False
 selected_candidates = []
 
@@ -766,10 +573,9 @@ def show_location_warning():
         """
         <div style="display: flex; justify-content: center; align-items: center; gap: 8px;
                     width: 100%; height: 44px; margin: 4px 0 10px 0;
-                    background-color: #FFFDF7; border: 1.5px solid #F7D488; border-radius: 12px;
-                    box-shadow: 0 3px 10px rgba(247, 212, 136, 0.2);">
-            <span style="font-size: 16px; line-height: 1;">⚠️</span>
-            <span style="color: #6C4D0A; font-size: 13.5px; font-weight: 700; line-height: 1;">
+                    background-color: #FFFDF7; border: 1.5px solid #F7D488; border-radius: 12px;">
+            <span style="font-size: 16px;">⚠️</span>
+            <span style="color: #6C4D0A; font-size: 13.5px; font-weight: 700;">
                 위치를 입력하거나 '내 위치 찾기'를 눌러주세요!
             </span>
         </div>
@@ -780,14 +586,13 @@ def show_location_warning():
 # --- 3. 룰렛 방식 선택 ---
 st.markdown("<div style='margin-bottom: 6px; font-size: 14px; font-weight: 700; color: #3E3228;'>🎯 룰렛 방식 선택</div>", unsafe_allow_html=True)
 
-# 박스 1: 완전 랜덤 룰렛
 with st.container(border=True):
     st.markdown(
         """
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
             <div>
                 <div style="font-size: 15.5px; font-weight: 800; color: #2E1C10;">🎲 완전 랜덤 룰렛</div>
-                <div style="font-size: 12.5px; color: #8C827A; margin-top: 2px;">65종의 다양한 점심 메뉴 중에서 무작위로 추첨!</div>
+                <div style="font-size: 12.5px; color: #8C827A; margin-top: 2px;">66종의 검증된 점심 밥집 메뉴 중에서 무작위 추천!</div>
             </div>
             <span style="font-size: 22px;">🎰</span>
         </div>
@@ -795,7 +600,6 @@ with st.container(border=True):
         unsafe_allow_html=True
     )
     if st.button("🎲 랜덤 룰렛 돌리기", use_container_width=True, type="primary", key="btn_trigger_random"):
-        st.session_state.active_mode = "random"
         if not region.strip() and not st.session_state.gps_coords:
             show_location_warning()
         else:
@@ -805,14 +609,13 @@ with st.container(border=True):
 
 st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
 
-# 박스 2: 기분 & 상황별 룰렛
 with st.container(border=True):
     st.markdown(
         """
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
             <div>
                 <div style="font-size: 15.5px; font-weight: 800; color: #2E1C10;">✨ 기분 & 상황별 맞춤 룰렛</div>
-                <div style="font-size: 12.5px; color: #8C827A; margin-top: 2px;">오늘의 상태를 선택하고 그에 맞는 메뉴를 골라봐요!</div>
+                <div style="font-size: 12.5px; color: #8C827A; margin-top: 2px;">오늘 컨디션에 꼭 맞는 메뉴 라인업에서 추천받기</div>
             </div>
             <span style="font-size: 22px;">🔮</span>
         </div>
@@ -821,22 +624,15 @@ with st.container(border=True):
     )
     
     selected_mood = None
-
     for left_k, right_k in ROW_PAIRS:
         col_left, col_right = st.columns(2)
-        
         with col_left:
             desc_l, _ = MOOD_DATA[left_k]
-            btn_label_l = f"{left_k} ({desc_l})"
-            if st.button(btn_label_l, use_container_width=True, key=f"btn_{left_k}"):
-                st.session_state.active_mode = "mood"
+            if st.button(f"{left_k} ({desc_l})", use_container_width=True, key=f"btn_{left_k}"):
                 selected_mood = left_k
-
         with col_right:
             desc_r, _ = MOOD_DATA[right_k]
-            btn_label_r = f"{right_k} ({desc_r})"
-            if st.button(btn_label_r, use_container_width=True, key=f"btn_{right_k}"):
-                st.session_state.active_mode = "mood"
+            if st.button(f"{right_k} ({desc_r})", use_container_width=True, key=f"btn_{right_k}"):
                 selected_mood = right_k
 
     if selected_mood:
@@ -852,27 +648,27 @@ with st.container(border=True):
 card_spot = st.empty()
 detail_spot = st.empty()
 
-# --- 4. 룰렛 애니메이션 및 식당 탐색 로직 ---
+# --- 4. 룰렛 실행 및 고속 탐색 로직 ---
 if spin_triggered and selected_candidates:
     detail_spot.empty()
 
     if st.session_state.gps_coords:
         c_lat, c_lng = st.session_state.gps_coords
     else:
-        with st.spinner(f"카카오맵에서 '{region}' 위치를 확인하고 있습니다..."):
+        with st.spinner(f"'{region}' 위치 확인 중..."):
             c_lat, c_lng = kakao_get_coordinates(region)
 
     if not c_lat:
-        region_warning_spot.error(f"⚠️ '{region}' 위치를 찾지 못했습니다. 지명이나 동 이름을 입력해 보세요.")
+        region_warning_spot.error(f"⚠️ '{region}' 위치를 찾지 못했습니다. 주요 건물이나 역 이름을 입력해 보세요.")
     else:
         final_menu = None
         places = []
-
         shuffled = selected_candidates.copy()
         random.shuffle(shuffled)
 
-        with st.spinner("점심 전문 식당을 엄선 중입니다..."):
-            for m_name, m_emoji, m_kw, m_tags in shuffled:
+        with st.spinner("주변 점심 전문점을 엄선하는 중..."):
+            # 최대 4개 메뉴 시도 후 없으면 백반 대체
+            for m_name, m_emoji, m_kw in shuffled[:5]:
                 found = kakao_search_places(c_lat, c_lng, m_name, m_kw, radius_km=radius_km)
                 if found:
                     final_menu = (m_name, m_emoji)
@@ -886,21 +682,22 @@ if spin_triggered and selected_candidates:
                     places = fallback_found
 
         if final_menu and places:
-            for i in range(7):
+            # 셔플 애니메이션
+            for i in range(5):
                 temp = random.choice(selected_candidates)
                 card_spot.markdown(
                     f"""
-                    <div style="text-align: center; margin: 16px 0 12px 0; padding: 22px 18px; 
+                    <div style="text-align: center; margin: 16px 0 12px 0; padding: 20px 18px; 
                                 background: #FFFDF9; border-radius: 20px; border: 1.5px solid #F5D5B8;
                                 box-shadow: 0 4px 16px rgba(245, 213, 184, 0.35);">
-                        <div style="font-size: 60px; line-height: 1; margin-bottom: 6px;">{temp[1]}</div>
-                        <div style="color: #2E1C10; font-size: 24px; font-weight: 800; margin: 4px 0;">{temp[0]}</div>
-                        <p style="color: #8C827A; font-size: 13px; margin: 0;">{radius_display_text} 기준 순수 밥집 찾는 중... 🎲</p>
+                        <div style="font-size: 54px; line-height: 1; margin-bottom: 6px;">{temp[1]}</div>
+                        <div style="color: #2E1C10; font-size: 22px; font-weight: 800; margin: 4px 0;">{temp[0]}</div>
+                        <p style="color: #8C827A; font-size: 13px; margin: 0;">{radius_display_text} 기준 맛집 추첨 중... 🎲</p>
                     </div>
                     """,
                     unsafe_allow_html=True
                 )
-                time.sleep(0.04 + (i * 0.015))
+                time.sleep(0.04 + (i * 0.02))
 
             st.session_state.spin_count += 1
             st.session_state.saved_result = {
@@ -914,7 +711,7 @@ if spin_triggered and selected_candidates:
                 "id": st.session_state.spin_count
             }
         else:
-            region_warning_spot.warning(f"⚠️ '{region}' 반경 내에 순수 점심 식사 매장을 찾지 못했습니다. 탐색 반경을 넓혀보세요!")
+            region_warning_spot.warning(f"⚠️ 설정하신 반경 내에 순수 점심 식당을 찾지 못했습니다. 탐색 반경을 넓혀보세요!")
 
 # --- 5. 결과 화면 출력 ---
 res = st.session_state.saved_result
@@ -924,14 +721,14 @@ if res is not None and res.get("places"):
         <div style="text-align: center; margin: 16px 0 14px 0; padding: 24px 20px; 
                     background: #FFFDF9; border-radius: 22px; border: 1.5px solid #F5D5B8; 
                     box-shadow: 0 4px 18px rgba(245, 213, 184, 0.35);">
-            <div style="font-size: 72px; line-height: 1; margin-bottom: 10px;">{res['emoji']}</div>
+            <div style="font-size: 68px; line-height: 1; margin-bottom: 8px;">{res['emoji']}</div>
             <div style="display: flex; justify-content: center; align-items: center; gap: 8px; width: 100%; margin: 4px 0;">
-                <span style="font-size: 24px; line-height: 1;">🎉</span>
-                <span style="color: #2E1C10; font-size: 28px; font-weight: 800; letter-spacing: -0.5px;">{res['menu']} 당첨!</span>
-                <span style="font-size: 24px; line-height: 1;">🎉</span>
+                <span style="font-size: 22px;">🎉</span>
+                <span style="color: #2E1C10; font-size: 26px; font-weight: 800; letter-spacing: -0.5px;">{res['menu']} 당첨!</span>
+                <span style="font-size: 22px;">🎉</span>
             </div>
-            <div style="color: #7A6F66; font-size: 13px; font-weight: 500; margin-top: 6px;">
-                점심 메뉴 랜덤 추첨 결과
+            <div style="color: #7A6F66; font-size: 13px; font-weight: 500; margin-top: 4px;">
+                점심 메뉴 추천 결과 ({res['radius_text']})
             </div>
         </div>
         """,
@@ -952,17 +749,17 @@ if res is not None and res.get("places"):
                         background: #FFFDF9; border-radius: 22px; border: 1.5px solid #F5D5B8; 
                         box-shadow: 0 4px 18px rgba(245, 213, 184, 0.35); text-align: center;">
                 <div style="display: flex; justify-content: center; align-items: center; gap: 6px; margin-bottom: 8px;">
-                    <span style="font-size: 12.5px; color: #E86A3E; font-weight: 700;">⭐ 오늘의 1픽 추천 점심</span>
+                    <span style="font-size: 12.5px; color: #E86A3E; font-weight: 700;">⭐ 오늘의 1픽 추천 밥집</span>
                     <span style="font-size: 11px; background: {tag_bg}; color: {tag_color}; padding: 2px 7px; border-radius: 6px; font-weight: 700;">
                         {tag_text}
                     </span>
                     <span style="font-size: 11px; background: #F3ECE4; color: #6E5F55; padding: 2px 7px; border-radius: 6px; font-weight: 600;">
-                        {top_pick.get('category', '전문음식점')}
+                        {top_pick.get('category', '식당')}
                     </span>
                 </div>
                 <div style="margin: 4px 0;">
                     <a href="{top_pick.get('place_url', '#')}" target="_blank" 
-                       style="text-decoration: none; color: #2E1C10; font-size: 24px; font-weight: 900; letter-spacing: -0.5px; display: inline-block;">
+                       style="text-decoration: none; color: #2E1C10; font-size: 23px; font-weight: 900; display: inline-block;">
                         {top_pick['name']}
                     </a>
                 </div>
@@ -975,13 +772,7 @@ if res is not None and res.get("places"):
         )
 
         if len(places) > 1:
-            st.markdown(
-                f"<div style='font-size: 14px; font-weight: 700; color: #2E1C10; margin-bottom: 8px;'>"
-                f"근처 다른 점심 후보 ({len(places)-1}곳)"
-                f"</div>",
-                unsafe_allow_html=True
-            )
-
+            st.markdown(f"<div style='font-size: 14px; font-weight: 700; color: #2E1C10; margin-bottom: 8px;'>근처 다른 후보 ({len(places)-1}곳)</div>", unsafe_allow_html=True)
             other_candidates = places[1:11]
             col_left, col_right = st.columns(2)
 
@@ -995,19 +786,19 @@ if res is not None and res.get("places"):
                         f"""
                         <div style="display: flex; justify-content: space-between; align-items: center; 
                                     background: #FFFFFF; border: 1px solid #ECE7E1; border-radius: 12px; 
-                                    padding: 9px 12px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+                                    padding: 9px 12px; margin-bottom: 8px;">
                             <div style="display: flex; align-items: center; gap: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                                <span style="display: inline-flex; justify-content: center; align-items: center; width: 19px; height: 19px; background: #F3EFEA; color: #555; border-radius: 5px; font-size: 11px; font-weight: 700;">
+                                <span style="display: inline-flex; justify-content: center; align-items: center; width: 18px; height: 18px; background: #F3EFEA; color: #555; border-radius: 5px; font-size: 11px; font-weight: 700;">
                                     {idx}
                                 </span>
-                                <a href="{p.get('place_url', '#')}" target="_blank" style="text-decoration: none; color: #111; font-size: 13.5px; font-weight: 700; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                <a href="{p.get('place_url', '#')}" target="_blank" style="text-decoration: none; color: #111; font-size: 13px; font-weight: 700; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                                     {p['name']}
                                 </a>
                                 <span style="font-size: 10px; background: #F7F5F2; color: #777; padding: 2px 5px; border-radius: 4px;">
                                     {p_tag}·{short_cat}
                                 </span>
                             </div>
-                            <div style="font-size: 12px; color: #555; font-weight: 500; margin-left: 6px; white-space: nowrap;">
+                            <div style="font-size: 11.5px; color: #666; font-weight: 500; margin-left: 6px; white-space: nowrap;">
                                 {p['dist']}km
                             </div>
                         </div>
@@ -1015,12 +806,11 @@ if res is not None and res.get("places"):
                         unsafe_allow_html=True
                     )
 
-        st.markdown("<div style='height: 14px;'></div>", unsafe_allow_html=True)
-        st.markdown("<h3 style='margin-bottom: 2px; font-size: 17px; font-weight: 800; color: #2E1C10;'>🗺️ 추천 식당 위치 지도</h3>", unsafe_allow_html=True)
-        st.caption("🔴 빨간 핀: 1픽 전문점 / 🔵 파란 핀: 주변 후보 (클릭 시 카카오맵 정보)")
+        st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+        st.markdown("<h3 style='margin-bottom: 2px; font-size: 16px; font-weight: 800; color: #2E1C10;'>🗺️️ 식당 위치 지도</h3>", unsafe_allow_html=True)
+        st.caption("🔴 빨간 핀: 1픽 매장 / 🔵 파란 핀: 주변 후보")
 
         m = folium.Map(location=[top_pick["lat"], top_pick["lng"]], zoom_start=15, control_scale=True)
-
         folium.Marker(
             location=[top_pick["lat"], top_pick["lng"]],
             popup=folium.Popup(f"<b>⭐ {top_pick['name']}</b><br>{top_pick['address']}<br><a href='{top_pick['place_url']}' target='_blank'>카카오맵 열기</a>", max_width=250),
@@ -1037,8 +827,8 @@ if res is not None and res.get("places"):
             ).add_to(m)
 
         unique_map_key = f"map_{res['id']}_{int(top_pick['lat'] * 10000)}"
-        st_folium(m, width="100%", height=400, key=unique_map_key, returned_objects=[])
+        st_folium(m, width="100%", height=380, key=unique_map_key, returned_objects=[])
 
-        st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
         kakao_directions_url = f"https://map.kakao.com/link/to/{urllib.parse.quote(top_pick['name'])},{top_pick['lat']},{top_pick['lng']}"
         st.link_button(f"🧭 '{top_pick['name']}' 길찾기 바로가기", kakao_directions_url, use_container_width=True)
