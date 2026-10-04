@@ -19,7 +19,7 @@ st.markdown(
         font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo", sans-serif;
     }
     
-    /* 상단바와 타이틀 사이 간격을 시원하고 넉넉하게 확보 */
+    /* 상단바와 타이틀 사이 간격 넉넉하게 확보 */
     .block-container {
         padding-top: 4.0rem !important;
         padding-bottom: 3.6rem !important;
@@ -61,14 +61,14 @@ st.markdown(
         margin-bottom: 14px !important;
     }
 
-    /* [중요] 룰렛 버튼을 제외한 '일반 옵션 버튼'에만 40px 적용 */
-    div.stButton > button:not([key="btn_trigger_random"]) {
+    /* 박스 내부(Border Wrapper 내부)의 옵션 버튼들만 40px로 제한 */
+    div[data-testid="stVerticalBlockBorderWrapper"] div.stButton > button {
         height: 40px !important;
         border-radius: 11px !important;
         transition: all 0.15s ease !important;
         white-space: nowrap !important;
     }
-    div.stButton > button:not([key="btn_trigger_random"])[kind="primary"] {
+    div[data-testid="stVerticalBlockBorderWrapper"] div.stButton > button[kind="primary"] {
         background-color: #E86A3E !important;
         color: white !important;
         border: none !important;
@@ -76,11 +76,11 @@ st.markdown(
         font-weight: 700 !important;
         box-shadow: 0 2px 7px rgba(232, 106, 62, 0.22) !important;
     }
-    div.stButton > button:not([key="btn_trigger_random"])[kind="primary"]:hover {
+    div[data-testid="stVerticalBlockBorderWrapper"] div.stButton > button[kind="primary"]:hover {
         background-color: #D65A2F !important;
         transform: translateY(-1px);
     }
-    div.stButton > button:not([key="btn_trigger_random"])[kind="secondary"] {
+    div[data-testid="stVerticalBlockBorderWrapper"] div.stButton > button[kind="secondary"] {
         border: 1.2px solid #EDE4DC !important;
         background-color: #FFFFFF !important;
         color: #3E3228 !important;
@@ -89,37 +89,29 @@ st.markdown(
         padding: 6px 8px !important;
         box-shadow: 0 1px 4px rgba(0,0,0,0.02) !important;
     }
-    div.stButton > button:not([key="btn_trigger_random"])[kind="secondary"]:hover {
+    div[data-testid="stVerticalBlockBorderWrapper"] div.stButton > button[kind="secondary"]:hover {
         border-color: #E86A3E !important;
         color: #E86A3E !important;
         background-color: #FFFDF9 !important;
         transform: translateY(-1px);
     }
 
-    /* 컬럼 좌우 간격 통일 */
+    /* 컬럼 좌우 간격 */
     div[data-testid="stColumn"] {
         padding: 0 3px !important;
     }
 
-    /* 음식 종류 세로 버튼 간격 미세 조정 */
-    div:has(> div.stButton > button[key="cbtn_korean"]) {
-        margin-bottom: -6px !important;
-    }
-    div:has(> div.stButton > button[key="cbtn_asian"]) {
-        margin-bottom: -6px !important;
-    }
-
-    /* 음식 종류 '모두' 버튼 상단 간격 확보 및 하단 잉여 마진 제거 */
-    div.stButton:has(> button[key="cbtn_all"]) {
+    /* 음식 종류 '모두' 버튼 간격 제어 */
+    div[data-testid="stVerticalBlockBorderWrapper"] div.stButton:not([data-testid="stColumn"] *) {
         margin-top: 6px !important;
         margin-bottom: 0px !important;
     }
-    div.stButton:has(> button[key="cbtn_all"]) > button {
+    div[data-testid="stVerticalBlockBorderWrapper"] div.stButton:not([data-testid="stColumn"] *) > button {
         margin-bottom: 0px !important;
     }
 
     /* ============================================================
-       [메인 룰렛 버튼: 박스 2배(84px) & 텍스트 1.5배(24px, 900 볼드)]
+       [메인 룰렛 버튼: 박스 외부에 단독 배치된 버튼 완전 공략]
        ============================================================ */
     @keyframes roulettePulse {
         0% {
@@ -136,14 +128,13 @@ st.markdown(
         }
     }
 
-    /* 룰렛 버튼 컨테이너: 상하 16px 균일 마진 */
-    div.stButton:has(> button[key="btn_trigger_random"]) {
+    /* 박스(border wrapper) 바깥에 위치한 독립 버튼 = 룰렛 버튼 */
+    div.block-container > div[data-testid="stVerticalBlock"] > div.stElementContainer:not(div[data-testid="stVerticalBlockBorderWrapper"] *) div.stButton {
         margin-top: 16px !important;
         margin-bottom: 16px !important;
     }
 
-    /* 룰렛 버튼 자체 스타일 */
-    div.stButton > button[key="btn_trigger_random"] {
+    div.block-container > div[data-testid="stVerticalBlock"] > div.stElementContainer:not(div[data-testid="stVerticalBlockBorderWrapper"] *) div.stButton > button {
         height: 84px !important;
         min-height: 84px !important;
         background: linear-gradient(135deg, #FF7B47 0%, #E85A2A 50%, #D84A1A 100%) !important;
@@ -158,9 +149,9 @@ st.markdown(
         justify-content: center !important;
     }
 
-    /* 룰렛 버튼 내부 텍스트 스타일 */
-    div.stButton > button[key="btn_trigger_random"] p,
-    div.stButton > button[key="btn_trigger_random"] span {
+    /* 버튼 내부 텍스트 24px Ultra Bold 강제 적용 */
+    div.block-container > div[data-testid="stVerticalBlock"] > div.stElementContainer:not(div[data-testid="stVerticalBlockBorderWrapper"] *) div.stButton > button p,
+    div.block-container > div[data-testid="stVerticalBlock"] > div.stElementContainer:not(div[data-testid="stVerticalBlockBorderWrapper"] *) div.stButton > button span {
         font-size: 24px !important;
         font-weight: 900 !important;
         letter-spacing: -0.5px !important;
@@ -168,7 +159,7 @@ st.markdown(
         line-height: 1.2 !important;
     }
 
-    div.stButton > button[key="btn_trigger_random"]:hover {
+    div.block-container > div[data-testid="stVerticalBlock"] > div.stElementContainer:not(div[data-testid="stVerticalBlockBorderWrapper"] *) div.stButton > button:hover {
         background: linear-gradient(135deg, #FF662A 0%, #D64716 100%) !important;
         transform: scale(1.02) !important;
     }
@@ -237,7 +228,7 @@ if qp.get("action") == "gps" and "lat" in qp and "lng" in qp:
         pass
     st.query_params.clear()
 
-# --- 필터링 키워드 정의 ---
+# 필터링 키워드 정의
 EXCLUDED_CATEGORIES = [
     "술집", "주점", "호프", "포차", "이자카야", "바(BAR)", "요리주점", "와인바",
     "칵테일바", "민속주점", "맥주", "룸살롱", "단란주점", "유흥주점", "라이브카페", 
@@ -384,7 +375,6 @@ DEFAULT_FOODS = [
     ("퓨전파스타", "🍝", "퓨전 양식당", "퓨전식", "mid")
 ]
 
-# --- 식당 텍스트 및 카테고리 정밀 검증 엔진 ---
 def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_name: str) -> bool:
     clean_name = place_name.replace(" ", "").upper()
     cat_full = category_name.replace(" ", "")
@@ -438,7 +428,6 @@ def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_na
 
     return True
 
-# --- 실시간 검색 기반 14시 이후 오픈 식당 필터링 ---
 @st.cache_data(ttl=3600, show_spinner=False)
 def is_dinner_only_restaurant(place_name: str, address: str) -> bool:
     clean_pname = place_name.split()[0]
@@ -476,7 +465,6 @@ def is_dinner_only_restaurant(place_name: str, address: str) -> bool:
 
     return False
 
-# --- 인근 주차장(300m 이내) 보유 여부 검증 ---
 def has_nearby_parking(lat: float, lng: float, place_name: str) -> bool:
     if any(k in place_name for k in ["주차", "타워", "빌딩", "스퀘어", "몰", "프라자", "센터"]):
         return True
@@ -532,7 +520,6 @@ def calculate_priority(place: dict, menu_name: str, has_parking: bool = False, n
 
     return score
 
-# --- 카카오 공식 API 통신 함수 ---
 @st.cache_data(ttl=86400, show_spinner=False)
 def kakao_get_coordinates(query: str):
     if not KAKAO_REST_KEY:
@@ -648,7 +635,7 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
         pass
     return []
 
-# --- 화면 상단 제목 및 설명 (여백을 넉넉하고 보기 좋게 배치) ---
+# --- 화면 상단 제목 및 설명 (넉넉한 상단 여백 및 조화로운 간격) ---
 st.markdown("<h1 style='color: #2E1C10; font-size: 28px; font-weight: 800; margin: 0 0 10px 0; letter-spacing: -0.6px;'>🍱 오늘 점심 뭐 먹지?</h1>", unsafe_allow_html=True)
 st.markdown("<div style='color: #8C827A; font-size: 13.5px; margin-bottom: 22px; line-height: 1.5;'>고민되는 점심 메뉴와 검증된 주변 밥집을 랜덤으로 골라드립니다.</div>", unsafe_allow_html=True)
 
@@ -700,7 +687,7 @@ with st.container(border=True):
             unsafe_allow_html=True
         )
 
-# --- 2. 탐색 반경 (개별 박스: 균등 4칸 배치) ---
+# --- 2. 탐색 반경 (개별 박스: 균등 4칸) ---
 clean_region = region.strip()
 is_admin_region = False
 
@@ -916,7 +903,7 @@ def show_cuisine_warning():
         unsafe_allow_html=True
     )
 
-# --- 6. 메인 룰렛 버튼 (Streamlit 네이티브 버튼 복원 + 84px / 24px Ultra Bold) ---
+# --- 6. 메인 룰렛 버튼 (네이티브 st.button + 단독 외부 버튼으로 100% 크기 적용 및 정상 동작) ---
 if st.button("🎲 오늘 점심 랜덤 룰렛 돌리기!", use_container_width=True, type="primary", key="btn_trigger_random"):
     if not region.strip() and not st.session_state.gps_coords:
         show_location_warning()
