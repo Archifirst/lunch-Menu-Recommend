@@ -209,6 +209,15 @@ st.markdown(
         border: 1.5px solid #F7D488;
         border-radius: 12px;
     }
+
+    /* 부드러운 전환 효과 애니메이션 */
+    @keyframes smoothFadeIn {
+        from { opacity: 0; transform: translateY(6px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .fade-in-content {
+        animation: smoothFadeIn 0.35s ease-out forwards;
+    }
     </style>
     """,
     unsafe_allow_html=True
@@ -242,8 +251,6 @@ if "gps_coords" not in st.session_state:
     st.session_state.gps_coords = None
 if "region_input_val" not in st.session_state:
     st.session_state.region_input_val = ""
-if "is_spinning" not in st.session_state:
-    st.session_state.is_spinning = False
 
 qp = st.query_params
 if qp.get("action") == "gps" and "lat" in qp and "lng" in qp:
@@ -324,8 +331,10 @@ KNOWN_FRANCHISE_BRANDS = [
 
 TONKATSU_NAME_INDICATORS = ["돈까스", "돈가스", "카츠", "카쯔", "가츠", "돈카츠", "포크커틀릿"]
 
+# 특정 단품 메뉴 엄격 필터: 상호명에 반드시 키워드가 들어가야 함
 STRICT_SPECIALTY_NAME_RULES = {
     "닭갈비": ["닭갈비"],
+    "수제비": ["수제비"],  # 단순 수제비 사리 취급점/매운탕/감자탕 원천 차단
     "칼국수": ["칼국수"],
     "막국수": ["막국수"],
     "국밥": ["국밥", "순대", "순댓국", "돼지국밥", "따로국밥", "소머리국밥"],
@@ -432,10 +441,18 @@ def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_na
         if any(bad in clean_name for bad in [k.upper() for k in MEAT_SHOP_KEYWORDS]):
             return False
 
+    # 닭갈비 엄격 검증
     if menu_name == "닭갈비":
         if "닭갈비" not in clean_name:
             return False
         if any(bad_chick in clean_name for bad_chick in ["치킨", "통닭", "찜닭", "삼계탕", "닭한마리", "닭발", "닭도리", "닭볶음"]):
+            return False
+
+    # 수제비 엄격 검증 (단순 사리 취급점 배제)
+    if menu_name == "수제비":
+        if "수제비" not in clean_name:
+            return False
+        if any(bad_soup in clean_name for bad_soup in ["매운탕", "감자탕", "부대찌개", "동태탕", "닭한마리", "포차"]):
             return False
 
     if menu_name not in ["김밥", "떡볶이"]:
@@ -542,7 +559,7 @@ def calculate_priority(place: dict, menu_name: str, has_parking: bool = False, n
     place["is_personal"] = not is_franchise
     score += (2.5 if is_franchise else -0.5)
 
-    if menu_name == "닭갈비" and "닭갈비" in p_name:
+    if menu_name in ["닭갈비", "수제비"] and menu_name in p_name:
         score -= 3.0
     if menu_name == "돈까스" and any(k in p_name for k in TONKATSU_NAME_INDICATORS):
         score -= 2.0
@@ -679,7 +696,6 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
 
 def reset_to_selection():
     st.session_state.saved_result = None
-    st.session_state.is_spinning = False
     st.rerun()
 
 # --- 화면 상단 헤더 ---
@@ -690,93 +706,13 @@ if not has_key:
     st.warning("⚠️ **API 키 설정 필요**: `.streamlit/secrets.toml` 또는 Cloud Secrets에 `KAKAO_REST_KEY`를 설정해주세요.")
 
 # ============================================================
-# [뷰 분기 1]: 룰렛 진행 중 또는 결과 화면 (상단 선택 창 전부 숨김)
+# [뷰 분기 1]: 룰렛 결과 화면 (상단 선택 창 숨김)
 # ============================================================
 res = st.session_state.saved_result
 
-if st.session_state.is_spinning or (res is not None and res.get("places")):
-    # 룰렛 애니메이션 롤링 처리
-    if st.session_state.is_spinning:
-        cu = st.session_state.selected_cuisine
-        pr = st.session_state.selected_price
-        price_map = {"1만원 이하": "low", "1~2만원": "mid", "2만원 이상": "high"}
-        target_pr = price_map.get(pr, None)
-
-        if cu == "모두":
-            candidates_pool = [f for f in DEFAULT_FOODS if f[0] != "죽"]
-        else:
-            candidates_pool = [f for f in DEFAULT_FOODS if f[3] == cu and f[0] != "죽"]
-
-        selected_candidates = [f for f in candidates_pool if f[4] == target_pr] if target_pr else candidates_pool
-        if not selected_candidates:
-            selected_candidates = candidates_pool
-
-        radius_km = PRESET_RADIUS.get(st.session_state.selected_radius_preset, 1.8) if st.session_state.selected_radius_preset != "직접 입력" else float(st.session_state.custom_radius_val)
-        radius_text = f"직접 입력 {radius_km:.1f}km" if st.session_state.selected_radius_preset == "직접 입력" else f"{st.session_state.selected_radius_preset} ({radius_km}km)"
-
-        if st.session_state.gps_coords:
-            c_lat, c_lng = st.session_state.gps_coords
-        else:
-            c_lat, c_lng = kakao_get_coordinates(st.session_state.region_input_val)
-
-        final_menu = None
-        places = []
-        shuffled = selected_candidates.copy()
-        random.shuffle(shuffled)
-        need_parking_flag = (st.session_state.selected_parking == "식당 주차장 혹은 인근 주차장 있음")
-
-        for m_name, m_emoji, m_kw, _, _ in shuffled[:6]:
-            found = kakao_search_places(c_lat, c_lng, m_name, m_kw, radius_km=radius_km, need_parking=need_parking_flag)
-            if found:
-                final_menu = (m_name, m_emoji)
-                places = found
-                break
-
-        if not places:
-            fallback_kw = "백반 가정식" if cu in ["한식", "모두"] else f"{cu} 전문점"
-            fallback_menu = "백반·가정식" if cu in ["한식", "모두"] else f"{cu} 밥집"
-            fallback_found = kakao_search_places(c_lat, c_lng, fallback_menu, fallback_kw, radius_km=radius_km, need_parking=need_parking_flag)
-            if fallback_found:
-                final_menu = (fallback_menu, "🍱")
-                places = fallback_found
-
-        # 부드러운 롤링 애니메이션 재생
-        rolling_spot = st.empty()
-        for i in range(6):
-            temp = random.choice(selected_candidates)
-            rolling_spot.markdown(
-                f"""
-                <div style="text-align: center; margin: 14px 0 14px 0; padding: 22px 18px; 
-                            background: #FFFDF9; border-radius: 20px; border: 1.5px solid #F5D5B8; 
-                            box-shadow: 0 4px 16px rgba(245, 213, 184, 0.35);">
-                    <div style="font-size: 58px; line-height: 1; margin-bottom: 6px;">{temp[1]}</div>
-                    <div style="color: #2E1C10; font-size: 23px; font-weight: 800; margin: 4px 0;">{temp[0]}</div>
-                    <p style="color: #8C827A; font-size: 13.5px; margin: 0;">{radius_text} 기준 맛집 추첨 중... 🎲</p>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-            time.sleep(0.05 + (i * 0.02))
-        rolling_spot.empty()
-
-        if final_menu and places:
-            st.session_state.spin_count += 1
-            st.session_state.saved_result = {
-                "menu": final_menu[0],
-                "emoji": final_menu[1],
-                "places": places,
-                "region": st.session_state.region_input_val or "내 위치",
-                "radius_text": radius_text,
-                "center_lat": c_lat,
-                "center_lng": c_lng,
-                "id": st.session_state.spin_count
-            }
-        st.session_state.is_spinning = False
-        st.rerun()
-
-    # 결과 카드 화면 렌더링
+if res is not None and res.get("places"):
     card_html = (
-        f'<div style="text-align: center; margin: 14px 0 14px 0; padding: 24px 20px; '
+        f'<div class="fade-in-content" style="text-align: center; margin: 14px 0 14px 0; padding: 24px 20px; '
         f'background: #FFFDF9; border-radius: 22px; border: 1.5px solid #F5D5B8; '
         f'box-shadow: 0 4px 18px rgba(245, 213, 184, 0.35);">'
         f'<div style="font-size: 68px; line-height: 1; margin-bottom: 8px;">{res["emoji"]}</div>'
@@ -804,7 +740,7 @@ if st.session_state.is_spinning or (res is not None and res.get("places")):
         parking_badge = '<span style="font-size: 11px; background: #E8F4EA; color: #2E7D32; padding: 2px 7px; border-radius: 6px; font-weight: 700;">🅿 주차 편리</span>'
 
     top_pick_html = (
-        f'<div style="margin-bottom: 20px; padding: 22px 18px; '
+        f'<div class="fade-in-content" style="margin-bottom: 20px; padding: 22px 18px; '
         f'background: #FFFDF9; border-radius: 22px; border: 1.5px solid #F5D5B8; '
         f'box-shadow: 0 4px 18px rgba(245, 213, 184, 0.35); text-align: center;">'
         f'<div style="display: flex; justify-content: center; align-items: center; gap: 6px; margin-bottom: 8px; flex-wrap: wrap;">'
@@ -826,7 +762,7 @@ if st.session_state.is_spinning or (res is not None and res.get("places")):
     st.markdown(top_pick_html, unsafe_allow_html=True)
 
     if len(places) > 1:
-        st.markdown(f"<div style='font-size: 14.5px; font-weight: 700; color: #2E1C10; margin-bottom: 8px;'>📋 근처 다른 후보 ({len(places)-1}곳)</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='fade-in-content' style='font-size: 14.5px; font-weight: 700; color: #2E1C10; margin-bottom: 8px;'>📋 근처 다른 후보 ({len(places)-1}곳)</div>", unsafe_allow_html=True)
         other_candidates = places[1:11]
         col_left, col_right = st.columns(2)
 
@@ -837,7 +773,7 @@ if st.session_state.is_spinning or (res is not None and res.get("places")):
 
             with target_col:
                 cand_html = (
-                    f'<div style="display: flex; justify-content: space-between; align-items: center; '
+                    f'<div class="fade-in-content" style="display: flex; justify-content: space-between; align-items: center; '
                     f'background: #FFFFFF; border: 1px solid #ECE7E1; border-radius: 12px; '
                     f'padding: 9px 12px; margin-bottom: 8px;">'
                     f'<div style="display: flex; align-items: center; gap: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">'
@@ -873,262 +809,371 @@ if st.session_state.is_spinning or (res is not None and res.get("places")):
     unique_map_key = f"map_{res['id']}_{int(top_pick['lat'] * 10000)}"
     st_folium(m, width="100%", height=380, key=unique_map_key, returned_objects=[])
 
-    # 지도 - 길찾기 간격: 절반으로 축소 (6px)
+    # 지도 - 길찾기 간격: 절반 축소 (6px)
     st.markdown("<div style='height: 6px;'></div>", unsafe_allow_html=True)
     kakao_directions_url = f"https://map.kakao.com/link/to/{urllib.parse.quote(top_pick['name'])},{top_pick['lat']},{top_pick['lng']}"
     st.link_button(f"🧭 '{top_pick['name']}' 길찾기 바로가기", kakao_directions_url, use_container_width=True)
 
-    # 길찾기 - 다시 뽑기 간격: 절반으로 축소 (5px)
+    # 길찾기 - 다시 뽑기 간격: 절반 축소 (5px)
     st.markdown("<div style='height: 5px;'></div>", unsafe_allow_html=True)
     if st.button("🔄 다시 뽑기", use_container_width=True, key="btn_reset_bottom"):
         reset_to_selection()
 
 # ============================================================
-# [뷰 분기 2]: 결과가 없을 때는 선택 박스 및 룰렛 버튼 정상 표시
+# [뷰 분기 2]: 선택 옵션 박스 및 룰렛 실행 루프
 # ============================================================
 else:
+    main_view = st.container()
+
     # --- 1. 위치 입력 ---
-    with st.container(border=True):
-        st.markdown("<div class='section-title'>📍 위치</div>", unsafe_allow_html=True)
-        col_input, col_gps = st.columns([3.5, 1.2], vertical_alignment="center")
+    with main_view.container():
+        with st.container(border=True):
+            st.markdown("<div class='section-title'>📍 위치</div>", unsafe_allow_html=True)
+            col_input, col_gps = st.columns([3.5, 1.2], vertical_alignment="center")
 
-        with col_input:
-            region = st.text_input(
-                "위치입력",
-                value=st.session_state.region_input_val,
-                placeholder="예시) 역삼역, 판교 테크노밸리, 홍대입구",
-                key="main_region_input",
-                label_visibility="collapsed"
-            )
-            if region != st.session_state.region_input_val:
-                st.session_state.region_input_val = region
-                st.session_state.gps_coords = None
+            with col_input:
+                region = st.text_input(
+                    "위치입력",
+                    value=st.session_state.region_input_val,
+                    placeholder="예시) 역삼역, 판교 테크노밸리, 홍대입구",
+                    key="main_region_input",
+                    label_visibility="collapsed"
+                )
+                if region != st.session_state.region_input_val:
+                    st.session_state.region_input_val = region
+                    st.session_state.gps_coords = None
 
-        with col_gps:
-            st.markdown(
+            with col_gps:
+                st.markdown(
+                    """
+                    <button onclick="
+                        if (navigator.geolocation) {
+                            navigator.geolocation.getCurrentPosition(function(pos) {
+                                const url = new URL(window.location.href);
+                                url.searchParams.set('action', 'gps');
+                                url.searchParams.set('lat', pos.coords.latitude);
+                                url.searchParams.set('lng', pos.coords.longitude);
+                                window.location.href = url.href;
+                            }, function(err) {
+                                alert('위치 권한을 허용해 주세요!');
+                            });
+                        } else {
+                            alert('GPS를 지원하지 않는 브라우저입니다.');
+                        }
+                    " style="width:100%; height:42px; background-color:#E86A3E; color:white; border:none; border-radius:12px; font-size:13px; font-weight:700; cursor:pointer; box-shadow: 0 2px 8px rgba(232, 106, 62, 0.2);">
+                        내 위치 찾기
+                    </button>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+        # --- 2. 탐색 반경 ---
+        clean_region = region.strip()
+        is_admin_region = False
+
+        if clean_region:
+            is_spot = bool(re.search(r"(역|출구|거리|센터|스퀘어|타워|빌딩|공원|마트|백화점)$", clean_region))
+            is_pure_admin = bool(re.search(r"([시군구읍면동]|\b\w+[0-9]*가)$", clean_region))
+            if is_pure_admin and not is_spot:
+                is_admin_region = True
+
+        should_show_radius = bool(clean_region and not is_admin_region)
+
+        if should_show_radius:
+            with st.container(border=True):
+                st.markdown("<div class='section-title'>📏 탐색 반경</div>", unsafe_allow_html=True)
+                
+                c1, c2, c3, c4 = st.columns(4, vertical_alignment="center")
+                current_preset = st.session_state.selected_radius_preset
+
+                with c1:
+                    if st.button("🚶 인근", key="rbtn_walk", type="primary" if current_preset == "인근" else "secondary", use_container_width=True):
+                        if st.session_state.selected_radius_preset != "인근":
+                            st.session_state.selected_radius_preset = "인근"
+                            st.rerun()
+
+                with c2:
+                    if st.button("🚲 근거리", key="rbtn_bike", type="primary" if current_preset == "근거리" else "secondary", use_container_width=True):
+                        if st.session_state.selected_radius_preset != "근거리":
+                            st.session_state.selected_radius_preset = "근거리"
+                            st.rerun()
+
+                with c3:
+                    if st.button("🚗 원거리", key="rbtn_car", type="primary" if current_preset == "원거리" else "secondary", use_container_width=True):
+                        if st.session_state.selected_radius_preset != "원거리":
+                            st.session_state.selected_radius_preset = "원거리"
+                            st.rerun()
+
+                with c4:
+                    if st.button("직접 입력", key="rbtn_custom", type="primary" if current_preset == "직접 입력" else "secondary", use_container_width=True):
+                        if st.session_state.selected_radius_preset != "직접 입력":
+                            st.session_state.selected_radius_preset = "직접 입력"
+                            st.rerun()
+
+                if st.session_state.selected_radius_preset == "직접 입력":
+                    st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
+                    manual_radius = st.number_input(
+                        "희망 반경 (단위: km)", 
+                        min_value=0.2, 
+                        max_value=10.0, 
+                        value=st.session_state.custom_radius_val, 
+                        step=0.2, 
+                        key="custom_radius_num",
+                        label_visibility="collapsed"
+                    )
+                    if manual_radius != st.session_state.custom_radius_val:
+                        st.session_state.custom_radius_val = manual_radius
+                    radius_km = float(manual_radius)
+                    radius_display_text = f"직접 입력 {radius_km:.1f}km"
+                else:
+                    radius_km = PRESET_RADIUS.get(st.session_state.selected_radius_preset, 1.8)
+                    radius_display_text = f"{st.session_state.selected_radius_preset} ({radius_km}km)"
+        else:
+            radius_km = 1.8
+            radius_display_text = "지역 인근"
+
+        # --- 3. 음식 종류 선택 ---
+        with st.container(border=True):
+            st.markdown("<div class='section-title'>🍽️ 음식 종류</div>", unsafe_allow_html=True)
+
+            cu1, cu2, cu3, cu4 = st.columns(4)
+            current_cuisine = st.session_state.selected_cuisine
+
+            with cu1:
+                if st.button("한식", key="cbtn_korean", type="primary" if current_cuisine == "한식" else "secondary", use_container_width=True):
+                    if st.session_state.selected_cuisine != "한식":
+                        st.session_state.selected_cuisine = "한식"
+                        st.rerun()
+            with cu2:
+                if st.button("중식", key="cbtn_chinese", type="primary" if current_cuisine == "중식" else "secondary", use_container_width=True):
+                    if st.session_state.selected_cuisine != "중식":
+                        st.session_state.selected_cuisine = "중식"
+                        st.rerun()
+            with cu3:
+                if st.button("일식", key="cbtn_japanese", type="primary" if current_cuisine == "일식" else "secondary", use_container_width=True):
+                    if st.session_state.selected_cuisine != "일식":
+                        st.session_state.selected_cuisine = "일식"
+                        st.rerun()
+            with cu4:
+                if st.button("양식", key="cbtn_western", type="primary" if current_cuisine == "양식" else "secondary", use_container_width=True):
+                    if st.session_state.selected_cuisine != "양식":
+                        st.session_state.selected_cuisine = "양식"
+                        st.rerun()
+
+            cu5, cu6, cu7, cu8 = st.columns(4)
+            with cu5:
+                if st.button("동남아식", key="cbtn_asian", type="primary" if current_cuisine == "동남아식" else "secondary", use_container_width=True):
+                    if st.session_state.selected_cuisine != "동남아식":
+                        st.session_state.selected_cuisine = "동남아식"
+                        st.rerun()
+            with cu6:
+                if st.button("인도식", key="cbtn_indian", type="primary" if current_cuisine == "인도식" else "secondary", use_container_width=True):
+                    if st.session_state.selected_cuisine != "인도식":
+                        st.session_state.selected_cuisine = "인도식"
+                        st.rerun()
+            with cu7:
+                if st.button("멕시코식", key="cbtn_mexican", type="primary" if current_cuisine == "멕시코식" else "secondary", use_container_width=True):
+                    if st.session_state.selected_cuisine != "멕시코식":
+                        st.session_state.selected_cuisine = "멕시코식"
+                        st.rerun()
+            with cu8:
+                if st.button("퓨전식", key="cbtn_fusion", type="primary" if current_cuisine == "퓨전식" else "secondary", use_container_width=True):
+                    if st.session_state.selected_cuisine != "퓨전식":
+                        st.session_state.selected_cuisine = "퓨전식"
+                        st.rerun()
+
+            if st.button("모두 (종류 구분 없음)", key="cbtn_all", type="primary" if current_cuisine == "모두" else "secondary", use_container_width=True):
+                if st.session_state.selected_cuisine != "모두":
+                    st.session_state.selected_cuisine = "모두"
+                    st.rerun()
+
+        # --- 4. 음식 가격 선택 ---
+        with st.container(border=True):
+            st.markdown("<div class='section-title'>💵 음식 가격(식사 기준)</div>", unsafe_allow_html=True)
+
+            p1, p2, p3, p4 = st.columns(4)
+            current_price = st.session_state.selected_price
+
+            with p1:
+                if st.button("1만원 이하", key="pbtn_low", type="primary" if current_price == "1만원 이하" else "secondary", use_container_width=True):
+                    if st.session_state.selected_price != "1만원 이하":
+                        st.session_state.selected_price = "1만원 이하"
+                        st.rerun()
+            with p2:
+                if st.button("1~2만원", key="pbtn_mid", type="primary" if current_price == "1~2만원" else "secondary", use_container_width=True):
+                    if st.session_state.selected_price != "1~2만원":
+                        st.session_state.selected_price = "1~2만원"
+                        st.rerun()
+            with p3:
+                if st.button("2만원 이상", key="pbtn_high", type="primary" if current_price == "2만원 이상" else "secondary", use_container_width=True):
+                    if st.session_state.selected_price != "2만원 이상":
+                        st.session_state.selected_price = "2만원 이상"
+                        st.rerun()
+            with p4:
+                if st.button("금액 상관 없음", key="pbtn_any", type="primary" if current_price == "금액 상관 없음" else "secondary", use_container_width=True):
+                    if st.session_state.selected_price != "금액 상관 없음":
+                        st.session_state.selected_price = "금액 상관 없음"
+                        st.rerun()
+
+        # --- 5. 주차 가능 여부 선택 ---
+        with st.container(border=True):
+            st.markdown("<div class='section-title'>🅿️ 주차 가능 여부</div>", unsafe_allow_html=True)
+            pk1, pk2 = st.columns(2)
+            current_parking = st.session_state.selected_parking
+
+            with pk1:
+                if st.button("식당 주차장 혹은 인근 주차장 있음", key="pkbtn_yes", type="primary" if current_parking == "식당 주차장 혹은 인근 주차장 있음" else "secondary", use_container_width=True):
+                    if st.session_state.selected_parking != "식당 주차장 혹은 인근 주차장 있음":
+                        st.session_state.selected_parking = "식당 주차장 혹은 인근 주차장 있음"
+                        st.rerun()
+            with pk2:
+                if st.button("주차 불필요", key="pkbtn_any", type="primary" if current_parking == "주차 불필요" else "secondary", use_container_width=True):
+                    if st.session_state.selected_parking != "주차 불필요":
+                        st.session_state.selected_parking = "주차 불필요"
+                        st.rerun()
+
+        region_warning_spot = st.empty()
+
+        def show_location_warning():
+            region_warning_spot.markdown(
                 """
-                <button onclick="
-                    if (navigator.geolocation) {
-                        navigator.geolocation.getCurrentPosition(function(pos) {
-                            const url = new URL(window.location.href);
-                            url.searchParams.set('action', 'gps');
-                            url.searchParams.set('lat', pos.coords.latitude);
-                            url.searchParams.set('lng', pos.coords.longitude);
-                            window.location.href = url.href;
-                        }, function(err) {
-                            alert('위치 권한을 허용해 주세요!');
-                        });
-                    } else {
-                        alert('GPS를 지원하지 않는 브라우저입니다.');
-                    }
-                " style="width:100%; height:42px; background-color:#E86A3E; color:white; border:none; border-radius:12px; font-size:13px; font-weight:700; cursor:pointer; box-shadow: 0 2px 8px rgba(232, 106, 62, 0.2);">
-                    내 위치 찾기
-                </button>
+                <div class="warning-box">
+                    <span style="font-size: 16px;">⚠️</span>
+                    <span style="color: #6C4D0A; font-size: 13.5px; font-weight: 700;">
+                        위치를 입력하거나 '내 위치 찾기'를 눌러주세요!
+                    </span>
+                </div>
                 """,
                 unsafe_allow_html=True
             )
 
-    # --- 2. 탐색 반경 ---
-    clean_region = region.strip()
-    is_admin_region = False
+        def show_cuisine_warning():
+            region_warning_spot.markdown(
+                """
+                <div class="warning-box">
+                    <span style="font-size: 16px;">⚠️</span>
+                    <span style="color: #6C4D0A; font-size: 13.5px; font-weight: 700;">
+                        음식 종류를 선택해 주세요!
+                    </span>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
-    if clean_region:
-        is_spot = bool(re.search(r"(역|출구|거리|센터|스퀘어|타워|빌딩|공원|마트|백화점)$", clean_region))
-        is_pure_admin = bool(re.search(r"([시군구읍면동]|\b\w+[0-9]*가)$", clean_region))
-        if is_pure_admin and not is_spot:
-            is_admin_region = True
+        # --- 6. 메인 룰렛 버튼 ---
+        spin_clicked = st.button("🎲 오늘 점심 랜덤 룰렛 돌리기!", use_container_width=True, type="primary", key="btn_trigger_random")
 
-    should_show_radius = bool(clean_region and not is_admin_region)
-
-    if should_show_radius:
-        with st.container(border=True):
-            st.markdown("<div class='section-title'>📏 탐색 반경</div>", unsafe_allow_html=True)
-            
-            c1, c2, c3, c4 = st.columns(4, vertical_alignment="center")
-            current_preset = st.session_state.selected_radius_preset
-
-            with c1:
-                if st.button("🚶 인근", key="rbtn_walk", type="primary" if current_preset == "인근" else "secondary", use_container_width=True):
-                    if st.session_state.selected_radius_preset != "인근":
-                        st.session_state.selected_radius_preset = "인근"
-                        st.rerun()
-
-            with c2:
-                if st.button("🚲 근거리", key="rbtn_bike", type="primary" if current_preset == "근거리" else "secondary", use_container_width=True):
-                    if st.session_state.selected_radius_preset != "근거리":
-                        st.session_state.selected_radius_preset = "근거리"
-                        st.rerun()
-
-            with c3:
-                if st.button("🚗 원거리", key="rbtn_car", type="primary" if current_preset == "원거리" else "secondary", use_container_width=True):
-                    if st.session_state.selected_radius_preset != "원거리":
-                        st.session_state.selected_radius_preset = "원거리"
-                        st.rerun()
-
-            with c4:
-                if st.button("직접 입력", key="rbtn_custom", type="primary" if current_preset == "직접 입력" else "secondary", use_container_width=True):
-                    if st.session_state.selected_radius_preset != "직접 입력":
-                        st.session_state.selected_radius_preset = "직접 입력"
-                        st.rerun()
-
-            if st.session_state.selected_radius_preset == "직접 입력":
-                st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
-                manual_radius = st.number_input(
-                    "희망 반경 (단위: km)", 
-                    min_value=0.2, 
-                    max_value=10.0, 
-                    value=st.session_state.custom_radius_val, 
-                    step=0.2, 
-                    key="custom_radius_num",
-                    label_visibility="collapsed"
-                )
-                if manual_radius != st.session_state.custom_radius_val:
-                    st.session_state.custom_radius_val = manual_radius
-                radius_km = float(manual_radius)
-                radius_display_text = f"직접 입력 {radius_km:.1f}km"
-            else:
-                radius_km = PRESET_RADIUS.get(st.session_state.selected_radius_preset, 1.8)
-                radius_display_text = f"{st.session_state.selected_radius_preset} ({radius_km}km)"
-    else:
-        radius_km = 1.8
-        radius_display_text = "지역 인근"
-
-    # --- 3. 음식 종류 선택 ---
-    with st.container(border=True):
-        st.markdown("<div class='section-title'>🍽️ 음식 종류</div>", unsafe_allow_html=True)
-
-        cu1, cu2, cu3, cu4 = st.columns(4)
-        current_cuisine = st.session_state.selected_cuisine
-
-        with cu1:
-            if st.button("한식", key="cbtn_korean", type="primary" if current_cuisine == "한식" else "secondary", use_container_width=True):
-                if st.session_state.selected_cuisine != "한식":
-                    st.session_state.selected_cuisine = "한식"
-                    st.rerun()
-        with cu2:
-            if st.button("중식", key="cbtn_chinese", type="primary" if current_cuisine == "중식" else "secondary", use_container_width=True):
-                if st.session_state.selected_cuisine != "중식":
-                    st.session_state.selected_cuisine = "중식"
-                    st.rerun()
-        with cu3:
-            if st.button("일식", key="cbtn_japanese", type="primary" if current_cuisine == "일식" else "secondary", use_container_width=True):
-                if st.session_state.selected_cuisine != "일식":
-                    st.session_state.selected_cuisine = "일식"
-                    st.rerun()
-        with cu4:
-            if st.button("양식", key="cbtn_western", type="primary" if current_cuisine == "양식" else "secondary", use_container_width=True):
-                if st.session_state.selected_cuisine != "양식":
-                    st.session_state.selected_cuisine = "양식"
-                    st.rerun()
-
-        cu5, cu6, cu7, cu8 = st.columns(4)
-        with cu5:
-            if st.button("동남아식", key="cbtn_asian", type="primary" if current_cuisine == "동남아식" else "secondary", use_container_width=True):
-                if st.session_state.selected_cuisine != "동남아식":
-                    st.session_state.selected_cuisine = "동남아식"
-                    st.rerun()
-        with cu6:
-            if st.button("인도식", key="cbtn_indian", type="primary" if current_cuisine == "인도식" else "secondary", use_container_width=True):
-                if st.session_state.selected_cuisine != "인도식":
-                    st.session_state.selected_cuisine = "인도식"
-                    st.rerun()
-        with cu7:
-            if st.button("멕시코식", key="cbtn_mexican", type="primary" if current_cuisine == "멕시코식" else "secondary", use_container_width=True):
-                if st.session_state.selected_cuisine != "멕시코식":
-                    st.session_state.selected_cuisine = "멕시코식"
-                    st.rerun()
-        with cu8:
-            if st.button("퓨전식", key="cbtn_fusion", type="primary" if current_cuisine == "퓨전식" else "secondary", use_container_width=True):
-                if st.session_state.selected_cuisine != "퓨전식":
-                    st.session_state.selected_cuisine = "퓨전식"
-                    st.rerun()
-
-        if st.button("모두 (종류 구분 없음)", key="cbtn_all", type="primary" if current_cuisine == "모두" else "secondary", use_container_width=True):
-            if st.session_state.selected_cuisine != "모두":
-                st.session_state.selected_cuisine = "모두"
-                st.rerun()
-
-    # --- 4. 음식 가격 선택 ---
-    with st.container(border=True):
-        st.markdown("<div class='section-title'>💵 음식 가격(식사 기준)</div>", unsafe_allow_html=True)
-
-        p1, p2, p3, p4 = st.columns(4)
-        current_price = st.session_state.selected_price
-
-        with p1:
-            if st.button("1만원 이하", key="pbtn_low", type="primary" if current_price == "1만원 이하" else "secondary", use_container_width=True):
-                if st.session_state.selected_price != "1만원 이하":
-                    st.session_state.selected_price = "1만원 이하"
-                    st.rerun()
-        with p2:
-            if st.button("1~2만원", key="pbtn_mid", type="primary" if current_price == "1~2만원" else "secondary", use_container_width=True):
-                if st.session_state.selected_price != "1~2만원":
-                    st.session_state.selected_price = "1~2만원"
-                    st.rerun()
-        with p3:
-            if st.button("2만원 이상", key="pbtn_high", type="primary" if current_price == "2만원 이상" else "secondary", use_container_width=True):
-                if st.session_state.selected_price != "2만원 이상":
-                    st.session_state.selected_price = "2만원 이상"
-                    st.rerun()
-        with p4:
-            if st.button("금액 상관 없음", key="pbtn_any", type="primary" if current_price == "금액 상관 없음" else "secondary", use_container_width=True):
-                if st.session_state.selected_price != "금액 상관 없음":
-                    st.session_state.selected_price = "금액 상관 없음"
-                    st.rerun()
-
-    # --- 5. 주차 가능 여부 선택 ---
-    with st.container(border=True):
-        st.markdown("<div class='section-title'>🅿️ 주차 가능 여부</div>", unsafe_allow_html=True)
-        pk1, pk2 = st.columns(2)
-        current_parking = st.session_state.selected_parking
-
-        with pk1:
-            if st.button("식당 주차장 혹은 인근 주차장 있음", key="pkbtn_yes", type="primary" if current_parking == "식당 주차장 혹은 인근 주차장 있음" else "secondary", use_container_width=True):
-                if st.session_state.selected_parking != "식당 주차장 혹은 인근 주차장 있음":
-                    st.session_state.selected_parking = "식당 주차장 혹은 인근 주차장 있음"
-                    st.rerun()
-        with pk2:
-            if st.button("주차 불필요", key="pkbtn_any", type="primary" if current_parking == "주차 불필요" else "secondary", use_container_width=True):
-                if st.session_state.selected_parking != "주차 불필요":
-                    st.session_state.selected_parking = "주차 불필요"
-                    st.rerun()
-
-    region_warning_spot = st.empty()
-
-    def show_location_warning():
-        region_warning_spot.markdown(
-            """
-            <div class="warning-box">
-                <span style="font-size: 16px;">⚠️</span>
-                <span style="color: #6C4D0A; font-size: 13.5px; font-weight: 700;">
-                    위치를 입력하거나 '내 위치 찾기'를 눌러주세요!
-                </span>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-    def show_cuisine_warning():
-        region_warning_spot.markdown(
-            """
-            <div class="warning-box">
-                <span style="font-size: 16px;">⚠️</span>
-                <span style="color: #6C4D0A; font-size: 13.5px; font-weight: 700;">
-                    음식 종류를 선택해 주세요!
-                </span>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-    # --- 6. 메인 룰렛 버튼 ---
-    if st.button("🎲 오늘 점심 랜덤 룰렛 돌리기!", use_container_width=True, type="primary", key="btn_trigger_random"):
+    # 버튼 클릭 시 즉시 롤링 및 자연스러운 결과 화면 안착 (깜빡임 없는 단일 파이프라인)
+    if spin_clicked:
         if not region.strip() and not st.session_state.gps_coords:
             show_location_warning()
         elif not st.session_state.selected_cuisine:
             show_cuisine_warning()
         else:
             region_warning_spot.empty()
-            # 룰렛 진행 상태로 플래그를 세우고 즉시 결과 페이지 뷰로 전환
-            st.session_state.is_spinning = True
-            st.rerun()
+            # 1. 기존 선택 상자들을 화면에서 바로 비움
+            main_view.empty()
+
+            # 2. 추천 조건 준비
+            cu = st.session_state.selected_cuisine
+            pr = st.session_state.selected_price
+            price_map = {"1만원 이하": "low", "1~2만원": "mid", "2만원 이상": "high"}
+            target_pr = price_map.get(pr, None)
+
+            if cu == "모두":
+                candidates_pool = [f for f in DEFAULT_FOODS if f[0] != "죽"]
+            else:
+                candidates_pool = [f for f in DEFAULT_FOODS if f[3] == cu and f[0] != "죽"]
+
+            selected_candidates = [f for f in candidates_pool if f[4] == target_pr] if target_pr else candidates_pool
+            if not selected_candidates:
+                selected_candidates = candidates_pool
+
+            # 3. 위치 좌표 및 검색 준비
+            if st.session_state.gps_coords:
+                c_lat, c_lng = st.session_state.gps_coords
+            else:
+                c_lat, c_lng = kakao_get_coordinates(region)
+
+            if not c_lat:
+                st.error(f"⚠️ '{region}' 위치를 찾지 못했습니다. 주요 건물이나 역 이름을 입력해 보세요.")
+                time.sleep(1.5)
+                st.rerun()
+
+            # 4. 애니메이션 스팟 준비
+            rolling_spot = st.empty()
+            shuffled = selected_candidates.copy()
+            random.shuffle(shuffled)
+            need_parking_flag = (st.session_state.selected_parking == "식당 주차장 혹은 인근 주차장 있음")
+
+            # 롤링 애니메이션 전반부 (가속)
+            for i in range(4):
+                temp = random.choice(selected_candidates)
+                rolling_spot.markdown(
+                    f"""
+                    <div class="fade-in-content" style="text-align: center; margin: 14px 0 14px 0; padding: 22px 18px; 
+                                background: #FFFDF9; border-radius: 20px; border: 1.5px solid #F5D5B8; 
+                                box-shadow: 0 4px 16px rgba(245, 213, 184, 0.35);">
+                        <div style="font-size: 58px; line-height: 1; margin-bottom: 6px;">{temp[1]}</div>
+                        <div style="color: #2E1C10; font-size: 23px; font-weight: 800; margin: 4px 0;">{temp[0]}</div>
+                        <p style="color: #8C827A; font-size: 13px; margin: 0;">{radius_display_text} 기준 맛집 추첨 중... 🎲</p>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+                time.sleep(0.04)
+
+            # 실제 맛집 API 탐색
+            final_menu = None
+            places = []
+            for m_name, m_emoji, m_kw, _, _ in shuffled[:6]:
+                found = kakao_search_places(c_lat, c_lng, m_name, m_kw, radius_km=radius_km, need_parking=need_parking_flag)
+                if found:
+                    final_menu = (m_name, m_emoji)
+                    places = found
+                    break
+
+            if not places:
+                fallback_kw = "백반 가정식" if cu in ["한식", "모두"] else f"{cu} 전문점"
+                fallback_menu = "백반·가정식" if cu in ["한식", "모두"] else f"{cu} 밥집"
+                fallback_found = kakao_search_places(c_lat, c_lng, fallback_menu, fallback_kw, radius_km=radius_km, need_parking=need_parking_flag)
+                if fallback_found:
+                    final_menu = (fallback_menu, "🍱")
+                    places = fallback_found
+
+            # 롤링 애니메이션 후반부 (감속)
+            for i in range(3):
+                temp = random.choice(selected_candidates)
+                rolling_spot.markdown(
+                    f"""
+                    <div style="text-align: center; margin: 14px 0 14px 0; padding: 22px 18px; 
+                                background: #FFFDF9; border-radius: 20px; border: 1.5px solid #F5D5B8; 
+                                box-shadow: 0 4px 16px rgba(245, 213, 184, 0.35);">
+                        <div style="font-size: 58px; line-height: 1; margin-bottom: 6px;">{temp[1]}</div>
+                        <div style="color: #2E1C10; font-size: 23px; font-weight: 800; margin: 4px 0;">{temp[0]}</div>
+                        <p style="color: #8C827A; font-size: 13px; margin: 0;">{radius_display_text} 기준 맛집 추첨 중... 🎲</p>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+                time.sleep(0.08 + (i * 0.05))
+
+            rolling_spot.empty()
+
+            if final_menu and places:
+                st.session_state.spin_count += 1
+                st.session_state.saved_result = {
+                    "menu": final_menu[0],
+                    "emoji": final_menu[1],
+                    "places": places,
+                    "region": region or "내 위치",
+                    "radius_text": radius_display_text,
+                    "center_lat": c_lat,
+                    "center_lng": c_lng,
+                    "id": st.session_state.spin_count
+                }
+                st.rerun()
+            else:
+                st.warning(f"⚠️ 설정하신 조건 내에 만족하는 식당을 찾지 못했습니다. 반경을 넓히거나 가격/주차 옵션을 조정해 보세요!")
+                time.sleep(1.8)
+                st.rerun()
