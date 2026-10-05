@@ -210,7 +210,6 @@ st.markdown(
         border-radius: 12px;
     }
 
-    /* 부드러운 전환 효과 애니메이션 */
     @keyframes smoothFadeIn {
         from { opacity: 0; transform: translateY(6px); }
         to { opacity: 1; transform: translateY(0); }
@@ -251,6 +250,27 @@ if "gps_coords" not in st.session_state:
     st.session_state.gps_coords = None
 if "region_input_val" not in st.session_state:
     st.session_state.region_input_val = ""
+
+# --- GPS 좌표 캐싱 및 역지오코딩 처리 ---
+@st.cache_data(ttl=86400, show_spinner=False)
+def kakao_reverse_geocode(lat: float, lng: float) -> str:
+    if not KAKAO_REST_KEY:
+        return "내 위치"
+    url = "https://dapi.kakao.com/v2/local/geo/coord2regioncode.json"
+    headers = {"Authorization": f"KakaoAK {KAKAO_REST_KEY}"}
+    params = {"x": str(lng), "y": str(lat)}
+    try:
+        res = requests.get(url, headers=headers, params=params, timeout=3.0)
+        if res.status_code == 200:
+            docs = res.json().get("documents", [])
+            for d in docs:
+                if d.get("region_type") == "H":
+                    return f"{d.get('region_2depth_name', '')} {d.get('region_3depth_name', '')}".strip()
+            if docs:
+                return docs[0].get("address_name", "내 위치")
+    except Exception:
+        pass
+    return "내 위치"
 
 qp = st.query_params
 if qp.get("action") == "gps" and "lat" in qp and "lng" in qp:
@@ -331,10 +351,9 @@ KNOWN_FRANCHISE_BRANDS = [
 
 TONKATSU_NAME_INDICATORS = ["돈까스", "돈가스", "카츠", "카쯔", "가츠", "돈카츠", "포크커틀릿"]
 
-# 특정 단품 메뉴 엄격 필터: 상호명에 반드시 키워드가 들어가야 함
 STRICT_SPECIALTY_NAME_RULES = {
     "닭갈비": ["닭갈비"],
-    "수제비": ["수제비"],  # 단순 수제비 사리 취급점/매운탕/감자탕 원천 차단
+    "수제비": ["수제비"],
     "칼국수": ["칼국수"],
     "막국수": ["막국수"],
     "국밥": ["국밥", "순대", "순댓국", "돼지국밥", "따로국밥", "소머리국밥"],
@@ -383,7 +402,7 @@ DEFAULT_FOODS = [
     ("막국수", "🥢", "막국수 전문점", "한식", "low"),
     ("냉면", "🧊", "함흥 평양 냉면 전문점", "한식", "mid"),
     ("잔치국수", "🍜", "잔치국수 멸치국수 전문점", "한식", "low"),
-    ("비빔국수", "🌶️", "비빔국수 전문점", "한식", "low"),
+    ("비빔국수", "🌶️️", "비빔국수 전문점", "한식", "low"),
     ("죽", "🥣", "죽 전문점", "한식", "low"),
     ("떡볶이", "🍢", "떡볶이 전문점", "한식", "low"),
     ("김밥", "🍙", "김밥 전문점", "한식", "low"),
@@ -485,47 +504,6 @@ def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_na
 
     return True
 
-@st.cache_data(ttl=3600, show_spinner=False)
-def is_dinner_only_restaurant(place_name: str, address: str) -> bool:
-    clean_pname = place_name.split()[0]
-    region_chunk = " ".join(address.split()[:2]) if address else ""
-    query = f"{region_chunk} {clean_pname} 영업시간".strip()
-
-    headers = {
-        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1"
-    }
-    url = f"https://m.search.daum.net/search?w=tot&q={urllib.parse.quote(query)}"
-
-    try:
-        res = requests.get(url, headers=headers, timeout=1.2)
-        if res.status_code == 200:
-            text = res.text
-            night_words = ["술집", "요리주점", "안주", "이자카야", "호프", "맥주집", "심야식당", "야간영업"]
-            if sum(1 for nw in night_words if nw in text) >= 2:
-                return True
-
-            time_matches = re.findall(r"(\d{1,2}):(\d{2})\s*(?:~|-|에|오픈|영업|시작)", text)
-            for h_str, _ in time_matches:
-                h = int(h_str)
-                if 14 <= h <= 23:
-                    return True
-                if 9 <= h <= 13:
-                    return False
-
-            pm_matches = re.findall(r"오후\s*(\d{1,2})(?::(\d{2})|시)", text)
-            for match in pm_matches:
-                h = int(match[0])
-                if h < 12:
-                    h += 12
-                if h >= 14:
-                    return True
-                if h <= 13:
-                    return False
-    except Exception:
-        pass
-
-    return False
-
 def has_nearby_parking(lat: float, lng: float, place_name: str) -> bool:
     if any(k in place_name for k in ["주차", "타워", "빌딩", "스퀘어", "몰", "프라자", "센터"]):
         return True
@@ -600,26 +578,6 @@ def kakao_get_coordinates(query: str):
         pass
     return None, None
 
-@st.cache_data(ttl=86400, show_spinner=False)
-def kakao_reverse_geocode(lat: float, lng: float) -> str:
-    if not KAKAO_REST_KEY:
-        return "내 위치"
-    url = "https://dapi.kakao.com/v2/local/geo/coord2regioncode.json"
-    headers = {"Authorization": f"KakaoAK {KAKAO_REST_KEY}"}
-    params = {"x": str(lng), "y": str(lat)}
-    try:
-        res = requests.get(url, headers=headers, params=params, timeout=3.0)
-        if res.status_code == 200:
-            docs = res.json().get("documents", [])
-            for d in docs:
-                if d.get("region_type") == "H":
-                    return f"{d.get('region_2depth_name', '')} {d.get('region_3depth_name', '')}".strip()
-            if docs:
-                return docs[0].get("address_name", "내 위치")
-    except Exception:
-        pass
-    return "내 위치"
-
 def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: str, radius_km: float = 1.8, need_parking: bool = False):
     if not KAKAO_REST_KEY:
         return []
@@ -683,13 +641,7 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
             else:
                 candidates.sort(key=lambda x: x["priority_score"])
 
-            filtered_candidates = []
-            for cand in candidates:
-                if is_dinner_only_restaurant(cand["name"], cand["address"]):
-                    continue
-                filtered_candidates.append(cand)
-
-            return filtered_candidates
+            return candidates
     except Exception:
         pass
     return []
@@ -706,7 +658,7 @@ if not has_key:
     st.warning("⚠️ **API 키 설정 필요**: `.streamlit/secrets.toml` 또는 Cloud Secrets에 `KAKAO_REST_KEY`를 설정해주세요.")
 
 # ============================================================
-# [뷰 분기 1]: 룰렛 결과 화면 (상단 선택 창 숨김)
+# [뷰 분기 1]: 룰렛 결과 화면
 # ============================================================
 res = st.session_state.saved_result
 
@@ -809,12 +761,10 @@ if res is not None and res.get("places"):
     unique_map_key = f"map_{res['id']}_{int(top_pick['lat'] * 10000)}"
     st_folium(m, width="100%", height=380, key=unique_map_key, returned_objects=[])
 
-    # 지도 - 길찾기 간격: 절반 축소 (6px)
     st.markdown("<div style='height: 6px;'></div>", unsafe_allow_html=True)
     kakao_directions_url = f"https://map.kakao.com/link/to/{urllib.parse.quote(top_pick['name'])},{top_pick['lat']},{top_pick['lng']}"
     st.link_button(f"🧭 '{top_pick['name']}' 길찾기 바로가기", kakao_directions_url, use_container_width=True)
 
-    # 길찾기 - 다시 뽑기 간격: 절반 축소 (5px)
     st.markdown("<div style='height: 5px;'></div>", unsafe_allow_html=True)
     if st.button("🔄 다시 뽑기", use_container_width=True, key="btn_reset_bottom"):
         reset_to_selection()
@@ -1063,7 +1013,7 @@ else:
         # --- 6. 메인 룰렛 버튼 ---
         spin_clicked = st.button("🎲 오늘 점심 랜덤 룰렛 돌리기!", use_container_width=True, type="primary", key="btn_trigger_random")
 
-    # 버튼 클릭 시 즉시 롤링 및 자연스러운 결과 화면 안착 (깜빡임 없는 단일 파이프라인)
+    # 버튼 클릭 시 즉시 롤링 및 자연스러운 결과 화면 안착
     if spin_clicked:
         if not region.strip() and not st.session_state.gps_coords:
             show_location_warning()
@@ -1071,10 +1021,8 @@ else:
             show_cuisine_warning()
         else:
             region_warning_spot.empty()
-            # 1. 기존 선택 상자들을 화면에서 바로 비움
             main_view.empty()
 
-            # 2. 추천 조건 준비
             cu = st.session_state.selected_cuisine
             pr = st.session_state.selected_price
             price_map = {"1만원 이하": "low", "1~2만원": "mid", "2만원 이상": "high"}
@@ -1089,7 +1037,6 @@ else:
             if not selected_candidates:
                 selected_candidates = candidates_pool
 
-            # 3. 위치 좌표 및 검색 준비
             if st.session_state.gps_coords:
                 c_lat, c_lng = st.session_state.gps_coords
             else:
@@ -1100,13 +1047,12 @@ else:
                 time.sleep(1.5)
                 st.rerun()
 
-            # 4. 애니메이션 스팟 준비
             rolling_spot = st.empty()
             shuffled = selected_candidates.copy()
             random.shuffle(shuffled)
             need_parking_flag = (st.session_state.selected_parking == "식당 주차장 혹은 인근 주차장 있음")
 
-            # 롤링 애니메이션 전반부 (가속)
+            # 롤링 애니메이션 전반부
             for i in range(4):
                 temp = random.choice(selected_candidates)
                 rolling_spot.markdown(
@@ -1123,7 +1069,7 @@ else:
                 )
                 time.sleep(0.04)
 
-            # 실제 맛집 API 탐색
+            # 카카오맵 Local API 전용 탐색 (웹 크롤링 없음)
             final_menu = None
             places = []
             for m_name, m_emoji, m_kw, _, _ in shuffled[:6]:
@@ -1141,7 +1087,7 @@ else:
                     final_menu = (fallback_menu, "🍱")
                     places = fallback_found
 
-            # 롤링 애니메이션 후반부 (감속)
+            # 롤링 애니메이션 후반부
             for i in range(3):
                 temp = random.choice(selected_candidates)
                 rolling_spot.markdown(
@@ -1174,6 +1120,6 @@ else:
                 }
                 st.rerun()
             else:
-                st.warning(f"⚠️ 설정하신 조건 내에 만족하는 식당을 찾지 못했습니다. 반경을 넓히거나 가격/주차 옵션을 조정해 보세요!")
+                st.warning("⚠️ 설정하신 조건 내에 만족하는 식당을 찾지 못했습니다. 반경을 넓히거나 가격/주차 옵션을 조정해 보세요!")
                 time.sleep(1.8)
                 st.rerun()
