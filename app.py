@@ -163,7 +163,7 @@ st.markdown(
         }
     }
 
-    /* 룰렛 버튼 컨테이너: 상단 마진을 0으로 맞춰 안내 박스와 카드 사이 간격(14px) 통일 */
+    /* 룰렛 버튼 컨테이너: 상단 마진을 0으로 맞춤 */
     div.block-container > div[data-testid="stVerticalBlock"] > div.stElementContainer:not(div[data-testid="stVerticalBlockBorderWrapper"] *) div.stButton:has(button[key="btn_trigger_random"]) {
         margin-top: 0px !important;
         margin-bottom: 14px !important;
@@ -198,18 +198,20 @@ st.markdown(
         transform: scale(1.015) !important;
     }
 
-    /* 안내 경고 박스: 이전 카드와의 간격 및 버튼과의 간격을 14px로 일치 */
+    /* 안내 경고 박스 */
     .warning-box {
         display: flex;
         justify-content: center;
         align-items: center;
         gap: 8px;
         width: 100%;
-        height: 44px;
+        min-height: 44px;
+        padding: 6px 12px;
         margin: 0 0 14px 0 !important;
         background-color: #FFFDF7;
         border: 1.5px solid #F7D488;
         border-radius: 12px;
+        box-sizing: border-box;
     }
 
     @keyframes smoothFadeIn {
@@ -710,7 +712,7 @@ if res is not None and res.get("places"):
         f'<div class="fade-in-content" style="margin-bottom: 20px; padding: 22px 18px; '
         f'background: #FFFDF9; border-radius: 22px; border: 1.5px solid #F5D5B8; '
         f'box-shadow: 0 4px 18px rgba(245, 213, 184, 0.35); text-align: center;">'
-        f'<div style="display: center; justify-content: center; align-items: center; gap: 6px; margin-bottom: 8px; flex-wrap: wrap;">'
+        f'<div style="display: flex; justify-content: center; align-items: center; gap: 6px; margin-bottom: 8px; flex-wrap: wrap;">'
         f'<span style="font-size: 12.5px; color: #E86A3E; font-weight: 700;">⭐ 오늘의 1픽 추천 밥집</span>'
         f'<span style="font-size: 11px; background: {tag_bg}; color: {tag_color}; padding: 2px 7px; border-radius: 6px; font-weight: 700;">{tag_text}</span>'
         f'<span style="font-size: 11px; background: #F3ECE4; color: #6E5F55; padding: 2px 7px; border-radius: 6px; font-weight: 600;">{top_pick.get("category", "식당")}</span>'
@@ -1025,6 +1027,19 @@ else:
                 unsafe_allow_html=True
             )
 
+        def show_location_not_found_warning(target_region: str):
+            region_warning_spot.markdown(
+                f"""
+                <div class="warning-box">
+                    <span style="font-size: 16px;">⚠️</span>
+                    <span style="color: #6C4D0A; font-size: 13.5px; font-weight: 700;">
+                        '{target_region}' 위치를 찾지 못했습니다. 도로명/지번 주소 또는 주요 건물·역 이름을 확인해 주세요!
+                    </span>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
         # --- 6. 메인 룰렛 버튼 ---
         spin_clicked = st.button("🎲 오늘 점심 랜덤 룰렛 돌리기!", use_container_width=True, type="primary", key="btn_trigger_random")
 
@@ -1035,106 +1050,105 @@ else:
         elif not st.session_state.selected_cuisine:
             show_cuisine_warning()
         else:
-            region_warning_spot.empty()
-            main_view.empty()
-
-            cu = st.session_state.selected_cuisine
-            pr = st.session_state.selected_price
-            price_map = {"1만원 이하": "low", "1~2만원": "mid", "2만원 이상": "high"}
-            target_pr = price_map.get(pr, None)
-
-            if cu == "모두":
-                candidates_pool = [f for f in DEFAULT_FOODS if f[0] != "죽"]
-            else:
-                candidates_pool = [f for f in DEFAULT_FOODS if f[3] == cu and f[0] != "죽"]
-
-            selected_candidates = [f for f in candidates_pool if f[4] == target_pr] if target_pr else candidates_pool
-            if not selected_candidates:
-                selected_candidates = candidates_pool
-
+            # 1. 위치 좌표 확인 (오타 등으로 좌표를 찾지 못하면 노란 경고 박스로 안내)
             if st.session_state.gps_coords:
                 c_lat, c_lng = st.session_state.gps_coords
             else:
                 c_lat, c_lng = kakao_get_coordinates(region)
 
             if not c_lat:
-                st.error(f"⚠️ '{region}' 위치를 찾지 못했습니다. 도로명/지번 주소 또는 주요 건물·역 이름을 입력해 보세요.")
-                time.sleep(1.8)
-                st.rerun()
-
-            rolling_spot = st.empty()
-            shuffled = selected_candidates.copy()
-            random.shuffle(shuffled)
-            need_parking_flag = (st.session_state.selected_parking == "식당 주차장 혹은 인근 주차장 있음")
-
-            # 롤링 애니메이션 전반부
-            for i in range(4):
-                temp = random.choice(selected_candidates)
-                rolling_spot.markdown(
-                    f"""
-                    <div class="fade-in-content" style="text-align: center; margin: 14px 0 14px 0; padding: 22px 18px; 
-                                background: #FFFDF9; border-radius: 20px; border: 1.5px solid #F5D5B8; 
-                                box-shadow: 0 4px 16px rgba(245, 213, 184, 0.35);">
-                        <div style="font-size: 58px; line-height: 1; margin-bottom: 6px;">{temp[1]}</div>
-                        <div style="color: #2E1C10; font-size: 23px; font-weight: 800; margin: 4px 0;">{temp[0]}</div>
-                        <p style="color: #8C827A; font-size: 13px; margin: 0;">{radius_display_text} 기준 맛집 추첨 중... 🎲</p>
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
-                time.sleep(0.04)
-
-            # 카카오맵 Local API 전용 탐색
-            final_menu = None
-            places = []
-            for m_name, m_emoji, m_kw, _, _ in shuffled[:6]:
-                found = kakao_search_places(c_lat, c_lng, m_name, m_kw, radius_km=radius_km, need_parking=need_parking_flag)
-                if found:
-                    final_menu = (m_name, m_emoji)
-                    places = found
-                    break
-
-            if not places:
-                fallback_kw = "백반 가정식" if cu in ["한식", "모두"] else f"{cu} 전문점"
-                fallback_menu = "백반·가정식" if cu in ["한식", "모두"] else f"{cu} 밥집"
-                fallback_found = kakao_search_places(c_lat, c_lng, fallback_menu, fallback_kw, radius_km=radius_km, need_parking=need_parking_flag)
-                if fallback_found:
-                    final_menu = (fallback_menu, "🍱")
-                    places = fallback_found
-
-            # 롤링 애니메이션 후반부
-            for i in range(3):
-                temp = random.choice(selected_candidates)
-                rolling_spot.markdown(
-                    f"""
-                    <div style="text-align: center; margin: 14px 0 14px 0; padding: 22px 18px; 
-                                background: #FFFDF9; border-radius: 20px; border: 1.5px solid #F5D5B8; 
-                                box-shadow: 0 4px 16px rgba(245, 213, 184, 0.35);">
-                        <div style="font-size: 58px; line-height: 1; margin-bottom: 6px;">{temp[1]}</div>
-                        <div style="color: #2E1C10; font-size: 23px; font-weight: 800; margin: 4px 0;">{temp[0]}</div>
-                        <p style="color: #8C827A; font-size: 13px; margin: 0;">{radius_display_text} 기준 맛집 추첨 중... 🎲</p>
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
-                time.sleep(0.08 + (i * 0.05))
-
-            rolling_spot.empty()
-
-            if final_menu and places:
-                st.session_state.spin_count += 1
-                st.session_state.saved_result = {
-                    "menu": final_menu[0],
-                    "emoji": final_menu[1],
-                    "places": places,
-                    "region": region or "내 위치",
-                    "radius_text": radius_display_text,
-                    "center_lat": c_lat,
-                    "center_lng": c_lng,
-                    "id": st.session_state.spin_count
-                }
-                st.rerun()
+                show_location_not_found_warning(region)
             else:
-                st.warning("⚠️ 설정하신 조건 내에 만족하는 식당을 찾지 못했습니다. 반경을 넓히거나 가격/주차 옵션을 조정해 보세요!")
-                time.sleep(1.8)
-                st.rerun()
+                region_warning_spot.empty()
+                main_view.empty()
+
+                cu = st.session_state.selected_cuisine
+                pr = st.session_state.selected_price
+                price_map = {"1만원 이하": "low", "1~2만원": "mid", "2만원 이상": "high"}
+                target_pr = price_map.get(pr, None)
+
+                if cu == "모두":
+                    candidates_pool = [f for f in DEFAULT_FOODS if f[0] != "죽"]
+                else:
+                    candidates_pool = [f for f in DEFAULT_FOODS if f[3] == cu and f[0] != "죽"]
+
+                selected_candidates = [f for f in candidates_pool if f[4] == target_pr] if target_pr else candidates_pool
+                if not selected_candidates:
+                    selected_candidates = candidates_pool
+
+                rolling_spot = st.empty()
+                shuffled = selected_candidates.copy()
+                random.shuffle(shuffled)
+                need_parking_flag = (st.session_state.selected_parking == "식당 주차장 혹은 인근 주차장 있음")
+
+                # 롤링 애니메이션 전반부
+                for i in range(4):
+                    temp = random.choice(selected_candidates)
+                    rolling_spot.markdown(
+                        f"""
+                        <div class="fade-in-content" style="text-align: center; margin: 14px 0 14px 0; padding: 22px 18px; 
+                                    background: #FFFDF9; border-radius: 20px; border: 1.5px solid #F5D5B8; 
+                                    box-shadow: 0 4px 16px rgba(245, 213, 184, 0.35);">
+                            <div style="font-size: 58px; line-height: 1; margin-bottom: 6px;">{temp[1]}</div>
+                            <div style="color: #2E1C10; font-size: 23px; font-weight: 800; margin: 4px 0;">{temp[0]}</div>
+                            <p style="color: #8C827A; font-size: 13px; margin: 0;">{radius_display_text} 기준 맛집 추첨 중... 🎲</p>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+                    time.sleep(0.04)
+
+                # 카카오맵 Local API 전용 탐색
+                final_menu = None
+                places = []
+                for m_name, m_emoji, m_kw, _, _ in shuffled[:6]:
+                    found = kakao_search_places(c_lat, c_lng, m_name, m_kw, radius_km=radius_km, need_parking=need_parking_flag)
+                    if found:
+                        final_menu = (m_name, m_emoji)
+                        places = found
+                        break
+
+                if not places:
+                    fallback_kw = "백반 가정식" if cu in ["한식", "모두"] else f"{cu} 전문점"
+                    fallback_menu = "백반·가정식" if cu in ["한식", "모두"] else f"{cu} 밥집"
+                    fallback_found = kakao_search_places(c_lat, c_lng, fallback_menu, fallback_kw, radius_km=radius_km, need_parking=need_parking_flag)
+                    if fallback_found:
+                        final_menu = (fallback_menu, "🍱")
+                        places = fallback_found
+
+                # 롤링 애니메이션 후반부
+                for i in range(3):
+                    temp = random.choice(selected_candidates)
+                    rolling_spot.markdown(
+                        f"""
+                        <div style="text-align: center; margin: 14px 0 14px 0; padding: 22px 18px; 
+                                    background: #FFFDF9; border-radius: 20px; border: 1.5px solid #F5D5B8; 
+                                    box-shadow: 0 4px 16px rgba(245, 213, 184, 0.35);">
+                            <div style="font-size: 58px; line-height: 1; margin-bottom: 6px;">{temp[1]}</div>
+                            <div style="color: #2E1C10; font-size: 23px; font-weight: 800; margin: 4px 0;">{temp[0]}</div>
+                            <p style="color: #8C827A; font-size: 13px; margin: 0;">{radius_display_text} 기준 맛집 추첨 중... 🎲</p>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+                    time.sleep(0.08 + (i * 0.05))
+
+                rolling_spot.empty()
+
+                if final_menu and places:
+                    st.session_state.spin_count += 1
+                    st.session_state.saved_result = {
+                        "menu": final_menu[0],
+                        "emoji": final_menu[1],
+                        "places": places,
+                        "region": region or "내 위치",
+                        "radius_text": radius_display_text,
+                        "center_lat": c_lat,
+                        "center_lng": c_lng,
+                        "id": st.session_state.spin_count
+                    }
+                    st.rerun()
+                else:
+                    st.warning("⚠️ 설정하신 조건 내에 만족하는 식당을 찾지 못했습니다. 반경을 넓히거나 가격/주차 옵션을 조정해 보세요!")
+                    time.sleep(1.8)
+                    st.rerun()
