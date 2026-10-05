@@ -164,6 +164,7 @@ st.markdown(
         }
     }
 
+    /* 룰렛 버튼 컨테이너: 상단 마진을 0으로 맞춤 */
     div.block-container > div[data-testid="stVerticalBlock"] > div.stElementContainer:not(div[data-testid="stVerticalBlockBorderWrapper"] *) div.stButton:has(button[key="btn_trigger_random"]) {
         margin-top: 0px !important;
         margin-bottom: 14px !important;
@@ -198,6 +199,7 @@ st.markdown(
         transform: scale(1.015) !important;
     }
 
+    /* 안내 경고 박스 */
     .warning-box {
         display: flex;
         justify-content: center;
@@ -308,18 +310,69 @@ if qp.get("action") == "gps" and "lat" in qp and "lng" in qp:
         pass
     st.query_params.clear()
 
-# --- 최소한의 유흥/성인 업소 원천 차단 목록 ---
-HARD_EXCLUDED_CATEGORIES = [
-    "룸살롱", "단란주점", "유흥주점", "나이트클럽", "성인용품", "마사지", "안마", "노래방", "가라오케"
-]
-CAFE_EXCLUDED_CATEGORIES = [
-    "카페", "디저트", "제과,베이커리", "떡,한과", "도넛", "아이스크림"
-]
-SUSPECT_NIGHT_KEYWORDS = [
-    "실내포차", "소주방", "룸호프", "노가리", "맥주창고"
+# ==============================================================================
+# [원상 복구]: 주점/술집/야식 원천 차단 카테고리 및 상호명 블랙리스트 키워드
+# ==============================================================================
+EXCLUDED_CATEGORIES = [
+    "술집", "주점", "호프", "포차", "이자카야", "바(BAR)", "요리주점", "와인바",
+    "칵테일바", "민속주점", "맥주", "룸살롱", "단란주점", "유흥주점", "라이브카페", 
+    "나이트클럽", "오뎅바", "꼬치구이전문점", "선술집", "해물주점", "실내포차",
+    "포장마차", "와인", "위스키", "선술", "감성주점", "카페", "디저트", "제과,베이커리",
+    "실비집", "대포집", "맥줏집"
 ]
 
-# --- 단품 대표 메뉴 전문점 엄격 매칭 규칙 (부메뉴 식당 필터링용) ---
+EXCLUDED_NAME_KEYWORDS = [
+    "포차", "주점", "호프", "이자카야", "술집", "맥주", "와인", "비어",
+    "BEER", "노래방", "포장마차", "야시장", "소주", "오뎅바", "소주방",
+    "막걸리", "동동주", "생맥주", "달빛", "심야", "야식", "올나잇", "주막", "동동",
+    "탁주", "양조장", "브루어리", "BREW", "탭룸", "살롱", "가라오케", "선술집",
+    "대포", "대포집", "통닭발", "껍데기", "연탄구이", "원조골뱅이", "실비집", "실비"
+]
+
+JEON_KEYWORDS = [
+    "파전", "빈대떡", "부침개", "지짐이", "전이야기", "전나라", "전마을", 
+    "전선생", "종로전", "원조전", "전골목", "주막", "전사랑", "전세상"
+]
+
+NON_LUNCH_CATEGORIES = [
+    "육류,고기구이", "삼겹살", "곱창,막창", "양꼬치", "조개구이",
+    "치킨", "닭요리 > 치킨", "닭꼬치", "꼬치구이", "전,빈대떡", "닭발"
+]
+
+MEAT_SHOP_KEYWORDS = [
+    "축산", "정육", "식육", "마장", "화로", "연탄", "솥뚜껑",
+    "뒷고기", "주먹고기", "생고기", "생삼겹", "대패", "삼겹", "오겹",
+    "곱창", "막창", "대창", "특양", "양꼬치", "양갈비", "갈매기", "뽈살",
+    "야키니쿠", "우삼겹", "냉삼", "생갈비", "통닭발", "불닭발", "조개구이",
+    "장어구이", "야키토리", "쿠시카츠", "닭강정"
+]
+
+EVENING_RAW_FISH_KEYWORDS = [
+    "횟집", "회센타", "회센터", "수산", "회타운", "활어", "선어", "막회", "숙성회",
+    "물회마차", "포차회", "바다마차", "해물포차", "해산물포차", "참치정육점"
+]
+
+VIETNAMESE_NOODLE_KEYWORDS = [
+    "쌀국수", "포(PHO)", "PHO", "분짜", "반미", "포보", "미분당", "에머이",
+    "사이공", "반포식스", "포메인", "포베이", "까몬", "더포", "낭만쌀국수",
+    "아시아문", "팟타이", "포앤", "반쎄오", "월남쌈"
+]
+
+MULTI_MENU_FRANCHISES = [
+    "국수나무", "미소야", "역전우동", "한솥", "도시락",
+    "김밥천국", "고봉민", "김가네", "얌샘", "싸다김밥", "종로김밥", 
+    "선비꼬마김밥", "마녀김밥", "바르다김선생", "밥버거", "토마토김밥",
+    "분식천국", "나드리김밥", "소풍김밥"
+]
+
+# 스테이크 검색 시 원천 배제할 분식/도시락/돈까스 브랜드
+STEAK_EXCLUDED_KEYWORDS = [
+    "한솥", "도시락", "김밥", "천국", "돈까스", "돈가스", "카츠", "가츠", "카쯔",
+    "함박", "함바그", "버거", "맥도날드", "롯데리아", "맘스터치", "버거킹", "토마토김밥",
+    "얌샘", "고봉민", "싸다김밥", "분식", "포장마차", "국수나무", "역전우동"
+]
+
+# --- 단품 대표 메뉴 전문점 엄격 매칭 규칙 ---
 STRICT_SPECIALTY_KEYWORDS = {
     "막국수": {
         "required": ["막국수"],
@@ -363,7 +416,7 @@ STRICT_SPECIALTY_KEYWORDS = {
     },
     "타코": {
         "required": ["타코", "TACO", "멕시칸", "멕시코"],
-        "forbidden": ["호프", "치킨"]
+        "forbidden": ["치킨"]
     },
     "인도커리": {
         "required": ["인도", "커리", "인디아", "난", "CURRY"],
@@ -474,7 +527,7 @@ def fetch_google_place_details(place_name: str, lat: float, lng: float) -> dict:
         "is_lunch_open": None,
         "open_now": None,
         "today_hours_text": "",
-        "price_level": None,         # 구글 priceLevel 원본 문자열
+        "price_level": None,
         "price_level_text": "",
         "parking_info": "",
         "primary_type": "",
@@ -566,6 +619,7 @@ def fetch_google_place_details(place_name: str, lat: float, lng: float) -> dict:
                         earliest_open_hour = min(per.get("open", {}).get("hour", 0) for per in today_periods)
                         latest_close_hour = max(per.get("close", {}).get("hour", 24) for per in today_periods if per.get("close"))
 
+                        # 14시 이전에 문을 열고 12시 이후까지 영업해야 점심 영업 인정
                         if earliest_open_hour <= 13 and latest_close_hour >= 12:
                             default_res["is_lunch_open"] = True
                         else:
@@ -578,61 +632,79 @@ def fetch_google_place_details(place_name: str, lat: float, lng: float) -> dict:
 
     return default_res
 
+# ==============================================================================
+# [복구 및 강화]: 주점 배제 + 전문점 엄격 필터링 + 가격대 검증 통합 판별기
+# ==============================================================================
 def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_name: str, g_details: dict, selected_price_code: str) -> bool:
-    """
-    1. 유흥/성인업소 차단
-    2. 전문점 엄격 필터링 (메뉴에 조금 껴있는 타 업종 식당 차단)
-    3. 구글 플레이스 가격대 교차 검증 (금액대 옵션 준수)
-    4. 구글 플레이스 점심 영업 시간 확인
-    """
     clean_name = place_name.replace(" ", "").upper()
     cat_full = category_name.replace(" ", "")
 
-    # 1. 유흥/성인업소 차단
-    if any(hard in cat_full for hard in HARD_EXCLUDED_CATEGORIES):
-        return False
-    if any(hard in clean_name for hard in ["룸살롱", "단란주점", "유흥주점", "나이트클럽"]):
+    # 1. 카카오 카테고리 기반 주점/술집/유흥업소 원천 배제
+    if any(ex in cat_full for ex in EXCLUDED_CATEGORIES):
         return False
 
-    # 2. 식사 미제공 카페/디저트 차단
-    if any(cafe in cat_full for cafe in CAFE_EXCLUDED_CATEGORIES):
+    # 2. 상호명 내 술집/주점/호프/포차/소주방 키워드 원천 배제
+    # (타코 전문점의 경우 멕시칸/타코가 확실히 들어가면 일부 펍 명칭 유연 처리)
+    if menu_name == "타코" and any(k in clean_name for k in ["타코", "TACO", "멕시칸"]):
+        if any(bad in clean_name for bad in ["노래방", "나이트클럽", "룸살롱", "단란주점", "유흥주점", "소주방", "호프"]):
+            return False
+    else:
+        if any(bad in clean_name for bad in [k.upper() for k in EXCLUDED_NAME_KEYWORDS]):
+            return False
+
+    # 3. 전/빈대떡 주막류 및 구이/정육점/야식류 배제
+    if any(jeon in clean_name for jeon in JEON_KEYWORDS):
+        return False
+    if any(c in cat_full for c in ["전,빈대떡", "빈대떡"]):
         return False
 
-    # 3. [전문점 엄격 필터링]
-    # 대표 단품 요리의 경우 상호명 및 업종 카테고리에 전문 키워드가 반드시 있어야 함
+    if any(non in cat_full for non in NON_LUNCH_CATEGORIES):
+        if not (menu_name == "닭갈비" and "닭요리" in cat_full):
+            return False
+
+    if "굽자" not in place_name:
+        if "구이" in clean_name and menu_name != "생선구이":
+            return False
+        if any(bad in clean_name for bad in [k.upper() for k in MEAT_SHOP_KEYWORDS]):
+            return False
+
+    # 4. 저녁 횟집 배제
+    if menu_name not in ["초밥", "회덮밥", "생선구이"]:
+        if any(fish in clean_name for fish in EVENING_RAW_FISH_KEYWORDS):
+            return False
+
+    # 5. [전문점 엄격 필터링]: 단품 요리 시 타 업종 식당 배제
     if menu_name in STRICT_SPECIALTY_KEYWORDS:
         rule = STRICT_SPECIALTY_KEYWORDS[menu_name]
         has_required = any(req.upper() in clean_name or req.upper() in cat_full for req in rule["required"])
         if not has_required:
             return False
         
-        # 금지 키워드가 메인으로 들어간 식당(예: 막국수 시켰는데 돼지국밥집인 경우) 차단
         has_forbidden = any(forbid.upper() in clean_name for forbid in rule["forbidden"])
         if has_forbidden:
             return False
 
-    # 4. [금액대 엄격 검증]
-    # 구글 플레이스에 가격대 정보가 등록되어 있는 경우 사용자 선택과 비교
+    # 6. [스테이크 전용 엄격 배제]
+    if menu_name == "스테이크":
+        if any(bad in clean_name for bad in STEAK_EXCLUDED_KEYWORDS):
+            return False
+        if any(bad_cat in cat_full for bad_cat in ["도시락", "분식", "돈가스", "돈까스", "패스트푸드"]):
+            return False
+
+    # 7. [구글 플레이스 영업시간 데이터가 있는 경우]: 14시 이후 오픈 매장 배제
+    if g_details.get("found") and g_details.get("is_lunch_open") is not None:
+        if not g_details["is_lunch_open"]:
+            return False
+
+    # 8. [금액대 엄격 검증]: 구글 가격 레벨과 사용자 설정 비교
     if selected_price_code and g_details.get("price_level"):
         pl = g_details["price_level"]
         if selected_price_code == "low":
-            # 1만원 이하 선택 시 비싼 레스토랑(MODERATE 이상) 차단
             if pl in ["PRICE_LEVEL_MODERATE", "PRICE_LEVEL_EXPENSIVE", "PRICE_LEVEL_VERY_EXPENSIVE"]:
                 return False
         elif selected_price_code == "high":
-            # 2만원 이상 선택 시 저렴한 분식/패스트푸드(INEXPENSIVE) 차단
             if pl == "PRICE_LEVEL_INEXPENSIVE":
                 return False
-
-    # 5. Google Places 영업시간 데이터 기준 점심 운영 여부 확인
-    if g_details.get("found") and g_details.get("is_lunch_open") is not None:
-        return g_details["is_lunch_open"]
-
-    # 6. 구글 데이터 부재 시 보수적 야간 키워드 필터링
-    if any(bad in clean_name for bad in SUSPECT_NIGHT_KEYWORDS):
-        return False
-    if any(c in cat_full for c in ["유흥주점", "룸살롱", "단란주점"]):
-        return False
 
     return True
 
@@ -769,7 +841,7 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
 
                 g_details = fetch_google_place_details(p_name, p_lat, p_lng)
 
-                # 전문점 엄격 필터링 및 가격대 일치 검증
+                # 복구된 주점 배제 + 전문점 엄격 필터링 + 가격대 검증 적용
                 if not is_valid_specialized_restaurant(menu_name, p_name, cat_name, g_details, selected_price_code):
                     continue
 
@@ -1240,7 +1312,6 @@ else:
                 # 가격대 필터링 엄격 준수
                 if target_pr:
                     selected_candidates = [f for f in candidates_pool if f[4] == target_pr]
-                    # 해당 카테고리에 지정한 가격대 메뉴가 없을 경우를 위해 카테고리 전체로 확장
                     if not selected_candidates:
                         selected_candidates = candidates_pool
                 else:
@@ -1273,7 +1344,7 @@ else:
                     )
                     time.sleep(0.06)
 
-                # 전문점 엄격 필터링 및 가격대 일치 검증 탐색
+                # 복구된 주점 배제 + 전문점 엄격 필터링 + 가격대 검증 적용 탐색
                 final_menu = None
                 places = []
                 for m_name, m_emoji, m_kw, _, _ in shuffled[:6]:
