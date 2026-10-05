@@ -243,7 +243,7 @@ if "custom_radius_val" not in st.session_state:
 if "selected_cuisine" not in st.session_state:
     st.session_state.selected_cuisine = None
 if "selected_price" not in st.session_state:
-    st.session_state.selected_price = "금액 상관 없음"
+    st.session_state.selected_price = "상관없음"
 if "selected_parking" not in st.session_state:
     st.session_state.selected_parking = "주차 불필요"
 if "saved_result" not in st.session_state:
@@ -369,6 +369,7 @@ STRICT_SPECIALTY_NAME_RULES = {
     "육개장": ["육개장", "육대장", "혜장국"]
 }
 
+# 퓨전식 메뉴 제외
 DEFAULT_FOODS = [
     ("김치찌개", "🥘", "김치찌개 전문점", "한식", "low"),
     ("된장찌개", "🍲", "된장찌개 백반", "한식", "low"),
@@ -436,9 +437,7 @@ DEFAULT_FOODS = [
     ("나시고랭", "🍳", "인도네시아 나시고랭", "동남아식", "mid"),
     ("인도커리", "🍛", "인도커리 난 전문점", "인도식", "mid"),
     ("타코", "🌮", "멕시칸 타코", "멕시코식", "mid"),
-    ("브리또", "🌯", "멕시칸 브리또", "멕시코식", "low"),
-    ("포케", "🥗", "하와이안 포케", "퓨전식", "mid"),
-    ("퓨전파스타", "🍝", "퓨전 양식당", "퓨전식", "mid")
+    ("브리또", "🌯", "멕시칸 브리또", "멕시코식", "low")
 ]
 
 def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_name: str) -> bool:
@@ -899,7 +898,7 @@ else:
             radius_km = 1.8
             radius_display_text = "지역 인근"
 
-        # --- 3. 음식 종류 선택 ---
+        # --- 3. 음식 종류 선택 (깔끔한 4x2 그리드 구성) ---
         with st.container(border=True):
             st.markdown("<div class='section-title'>🍽️ 음식 종류</div>", unsafe_allow_html=True)
 
@@ -944,15 +943,10 @@ else:
                         st.session_state.selected_cuisine = "멕시코식"
                         st.rerun()
             with cu8:
-                if st.button("퓨전식", key="cbtn_fusion", type="primary" if current_cuisine == "퓨전식" else "secondary", use_container_width=True):
-                    if st.session_state.selected_cuisine != "퓨전식":
-                        st.session_state.selected_cuisine = "퓨전식"
+                if st.button("상관없음", key="cbtn_any", type="primary" if current_cuisine == "상관없음" else "secondary", use_container_width=True):
+                    if st.session_state.selected_cuisine != "상관없음":
+                        st.session_state.selected_cuisine = "상관없음"
                         st.rerun()
-
-            if st.button("모두 (종류 구분 없음)", key="cbtn_all", type="primary" if current_cuisine == "모두" else "secondary", use_container_width=True):
-                if st.session_state.selected_cuisine != "모두":
-                    st.session_state.selected_cuisine = "모두"
-                    st.rerun()
 
         # --- 4. 음식 가격 선택 ---
         with st.container(border=True):
@@ -977,9 +971,9 @@ else:
                         st.session_state.selected_price = "2만원 이상"
                         st.rerun()
             with p4:
-                if st.button("금액 상관 없음", key="pbtn_any", type="primary" if current_price == "금액 상관 없음" else "secondary", use_container_width=True):
-                    if st.session_state.selected_price != "금액 상관 없음":
-                        st.session_state.selected_price = "금액 상관 없음"
+                if st.button("상관없음", key="pbtn_any", type="primary" if current_price == "상관없음" else "secondary", use_container_width=True):
+                    if st.session_state.selected_price != "상관없음":
+                        st.session_state.selected_price = "상관없음"
                         st.rerun()
 
         # --- 5. 주차 가능 여부 선택 ---
@@ -1005,7 +999,7 @@ else:
             region_warning_spot.markdown(
                 """
                 <div class="warning-box">
-                    <span style="font-size: 16px;">⚠️</span>
+                    <span style="font-size: 16px;">⚠️️</span>
                     <span style="color: #6C4D0A; font-size: 13.5px; font-weight: 700;">
                         위치를 입력하거나 '내 위치 찾기'를 눌러주세요!
                     </span>
@@ -1050,7 +1044,7 @@ else:
         elif not st.session_state.selected_cuisine:
             show_cuisine_warning()
         else:
-            # 1. 위치 좌표 확인 (오타 등으로 좌표를 찾지 못하면 노란 경고 박스로 안내)
+            # 1. 위치 좌표 확인
             if st.session_state.gps_coords:
                 c_lat, c_lng = st.session_state.gps_coords
             else:
@@ -1067,7 +1061,7 @@ else:
                 price_map = {"1만원 이하": "low", "1~2만원": "mid", "2만원 이상": "high"}
                 target_pr = price_map.get(pr, None)
 
-                if cu == "모두":
+                if cu == "상관없음":
                     candidates_pool = [f for f in DEFAULT_FOODS if f[0] != "죽"]
                 else:
                     candidates_pool = [f for f in DEFAULT_FOODS if f[3] == cu and f[0] != "죽"]
@@ -1109,8 +1103,8 @@ else:
                         break
 
                 if not places:
-                    fallback_kw = "백반 가정식" if cu in ["한식", "모두"] else f"{cu} 전문점"
-                    fallback_menu = "백반·가정식" if cu in ["한식", "모두"] else f"{cu} 밥집"
+                    fallback_kw = "백반 가정식" if cu in ["한식", "상관없음"] else f"{cu} 전문점"
+                    fallback_menu = "백반·가정식" if cu in ["한식", "상관없음"] else f"{cu} 밥집"
                     fallback_found = kakao_search_places(c_lat, c_lng, fallback_menu, fallback_kw, radius_km=radius_km, need_parking=need_parking_flag)
                     if fallback_found:
                         final_menu = (fallback_menu, "🍱")
