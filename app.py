@@ -402,7 +402,7 @@ DEFAULT_FOODS = [
     ("막국수", "🥢", "막국수 전문점", "한식", "low"),
     ("냉면", "🧊", "함흥 평양 냉면 전문점", "한식", "mid"),
     ("잔치국수", "🍜", "잔치국수 멸치국수 전문점", "한식", "low"),
-    ("비빔국수", "🌶️️", "비빔국수 전문점", "한식", "low"),
+    ("비빔국수", "🌶", "비빔국수 전문점", "한식", "low"),
     ("죽", "🥣", "죽 전문점", "한식", "low"),
     ("떡볶이", "🍢", "떡볶이 전문점", "한식", "low"),
     ("김밥", "🍙", "김밥 전문점", "한식", "low"),
@@ -460,14 +460,12 @@ def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_na
         if any(bad in clean_name for bad in [k.upper() for k in MEAT_SHOP_KEYWORDS]):
             return False
 
-    # 닭갈비 엄격 검증
     if menu_name == "닭갈비":
         if "닭갈비" not in clean_name:
             return False
         if any(bad_chick in clean_name for bad_chick in ["치킨", "통닭", "찜닭", "삼계탕", "닭한마리", "닭발", "닭도리", "닭볶음"]):
             return False
 
-    # 수제비 엄격 검증 (단순 사리 취급점 배제)
     if menu_name == "수제비":
         if "수제비" not in clean_name:
             return False
@@ -561,21 +559,36 @@ def calculate_priority(place: dict, menu_name: str, has_parking: bool = False, n
 
     return score
 
+# --- 주소 및 키워드 복합 검색 좌표 추출 함수 ---
 @st.cache_data(ttl=86400, show_spinner=False)
 def kakao_get_coordinates(query: str):
-    if not KAKAO_REST_KEY:
+    if not KAKAO_REST_KEY or not query.strip():
         return None, None
-    url = "https://dapi.kakao.com/v2/local/search/keyword.json"
     headers = {"Authorization": f"KakaoAK {KAKAO_REST_KEY}"}
-    params = {"query": query.strip(), "size": 1}
+    clean_q = query.strip()
+
+    # 1. 주소 검색 API 우선 호출 (도로명 / 지번 주소 지원)
+    addr_url = "https://dapi.kakao.com/v2/local/search/address.json"
     try:
-        res = requests.get(url, headers=headers, params=params, timeout=3.0)
+        res = requests.get(addr_url, headers=headers, params={"query": clean_q, "size": 1}, timeout=3.0)
         if res.status_code == 200:
             docs = res.json().get("documents", [])
             if docs:
                 return float(docs[0]["y"]), float(docs[0]["x"])
     except Exception:
         pass
+
+    # 2. 키워드 검색 API 폴백 (지하철역, 상호, 랜드마크 등)
+    kw_url = "https://dapi.kakao.com/v2/local/search/keyword.json"
+    try:
+        res = requests.get(kw_url, headers=headers, params={"query": clean_q, "size": 1}, timeout=3.0)
+        if res.status_code == 200:
+            docs = res.json().get("documents", [])
+            if docs:
+                return float(docs[0]["y"]), float(docs[0]["x"])
+    except Exception:
+        pass
+
     return None, None
 
 def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: str, radius_km: float = 1.8, need_parking: bool = False):
@@ -785,7 +798,7 @@ else:
                 region = st.text_input(
                     "위치입력",
                     value=st.session_state.region_input_val,
-                    placeholder="예시) 역삼역, 판교 테크노밸리, 홍대입구",
+                    placeholder="예시) 테헤란로 152, 역삼동 737, 홍대입구역",
                     key="main_region_input",
                     label_visibility="collapsed"
                 )
@@ -1043,8 +1056,8 @@ else:
                 c_lat, c_lng = kakao_get_coordinates(region)
 
             if not c_lat:
-                st.error(f"⚠️ '{region}' 위치를 찾지 못했습니다. 주요 건물이나 역 이름을 입력해 보세요.")
-                time.sleep(1.5)
+                st.error(f"⚠️ '{region}' 위치를 찾지 못했습니다. 도로명/지번 주소 또는 주요 건물·역 이름을 입력해 보세요.")
+                time.sleep(1.8)
                 st.rerun()
 
             rolling_spot = st.empty()
@@ -1069,7 +1082,7 @@ else:
                 )
                 time.sleep(0.04)
 
-            # 카카오맵 Local API 전용 탐색 (웹 크롤링 없음)
+            # 카카오맵 Local API 전용 탐색
             final_menu = None
             places = []
             for m_name, m_emoji, m_kw, _, _ in shuffled[:6]:
