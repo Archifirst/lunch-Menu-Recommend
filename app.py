@@ -164,6 +164,7 @@ st.markdown(
         }
     }
 
+    /* 룰렛 버튼 컨테이너: 상단 마진을 0으로 맞춤 */
     div.block-container > div[data-testid="stVerticalBlock"] > div.stElementContainer:not(div[data-testid="stVerticalBlockBorderWrapper"] *) div.stButton:has(button[key="btn_trigger_random"]) {
         margin-top: 0px !important;
         margin-bottom: 14px !important;
@@ -198,6 +199,7 @@ st.markdown(
         transform: scale(1.015) !important;
     }
 
+    /* 안내 경고 박스 */
     .warning-box {
         display: flex;
         justify-content: center;
@@ -213,6 +215,7 @@ st.markdown(
         box-sizing: border-box;
     }
 
+    /* [결과 화면] 지도 하단 여백 및 버튼 간격 축소 */
     div.stElementContainer:has(iframe) {
         margin-bottom: -4px !important;
     }
@@ -319,9 +322,16 @@ SUSPECT_NIGHT_KEYWORDS = [
     "실내포차", "소주방", "룸호프", "노가리", "맥주창고"
 ]
 
+# --- 스테이크 검색 시 원천 배제할 분식/도시락/돈까스/패스트푸드 브랜드 및 키워드 ---
+STEAK_EXCLUDED_KEYWORDS = [
+    "한솥", "도시락", "김밥", "천국", "돈까스", "돈가스", "카츠", "가츠", "카쯔",
+    "함박", "함바그", "버거", "맥도날드", "롯데리아", "맘스터치", "버거킹", "토마토김밥",
+    "얌샘", "고봉민", "싸다김밥", "분식", "포장마차", "국수나무", "역전우동"
+]
+
 # --- 카카오 검색 적중률을 극대화한 메뉴 및 키워드 데이터셋 ---
 DEFAULT_FOODS = [
-    # 한식 (가격대별 다양성 확보)
+    # 한식
     ("김치찌개", "🥘", "김치찌개", "한식", "low"),
     ("된장찌개", "🍲", "된장찌개", "한식", "low"),
     ("순두부찌개", "🥚", "순두부찌개", "한식", "low"),
@@ -384,11 +394,11 @@ DEFAULT_FOODS = [
     ("일본카레", "🍛", "카레", "일식", "low"),
     ("오마카세", "🍣", "스시", "일식", "high"),
 
-    # 양식
+    # 양식 (스테이크 검색 쿼리를 전문 레스토랑 중심 키워드로 정교화)
     ("파스타", "🍝", "파스타", "양식", "mid"),
     ("피자", "🍕", "화덕피자", "양식", "mid"),
     ("수제버거", "🍔", "수제버거", "양식", "mid"),
-    ("스테이크", "🥩", "스테이크", "양식", "high"),
+    ("스테이크", "🥩", "스테이크 전문점", "양식", "high"),
     ("리조또", "🧀", "이탈리안", "양식", "mid"),
     ("샌드위치", "🥪", "샌드위치", "양식", "low"),
     ("브런치", "🥞", "브런치", "양식", "mid"),
@@ -524,23 +534,41 @@ def fetch_google_place_details(place_name: str, lat: float, lng: float) -> dict:
 
     return default_res
 
-def is_valid_lunch_restaurant_smart(place_name: str, category_name: str, g_details: dict) -> bool:
+def is_valid_lunch_restaurant_smart(menu_name: str, place_name: str, category_name: str, g_details: dict) -> bool:
     clean_name = place_name.replace(" ", "").upper()
     cat_full = category_name.replace(" ", "")
 
+    # 1. 유흥/성인업소 차단
     if any(hard in cat_full for hard in HARD_EXCLUDED_CATEGORIES):
         return False
     if any(hard in clean_name for hard in ["룸살롱", "단란주점", "유흥주점", "나이트클럽"]):
         return False
 
+    # 2. 비식사 카페/디저트 차단
     if any(cafe in cat_full for cafe in CAFE_EXCLUDED_CATEGORIES):
         return False
 
-    # Google Places 영업시간 데이터가 있는 경우: 점심 영업 여부를 최우선 판별
+    # 3. [스테이크 전문점 엄격 필터링]
+    if menu_name == "스테이크":
+        # 도시락, 돈까스, 분식, 햄버거 등 부메뉴로 취급하는 업태 원천 배제
+        if any(bad in clean_name for bad in STEAK_EXCLUDED_KEYWORDS):
+            return False
+        if any(bad_cat in cat_full for bad_cat in ["도시락", "분식", "돈가스", "돈까스", "패스트푸드"]):
+            return False
+        
+        # 진짜 스테이크 전문 레스토랑인지 검증 (상호명 또는 카테고리에 스테이크/양식/레스토랑/이탈리안 명시 필수)
+        is_real_steakhouse = (
+            any(k in clean_name for k in ["스테이크", "STEAK", "립하우스", "그릴", "OUTBACK", "아웃백", "빕스", "VIPS"]) or
+            any(k in cat_full for k in ["스테이크,립", "패밀리레스토랑", "이탈리안", "양식"])
+        )
+        if not is_real_steakhouse:
+            return False
+
+    # 4. Google Places 영업시간 데이터 기준 (점심 운영 여부 최우선)
     if g_details.get("found") and g_details.get("is_lunch_open") is not None:
         return g_details["is_lunch_open"]
 
-    # Google 영업시간이 없을 때 보수적 야간 키워드 필터링
+    # 5. Google 영업시간이 없을 때 보수적 야간 키워드 필터링
     if any(bad in clean_name for bad in SUSPECT_NIGHT_KEYWORDS):
         return False
     if any(c in cat_full for c in ["유흥주점", "룸살롱", "단란주점"]):
@@ -628,6 +656,10 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
 
     # 카테고리별 스마트 대체 검색어 사전
     CUISINE_FALLBACK_MAP = {
+        # 양식 (스테이크는 패밀리레스토랑/스테이크하우스로 정교화)
+        "스테이크": ["스테이크하우스", "스테이크 레스토랑", "패밀리레스토랑"],
+        "리조또": ["이탈리안", "파스타", "양식당"],
+        "브런치": ["브런치", "양식", "카페거리"],
         # 멕시코식
         "타코": ["타코", "멕시칸", "멕시코요리"],
         "부리또": ["부리또", "브리또", "멕시칸"],
@@ -649,10 +681,7 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
         "가츠동": ["돈부리", "일식덮밥", "일식"],
         "텐동": ["텐동", "일식덮밥", "일식당"],
         "일본라멘": ["라멘", "일본라멘", "일식당"],
-        "오마카세": ["스시", "초밥", "일식당"],
-        # 양식
-        "리조또": ["이탈리안", "파스타", "양식당"],
-        "브런치": ["브런치", "양식", "카페거리"]
+        "오마카세": ["스시", "초밥", "일식당"]
     }
 
     params = {
@@ -688,7 +717,8 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
 
                 g_details = fetch_google_place_details(p_name, p_lat, p_lng)
 
-                if not is_valid_lunch_restaurant_smart(p_name, cat_name, g_details):
+                # 스테이크 전문점 엄격 필터링 및 스마트 점심 판별 적용
+                if not is_valid_lunch_restaurant_smart(menu_name, p_name, cat_name, g_details):
                     continue
 
                 kakao_parking = has_nearby_parking_kakao(p_lat, p_lng, p_name) if need_parking else False
