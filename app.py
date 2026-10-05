@@ -163,7 +163,6 @@ st.markdown(
         }
     }
 
-    /* 룰렛 버튼 컨테이너: 상단 마진을 0으로 맞춤 */
     div.block-container > div[data-testid="stVerticalBlock"] > div.stElementContainer:not(div[data-testid="stVerticalBlockBorderWrapper"] *) div.stButton:has(button[key="btn_trigger_random"]) {
         margin-top: 0px !important;
         margin-bottom: 14px !important;
@@ -198,7 +197,6 @@ st.markdown(
         transform: scale(1.015) !important;
     }
 
-    /* 안내 경고 박스 */
     .warning-box {
         display: flex;
         justify-content: center;
@@ -369,7 +367,6 @@ STRICT_SPECIALTY_NAME_RULES = {
     "육개장": ["육개장", "육대장", "혜장국"]
 }
 
-# 퓨전식 메뉴 제외
 DEFAULT_FOODS = [
     ("김치찌개", "🥘", "김치찌개 전문점", "한식", "low"),
     ("된장찌개", "🍲", "된장찌개 백반", "한식", "low"),
@@ -570,7 +567,6 @@ def kakao_get_coordinates(query: str):
     headers = {"Authorization": f"KakaoAK {KAKAO_REST_KEY}"}
     clean_q = query.strip()
 
-    # 1. 주소 검색 API 우선 호출 (도로명 / 지번 주소 지원)
     addr_url = "https://dapi.kakao.com/v2/local/search/address.json"
     try:
         res = requests.get(addr_url, headers=headers, params={"query": clean_q, "size": 1}, timeout=3.0)
@@ -581,7 +577,6 @@ def kakao_get_coordinates(query: str):
     except Exception:
         pass
 
-    # 2. 키워드 검색 API 폴백 (지하철역, 상호, 랜드마크 등)
     kw_url = "https://dapi.kakao.com/v2/local/search/keyword.json"
     try:
         res = requests.get(kw_url, headers=headers, params={"query": clean_q, "size": 1}, timeout=3.0)
@@ -898,7 +893,7 @@ else:
             radius_km = 1.8
             radius_display_text = "지역 인근"
 
-        # --- 3. 음식 종류 선택 (깔끔한 4x2 그리드 구성) ---
+        # --- 3. 음식 종류 선택 ---
         with st.container(border=True):
             st.markdown("<div class='section-title'>🍽️ 음식 종류</div>", unsafe_allow_html=True)
 
@@ -999,7 +994,7 @@ else:
             region_warning_spot.markdown(
                 """
                 <div class="warning-box">
-                    <span style="font-size: 16px;">⚠️️</span>
+                    <span style="font-size: 16px;">⚠️</span>
                     <span style="color: #6C4D0A; font-size: 13.5px; font-weight: 700;">
                         위치를 입력하거나 '내 위치 찾기'를 눌러주세요!
                     </span>
@@ -1012,7 +1007,7 @@ else:
             region_warning_spot.markdown(
                 """
                 <div class="warning-box">
-                    <span style="font-size: 16px;">⚠️</span>
+                    <span style="font-size: 16px;">⚠️️</span>
                     <span style="color: #6C4D0A; font-size: 13.5px; font-weight: 700;">
                         음식 종류를 선택해 주세요!
                     </span>
@@ -1061,14 +1056,28 @@ else:
                 price_map = {"1만원 이하": "low", "1~2만원": "mid", "2만원 이상": "high"}
                 target_pr = price_map.get(pr, None)
 
+                # 카테고리별 1차 풀 구성 (죽 제외)
                 if cu == "상관없음":
                     candidates_pool = [f for f in DEFAULT_FOODS if f[0] != "죽"]
                 else:
                     candidates_pool = [f for f in DEFAULT_FOODS if f[3] == cu and f[0] != "죽"]
 
-                selected_candidates = [f for f in candidates_pool if f[4] == target_pr] if target_pr else candidates_pool
-                if not selected_candidates:
+                # 선택한 카테고리 풀이 비어있을 경우 전체 풀로 복구
+                if not candidates_pool:
+                    candidates_pool = [f for f in DEFAULT_FOODS if f[0] != "죽"]
+
+                # 가격 조건 적용
+                if target_pr:
+                    selected_candidates = [f for f in candidates_pool if f[4] == target_pr]
+                    # 해당 가격대의 메뉴가 없으면 카테고리 전체 메뉴로 자동 확장
+                    if not selected_candidates:
+                        selected_candidates = candidates_pool
+                else:
                     selected_candidates = candidates_pool
+
+                # 최후 안전장치: 빈 리스트 방지
+                if not selected_candidates:
+                    selected_candidates = [f for f in DEFAULT_FOODS if f[0] != "죽"]
 
                 rolling_spot = st.empty()
                 shuffled = selected_candidates.copy()
@@ -1118,9 +1127,9 @@ else:
                         <div style="text-align: center; margin: 14px 0 14px 0; padding: 22px 18px; 
                                     background: #FFFDF9; border-radius: 20px; border: 1.5px solid #F5D5B8; 
                                     box-shadow: 0 4px 16px rgba(245, 213, 184, 0.35);">
-                            <div style="font-size: 58px; line-height: 1; margin-bottom: 6px;">{temp[1]}</div>
-                            <div style="color: #2E1C10; font-size: 23px; font-weight: 800; margin: 4px 0;">{temp[0]}</div>
-                            <p style="color: #8C827A; font-size: 13px; margin: 0;">{radius_display_text} 기준 맛집 추첨 중... 🎲</p>
+                        <div style="font-size: 58px; line-height: 1; margin-bottom: 6px;">{temp[1]}</div>
+                        <div style="color: #2E1C10; font-size: 23px; font-weight: 800; margin: 4px 0;">{temp[0]}</div>
+                        <p style="color: #8C827A; font-size: 13px; margin: 0;">{radius_display_text} 기준 맛집 추첨 중... 🎲</p>
                         </div>
                         """,
                         unsafe_allow_html=True
