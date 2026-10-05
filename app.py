@@ -164,7 +164,6 @@ st.markdown(
         }
     }
 
-    /* 룰렛 버튼 컨테이너: 상단 마진을 0으로 맞춤 */
     div.block-container > div[data-testid="stVerticalBlock"] > div.stElementContainer:not(div[data-testid="stVerticalBlockBorderWrapper"] *) div.stButton:has(button[key="btn_trigger_random"]) {
         margin-top: 0px !important;
         margin-bottom: 14px !important;
@@ -199,7 +198,6 @@ st.markdown(
         transform: scale(1.015) !important;
     }
 
-    /* 안내 경고 박스 */
     .warning-box {
         display: flex;
         justify-content: center;
@@ -215,7 +213,6 @@ st.markdown(
         box-sizing: border-box;
     }
 
-    /* [결과 화면] 지도 하단 여백 및 버튼 간격 축소 */
     div.stElementContainer:has(iframe) {
         margin-bottom: -4px !important;
     }
@@ -311,91 +308,110 @@ if qp.get("action") == "gps" and "lat" in qp and "lng" in qp:
         pass
     st.query_params.clear()
 
-# --- 최소한의 유흥/성인 업소 원천 차단 목록 ---
+# --- 필터링 기준 (유흥/성인업소 및 비식사 시설만 차단) ---
 HARD_EXCLUDED_CATEGORIES = [
     "룸살롱", "단란주점", "유흥주점", "나이트클럽", "성인용품", "마사지", "안마", "노래방", "가라오케"
 ]
-
-# 식사 미제공 카페/디저트 차단 목록
 CAFE_EXCLUDED_CATEGORIES = [
     "카페", "디저트", "제과,베이커리", "떡,한과", "도넛", "아이스크림"
 ]
-
-# Google Places 영업시간 데이터가 없을 때만 참고할 순수 야간 키워드
 SUSPECT_NIGHT_KEYWORDS = [
-    "포차", "실내포차", "소주방", "호프", "룸호프", "노가리", "맥주창고"
+    "실내포차", "소주방", "룸호프", "노가리", "맥주창고"
 ]
 
+# --- 카카오 검색 적중률을 극대화한 메뉴 및 키워드 데이터셋 ---
 DEFAULT_FOODS = [
-    ("김치찌개", "🥘", "김치찌개 전문점", "한식", "low"),
-    ("된장찌개", "🍲", "된장찌개 백반", "한식", "low"),
-    ("순두부찌개", "🥚", "순두부찌개 전문점", "한식", "low"),
-    ("부대찌개", "🥓", "부대찌개 전문점", "한식", "mid"),
-    ("청국장", "🍲", "청국장 전문점", "한식", "low"),
-    ("동태탕", "🐟", "동태탕 전문점", "한식", "mid"),
-    ("국밥", "🥣", "국밥 전문점", "한식", "low"),
+    # 한식 (가격대별 다양성 확보)
+    ("김치찌개", "🥘", "김치찌개", "한식", "low"),
+    ("된장찌개", "🍲", "된장찌개", "한식", "low"),
+    ("순두부찌개", "🥚", "순두부찌개", "한식", "low"),
+    ("부대찌개", "🥓", "부대찌개", "한식", "mid"),
+    ("청국장", "🍲", "청국장", "한식", "low"),
+    ("동태탕", "🐟", "동태탕", "한식", "mid"),
+    ("국밥", "🥣", "국밥", "한식", "low"),
     ("뼈해장국", "🍖", "뼈해장국", "한식", "low"),
-    ("설렁탕", "🥣", "설렁탕 전문점", "한식", "mid"),
-    ("곰탕", "🥩", "곰탕 전문점", "한식", "mid"),
-    ("갈비탕", "🍖", "갈비탕 전문점", "한식", "mid"),
-    ("삼계탕", "🍗", "삼계탕 전문점", "한식", "mid"),
-    ("추어탕", "🍲", "추어탕 전문점", "한식", "mid"),
-    ("육개장", "🌶", "전통 육개장 전문점", "한식", "low"),
-    ("콩나물국밥", "🌱", "콩나물국밥 전문점", "한식", "low"),
-    ("황태해장국", "🐟", "황태해장국 전문점", "한식", "low"),
-    ("선지해장국", "🥘", "선지해장국 전문점", "한식", "low"),
-    ("도가니탕", "🥣", "도가니탕 전문점", "한식", "high"),
-    ("백반", "🍱", "백반 가정식", "한식", "low"),
-    ("제육볶음", "🔥", "제육볶음 정식", "한식", "low"),
-    ("오징어볶음", "🦑", "오징어볶음 백반", "한식", "mid"),
-    ("낙지볶음", "🐙", "낙지볶음 전문점", "한식", "mid"),
-    ("쭈꾸미볶음", "🐙", "쭈꾸미 전문점", "한식", "mid"),
-    ("돌솥비빔밥", "🍳", "비빔밥 전문점", "한식", "low"),
-    ("보리밥정식", "🌾", "보리밥 정식", "한식", "low"),
-    ("쌈밥정식", "🥬", "쌈밥 정식", "한식", "mid"),
-    ("생선구이백반", "🐟", "생선구이 백반", "한식", "mid"),
-    ("닭갈비", "🍗", "닭갈비 전문점", "한식", "mid"),
-    ("찜닭", "🥔", "찜닭 전문점", "한식", "mid"),
-    ("코다리조림", "🐟", "코다리조림 전문점", "한식", "mid"),
-    ("간장게장백반", "🦀", "게장 정식", "한식", "high"),
-    ("칼국수", "🍜", "칼국수 전문점", "한식", "low"),
-    ("수제비", "🥣", "수제비 전문점", "한식", "low"),
-    ("막국수", "🥢", "막국수 전문점", "한식", "low"),
-    ("냉면", "🧊", "함흥 평양 냉면 전문점", "한식", "mid"),
-    ("잔치국수", "🍜", "잔치국수 멸치국수 전문점", "한식", "low"),
-    ("비빔국수", "🌶", "비빔국수 전문점", "한식", "low"),
-    ("죽", "🥣", "죽 전문점", "한식", "low"),
-    ("떡볶이", "🍢", "떡볶이 전문점", "한식", "low"),
-    ("김밥", "🍙", "김밥 전문점", "한식", "low"),
+    ("설렁탕", "🥣", "설렁탕", "한식", "mid"),
+    ("곰탕", "🥩", "곰탕", "한식", "mid"),
+    ("갈비탕", "🍖", "갈비탕", "한식", "mid"),
+    ("삼계탕", "🍗", "삼계탕", "한식", "mid"),
+    ("추어탕", "🍲", "추어탕", "한식", "mid"),
+    ("육개장", "🌶", "육개장", "한식", "low"),
+    ("콩나물국밥", "🌱", "콩나물국밥", "한식", "low"),
+    ("황태해장국", "🐟", "황태해장국", "한식", "low"),
+    ("선지해장국", "🥘", "선지해장국", "한식", "low"),
+    ("도가니탕", "🥣", "도가니탕", "한식", "high"),
+    ("백반", "🍱", "백반", "한식", "low"),
+    ("제육볶음", "🔥", "제육볶음", "한식", "low"),
+    ("오징어볶음", "🦑", "오징어볶음", "한식", "mid"),
+    ("낙지볶음", "🐙", "낙지볶음", "한식", "mid"),
+    ("쭈꾸미볶음", "🐙", "쭈꾸미", "한식", "mid"),
+    ("비빔밥", "🍳", "비빔밥", "한식", "low"),
+    ("보리밥", "🌾", "보리밥", "한식", "low"),
+    ("쌈밥", "🥬", "쌈밥", "한식", "mid"),
+    ("생선구이", "🐟", "생선구이", "한식", "mid"),
+    ("닭갈비", "🍗", "닭갈비", "한식", "mid"),
+    ("찜닭", "🥔", "찜닭", "한식", "mid"),
+    ("코다리조림", "🐟", "코다리조림", "한식", "mid"),
+    ("간장게장", "🦀", "게장", "한식", "high"),
+    ("칼국수", "🍜", "칼국수", "한식", "low"),
+    ("수제비", "🥣", "수제비", "한식", "low"),
+    ("막국수", "🥢", "막국수", "한식", "low"),
+    ("냉면", "🧊", "냉면", "한식", "mid"),
+    ("잔치국수", "🍜", "잔치국수", "한식", "low"),
+    ("비빔국수", "🌶", "비빔국수", "한식", "low"),
+    ("떡볶이", "🍢", "떡볶이", "한식", "low"),
+    ("김밥", "🍙", "김밥", "한식", "low"),
+
+    # 중식
     ("짜장면", "🥢", "짜장면", "중식", "low"),
     ("짬뽕", "🔥", "짬뽕", "중식", "low"),
-    ("볶음밥", "🍚", "중화 볶음밥", "중식", "low"),
-    ("마파두부밥", "🍛", "마파두부", "중식", "low"),
-    ("마라탕", "🌶️", "마라탕 전문점", "중식", "mid"),
-    ("소바", "🥢", "메밀소바 모밀 전문점", "일식", "low"),
-    ("돈까스", "🍱", "돈까스 카츠 전문점", "일식", "mid"),
-    ("초밥", "🍣", "스시 초밥 전문점", "일식", "mid"),
-    ("일본라멘", "🍜", "일본라멘 전문점", "일식", "mid"),
-    ("우동", "🍢", "사누키 우동 전문점", "일식", "low"),
-    ("사케동", "🍣", "연어덮밥 사케동", "일식", "mid"),
-    ("가츠동", "🍛", "돈부리 덮밥 전문점", "일식", "low"),
-    ("텐동", "🍤", "텐동 전문점", "일식", "mid"),
-    ("회덮밥", "🥗", "활어 회덮밥", "일식", "mid"),
-    ("카레라이스", "🍛", "일본카레 전문점", "일식", "low"),
-    ("파스타", "🍝", "파스타 레스토랑", "양식", "mid"),
+    ("중화볶음밥", "🍚", "중국집", "중식", "low"),
+    ("마파두부밥", "🍛", "중식당", "중식", "low"),
+    ("마라탕", "🌶️", "마라탕", "중식", "mid"),
+    ("탕수육정식", "🥟", "중화요리", "중식", "mid"),
+    ("딤섬", "🥟", "딤섬", "중식", "high"),
+
+    # 일식
+    ("돈까스", "🍱", "돈까스", "일식", "mid"),
+    ("초밥", "🍣", "초밥", "일식", "mid"),
+    ("일본라멘", "🍜", "라멘", "일식", "mid"),
+    ("소바", "🥢", "메밀소바", "일식", "low"),
+    ("우동", "🍢", "우동", "일식", "low"),
+    ("사케동", "🍣", "사케동", "일식", "mid"),
+    ("가츠동", "🍛", "돈부리", "일식", "low"),
+    ("텐동", "🍤", "텐동", "일식", "mid"),
+    ("회덮밥", "🥗", "회덮밥", "일식", "mid"),
+    ("일본카레", "🍛", "카레", "일식", "low"),
+    ("오마카세", "🍣", "스시", "일식", "high"),
+
+    # 양식
+    ("파스타", "🍝", "파스타", "양식", "mid"),
     ("피자", "🍕", "화덕피자", "양식", "mid"),
-    ("수제버거", "🍔", "수제버거 전문점", "양식", "mid"),
-    ("스테이크덮밥", "🥩", "스테이크 덮밥", "양식", "mid"),
-    ("리조또", "🧀", "이탈리안 리조또", "양식", "mid"),
-    ("샌드위치", "🥪", "수제 샌드위치", "양식", "low"),
-    ("쌀국수", "🍜", "베트남 쌀국수", "동남아식", "mid"),
-    ("팟타이", "🥢", "태국음식 팟타이", "동남아식", "mid"),
-    ("나시고랭", "🍳", "인도네시아 나시고랭", "동남아식", "mid"),
-    ("인도커리", "🍛", "인도커리 난 전문점", "인도식", "mid"),
+    ("수제버거", "🍔", "수제버거", "양식", "mid"),
+    ("스테이크", "🥩", "스테이크", "양식", "high"),
+    ("리조또", "🧀", "이탈리안", "양식", "mid"),
+    ("샌드위치", "🥪", "샌드위치", "양식", "low"),
+    ("브런치", "🥞", "브런치", "양식", "mid"),
+
+    # 동남아식
+    ("쌀국수", "🍜", "쌀국수", "동남아식", "low"),
+    ("팟타이", "🥢", "팟타이", "동남아식", "mid"),
+    ("나시고랭", "🍳", "나시고랭", "동남아식", "mid"),
+    ("분짜", "🥗", "분짜", "동남아식", "mid"),
+    ("반미", "🥖", "반미", "동남아식", "low"),
+    ("똠얌꿍", "🍲", "태국음식", "동남아식", "high"),
+
+    # 인도식
+    ("인도커리", "🍛", "인도커리", "인도식", "mid"),
+    ("인도난커리", "🫓", "인도요리", "인도식", "mid"),
+    ("탄두리치킨", "🍗", "인도음식", "인도식", "high"),
+    ("카레라이스", "🍛", "커리", "인도식", "low"),
+
+    # 멕시코식
     ("타코", "🌮", "타코", "멕시코식", "mid"),
     ("부리또", "🌯", "부리또", "멕시코식", "low"),
-    ("퀘사디아", "🫓", "멕시코음식", "멕시코식", "mid"),
-    ("파히타", "🥘", "멕시칸", "멕시코식", "high")
+    ("퀘사디아", "🫓", "멕시칸", "멕시코식", "mid"),
+    ("파히타", "🥘", "멕시코요리", "멕시코식", "high")
 ]
 
 # --- Google Places API (New) 기반 영업시간 및 상세 정보 분석 ---
@@ -403,7 +419,7 @@ DEFAULT_FOODS = [
 def fetch_google_place_details(place_name: str, lat: float, lng: float) -> dict:
     default_res = {
         "found": False,
-        "is_lunch_open": None,       # 점심 영업 여부 (True: 점심영업함, False: 저녁만함, None: 정보없음)
+        "is_lunch_open": None,
         "open_now": None,
         "today_hours_text": "",
         "price_level_text": "",
@@ -488,7 +504,6 @@ def fetch_google_place_details(place_name: str, lat: float, lng: float) -> dict:
                 today_periods = [per for per in periods if per.get("open", {}).get("day") == today_google_day]
 
                 if today_periods:
-                    # 24시간 영업 체크
                     is_24h = any(per.get("open", {}).get("hour") == 0 and not per.get("close") for per in today_periods)
                     if is_24h:
                         default_res["is_lunch_open"] = True
@@ -496,14 +511,12 @@ def fetch_google_place_details(place_name: str, lat: float, lng: float) -> dict:
                         earliest_open_hour = min(per.get("open", {}).get("hour", 0) for per in today_periods)
                         latest_close_hour = max(per.get("close", {}).get("hour", 24) for per in today_periods if per.get("close"))
 
-                        # 점심시간(11:00 ~ 14:00) 포함 여부 판단
-                        # 오픈이 14시 이전이고 마감이 12시 이후이면 점심 영업으로 인정
+                        # 14시 이전에 문을 열고 12시 이후까지 영업하면 점심 영업 인정
                         if earliest_open_hour <= 13 and latest_close_hour >= 12:
                             default_res["is_lunch_open"] = True
                         else:
                             default_res["is_lunch_open"] = False
                 else:
-                    # 오늘 영업 스케줄이 비어있으면 휴무이거나 디너 전용일 확률
                     default_res["is_lunch_open"] = False
 
     except Exception:
@@ -512,32 +525,25 @@ def fetch_google_place_details(place_name: str, lat: float, lng: float) -> dict:
     return default_res
 
 def is_valid_lunch_restaurant_smart(place_name: str, category_name: str, g_details: dict) -> bool:
-    """
-    구글 플레이스 영업시간 데이터를 최우선으로 적용하는 점심 식당 판별기
-    """
     clean_name = place_name.replace(" ", "").upper()
     cat_full = category_name.replace(" ", "")
 
-    # 1. 유흥/성인업소는 점심시간 영업 여부와 관계없이 절대 배제
     if any(hard in cat_full for hard in HARD_EXCLUDED_CATEGORIES):
         return False
     if any(hard in clean_name for hard in ["룸살롱", "단란주점", "유흥주점", "나이트클럽"]):
         return False
 
-    # 2. 식사 메뉴를 취급하지 않는 순수 카페/베이커리 제외
     if any(cafe in cat_full for cafe in CAFE_EXCLUDED_CATEGORIES):
         return False
 
-    # 3. Google Places 영업시간 데이터가 있는 경우: 점심 영업 여부를 최우선 판별 기준으로 적용
+    # Google Places 영업시간 데이터가 있는 경우: 점심 영업 여부를 최우선 판별
     if g_details.get("found") and g_details.get("is_lunch_open") is not None:
-        # 주점/펍/바/구이집 타이틀이 있더라도, 점심시간에 오픈하면 점심 식사 가능 매장으로 인정
         return g_details["is_lunch_open"]
 
-    # 4. Google Places 영업시간 데이터가 없는 경우 (카카오 정보 기반 보수적 판별)
-    # 술집 성격이 명확한 키워드가 있으면 제외
+    # Google 영업시간이 없을 때 보수적 야간 키워드 필터링
     if any(bad in clean_name for bad in SUSPECT_NIGHT_KEYWORDS):
         return False
-    if any(c in cat_full for c in ["유흥주점", "룸살롱", "단란주점", "호프"]):
+    if any(c in cat_full for c in ["유흥주점", "룸살롱", "단란주점"]):
         return False
 
     return True
@@ -613,16 +619,44 @@ def kakao_get_coordinates(query: str):
     return None, None
 
 def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: str, radius_km: float = 1.8, need_parking: bool = False):
+    """카카오 검색 및 카테고리별 2단계 스마트 폴백 엔진"""
     if not KAKAO_REST_KEY:
         return []
     url = "https://dapi.kakao.com/v2/local/search/keyword.json"
     headers = {"Authorization": f"KakaoAK {KAKAO_REST_KEY}"}
     radius_meters = int(radius_km * 1000)
 
-    query_text = search_query
+    # 카테고리별 스마트 대체 검색어 사전
+    CUISINE_FALLBACK_MAP = {
+        # 멕시코식
+        "타코": ["타코", "멕시칸", "멕시코요리"],
+        "부리또": ["부리또", "브리또", "멕시칸"],
+        "퀘사디아": ["멕시칸", "멕시코", "타코"],
+        "파히타": ["멕시코", "남미음식", "멕시칸"],
+        # 인도식
+        "인도커리": ["인도커리", "인도음식", "인도요리"],
+        "인도난커리": ["인도요리", "인도음식", "커리"],
+        "탄두리치킨": ["인도음식", "인도요리", "커리"],
+        "카레라이스": ["커리", "카레", "인도음식"],
+        # 동남아식
+        "팟타이": ["태국음식", "아시아음식", "쌀국수"],
+        "나시고랭": ["아시아음식", "동남아", "베트남"],
+        "분짜": ["베트남음식", "쌀국수", "베트남"],
+        "반미": ["베트남", "샌드위치", "쌀국수"],
+        "똠얌꿍": ["태국음식", "아시아음식", "동남아"],
+        # 일식
+        "사케동": ["연어덮밥", "일식덮밥", "일식당"],
+        "가츠동": ["돈부리", "일식덮밥", "일식"],
+        "텐동": ["텐동", "일식덮밥", "일식당"],
+        "일본라멘": ["라멘", "일본라멘", "일식당"],
+        "오마카세": ["스시", "초밥", "일식당"],
+        # 양식
+        "리조또": ["이탈리안", "파스타", "양식당"],
+        "브런치": ["브런치", "양식", "카페거리"]
+    }
 
     params = {
-        "query": query_text,
+        "query": search_query,
         "category_group_code": "FD6",
         "x": str(lng),
         "y": str(lat),
@@ -634,13 +668,15 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
     try:
         res = requests.get(url, headers=headers, params=params, timeout=3.0)
         docs = res.json().get("documents", []) if res.status_code == 200 else []
-        
-        # 멕시코식 메뉴 대체 검색
-        if not docs and menu_name in ["타코", "부리또", "퀘사디아", "파히타"]:
-            fallback_map = {"타코": "타코", "부리또": "브리또", "퀘사디아": "멕시칸", "파히타": "남미음식"}
-            params["query"] = fallback_map.get(menu_name, "멕시코")
-            res = requests.get(url, headers=headers, params=params, timeout=3.0)
-            docs = res.json().get("documents", []) if res.status_code == 200 else []
+
+        # 단품 검색 실패 시 스마트 폴백 검색 시도
+        if not docs and menu_name in CUISINE_FALLBACK_MAP:
+            for fallback_query in CUISINE_FALLBACK_MAP[menu_name]:
+                params["query"] = fallback_query
+                res = requests.get(url, headers=headers, params=params, timeout=2.5)
+                docs = res.json().get("documents", []) if res.status_code == 200 else []
+                if docs:
+                    break
 
         if docs:
             candidates = []
@@ -650,10 +686,8 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
                 p_lat = float(d.get("y"))
                 p_lng = float(d.get("x"))
 
-                # 1. Google Places API 정보 조회 (영업시간 최우선 판별)
                 g_details = fetch_google_place_details(p_name, p_lat, p_lng)
 
-                # 2. 스마트 점심 식당 여부 판별 (점심 영업 시 주점 명칭 포함되어도 통과)
                 if not is_valid_lunch_restaurant_smart(p_name, cat_name, g_details):
                     continue
 
@@ -810,7 +844,7 @@ if res is not None and res.get("places"):
                 st.markdown(cand_html, unsafe_allow_html=True)
 
     st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
-    st.markdown("<div class='section-title'>🗺️️ 식당 위치 지도</div>", unsafe_allow_html=True)
+    st.markdown("<div class='section-title'>🗺 식당 위치 지도</div>", unsafe_allow_html=True)
     st.caption("🔴 빨간 핀: 1픽 매장 / 🔵 파란 핀: 주변 후보")
 
     m = folium.Map(location=[top_pick["lat"], top_pick["lng"]], zoom_start=15, control_scale=True)
@@ -953,7 +987,7 @@ else:
 
         # --- 3. 음식 종류 선택 ---
         with st.container(border=True):
-            st.markdown("<div class='section-title'>🍽️️ 음식 종류</div>", unsafe_allow_html=True)
+            st.markdown("<div class='section-title'>🍽 음식 종류</div>", unsafe_allow_html=True)
 
             cu1, cu2, cu3, cu4 = st.columns(4)
             current_cuisine = st.session_state.selected_cuisine
@@ -1065,7 +1099,7 @@ else:
             region_warning_spot.markdown(
                 """
                 <div class="warning-box">
-                    <span style="font-size: 16px;">⚠️️</span>
+                    <span style="font-size: 16px;">⚠️</span>
                     <span style="color: #6C4D0A; font-size: 13.5px; font-weight: 700;">
                         음식 종류를 선택해 주세요!
                     </span>
@@ -1154,7 +1188,7 @@ else:
                     )
                     time.sleep(0.06)
 
-                # 스마트 영업시간 하이브리드 탐색
+                # 스마트 폴백 적용 하이브리드 탐색
                 final_menu = None
                 places = []
                 for m_name, m_emoji, m_kw, _, _ in shuffled[:6]:
@@ -1165,7 +1199,7 @@ else:
                         break
 
                 if not places:
-                    fallback_kw = "백반 가정식" if cu in ["한식", "상관없음"] else f"{cu} 전문점"
+                    fallback_kw = "백반" if cu in ["한식", "상관없음"] else f"{cu} 전문점"
                     fallback_menu = "백반·가정식" if cu in ["한식", "상관없음"] else f"{cu} 밥집"
                     fallback_found = kakao_search_places(c_lat, c_lng, fallback_menu, fallback_kw, radius_km=radius_km, need_parking=need_parking_flag)
                     if fallback_found:
