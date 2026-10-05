@@ -164,7 +164,6 @@ st.markdown(
         }
     }
 
-    /* 룰렛 버튼 컨테이너: 상단 마진을 0으로 맞춤 */
     div.block-container > div[data-testid="stVerticalBlock"] > div.stElementContainer:not(div[data-testid="stVerticalBlockBorderWrapper"] *) div.stButton:has(button[key="btn_trigger_random"]) {
         margin-top: 0px !important;
         margin-bottom: 14px !important;
@@ -199,7 +198,6 @@ st.markdown(
         transform: scale(1.015) !important;
     }
 
-    /* 안내 경고 박스 */
     .warning-box {
         display: flex;
         justify-content: center;
@@ -215,7 +213,6 @@ st.markdown(
         box-sizing: border-box;
     }
 
-    /* [결과 화면] 지도 하단 여백 및 버튼 간격 축소 */
     div.stElementContainer:has(iframe) {
         margin-bottom: -4px !important;
     }
@@ -311,7 +308,7 @@ if qp.get("action") == "gps" and "lat" in qp and "lng" in qp:
         pass
     st.query_params.clear()
 
-# --- 필터링 기준 (유흥/성인업소 및 비식사 시설만 차단) ---
+# --- 최소한의 유흥/성인 업소 원천 차단 목록 ---
 HARD_EXCLUDED_CATEGORIES = [
     "룸살롱", "단란주점", "유흥주점", "나이트클럽", "성인용품", "마사지", "안마", "노래방", "가라오케"
 ]
@@ -322,14 +319,59 @@ SUSPECT_NIGHT_KEYWORDS = [
     "실내포차", "소주방", "룸호프", "노가리", "맥주창고"
 ]
 
-# --- 스테이크 검색 시 원천 배제할 분식/도시락/돈까스/패스트푸드 브랜드 및 키워드 ---
-STEAK_EXCLUDED_KEYWORDS = [
-    "한솥", "도시락", "김밥", "천국", "돈까스", "돈가스", "카츠", "가츠", "카쯔",
-    "함박", "함바그", "버거", "맥도날드", "롯데리아", "맘스터치", "버거킹", "토마토김밥",
-    "얌샘", "고봉민", "싸다김밥", "분식", "포장마차", "국수나무", "역전우동"
-]
+# --- 단품 대표 메뉴 전문점 엄격 매칭 규칙 (부메뉴 식당 필터링용) ---
+STRICT_SPECIALTY_KEYWORDS = {
+    "막국수": {
+        "required": ["막국수"],
+        "forbidden": ["돼지국밥", "순대", "순댓국", "감자탕", "뼈해장국", "보쌈", "족발"]
+    },
+    "돈까스": {
+        "required": ["돈까스", "돈가스", "카츠", "가츠", "카쯔", "돈카츠", "포크커틀릿"],
+        "forbidden": ["김밥", "천국", "한솥", "도시락", "떡볶이", "순대"]
+    },
+    "국밥": {
+        "required": ["국밥", "순대", "순댓국", "돼지국밥", "따로국밥", "소머리국밥", "해장국"],
+        "forbidden": ["막국수", "돈까스", "피자", "파스타"]
+    },
+    "닭갈비": {
+        "required": ["닭갈비"],
+        "forbidden": ["치킨", "통닭", "삼계탕", "백숙", "닭발"]
+    },
+    "수제비": {
+        "required": ["수제비"],
+        "forbidden": ["매운탕", "감자탕", "부대찌개", "동태탕", "포차"]
+    },
+    "칼국수": {
+        "required": ["칼국수"],
+        "forbidden": ["중국집", "짜장", "짬뽕"]
+    },
+    "초밥": {
+        "required": ["스시", "초밥"],
+        "forbidden": ["횟집", "회센터", "수산", "활어", "물회마차", "포차"]
+    },
+    "스테이크": {
+        "required": ["스테이크", "STEAK", "립하우스", "그릴", "아웃백", "빕스"],
+        "forbidden": ["한솥", "도시락", "김밥", "돈까스", "돈가스", "함박", "분식", "햄버거"]
+    },
+    "짜장면": {
+        "required": ["중화", "중국", "반점", "루", "원", "각", "짜장", "짬뽕", "차이"],
+        "forbidden": ["분식", "김밥"]
+    },
+    "짬뽕": {
+        "required": ["짬뽕", "중화", "중국", "반점", "교동"],
+        "forbidden": ["분식", "김밥"]
+    },
+    "타코": {
+        "required": ["타코", "TACO", "멕시칸", "멕시코"],
+        "forbidden": ["호프", "치킨"]
+    },
+    "인도커리": {
+        "required": ["인도", "커리", "인디아", "난", "CURRY"],
+        "forbidden": ["분식"]
+    }
+}
 
-# --- 카카오 검색 적중률을 극대화한 메뉴 및 키워드 데이터셋 ---
+# --- 메뉴 및 가격대 데이터셋 ---
 DEFAULT_FOODS = [
     # 한식
     ("김치찌개", "🥘", "김치찌개", "한식", "low"),
@@ -394,7 +436,7 @@ DEFAULT_FOODS = [
     ("일본카레", "🍛", "카레", "일식", "low"),
     ("오마카세", "🍣", "스시", "일식", "high"),
 
-    # 양식 (스테이크 검색 쿼리를 전문 레스토랑 중심 키워드로 정교화)
+    # 양식
     ("파스타", "🍝", "파스타", "양식", "mid"),
     ("피자", "🍕", "화덕피자", "양식", "mid"),
     ("수제버거", "🍔", "수제버거", "양식", "mid"),
@@ -432,6 +474,7 @@ def fetch_google_place_details(place_name: str, lat: float, lng: float) -> dict:
         "is_lunch_open": None,
         "open_now": None,
         "today_hours_text": "",
+        "price_level": None,         # 구글 priceLevel 원본 문자열
         "price_level_text": "",
         "parking_info": "",
         "primary_type": "",
@@ -481,13 +524,15 @@ def fetch_google_place_details(place_name: str, lat: float, lng: float) -> dict:
             if "primaryTypeDisplayName" in p:
                 default_res["primary_type"] = p["primaryTypeDisplayName"].get("text", "")
 
+            raw_price = p.get("priceLevel", "")
+            default_res["price_level"] = raw_price
             price_map = {
                 "PRICE_LEVEL_INEXPENSIVE": "1만원 이하",
                 "PRICE_LEVEL_MODERATE": "1~2만원대",
                 "PRICE_LEVEL_EXPENSIVE": "2~3만원대",
                 "PRICE_LEVEL_VERY_EXPENSIVE": "3만원 이상"
             }
-            default_res["price_level_text"] = price_map.get(p.get("priceLevel", ""), "")
+            default_res["price_level_text"] = price_map.get(raw_price, "")
 
             parking_opts = p.get("parkingOptions", {})
             if parking_opts.get("freeParkingLot") or parking_opts.get("freeGarageParking"):
@@ -521,7 +566,6 @@ def fetch_google_place_details(place_name: str, lat: float, lng: float) -> dict:
                         earliest_open_hour = min(per.get("open", {}).get("hour", 0) for per in today_periods)
                         latest_close_hour = max(per.get("close", {}).get("hour", 24) for per in today_periods if per.get("close"))
 
-                        # 14시 이전에 문을 열고 12시 이후까지 영업하면 점심 영업 인정
                         if earliest_open_hour <= 13 and latest_close_hour >= 12:
                             default_res["is_lunch_open"] = True
                         else:
@@ -534,7 +578,13 @@ def fetch_google_place_details(place_name: str, lat: float, lng: float) -> dict:
 
     return default_res
 
-def is_valid_lunch_restaurant_smart(menu_name: str, place_name: str, category_name: str, g_details: dict) -> bool:
+def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_name: str, g_details: dict, selected_price_code: str) -> bool:
+    """
+    1. 유흥/성인업소 차단
+    2. 전문점 엄격 필터링 (메뉴에 조금 껴있는 타 업종 식당 차단)
+    3. 구글 플레이스 가격대 교차 검증 (금액대 옵션 준수)
+    4. 구글 플레이스 점심 영업 시간 확인
+    """
     clean_name = place_name.replace(" ", "").upper()
     cat_full = category_name.replace(" ", "")
 
@@ -544,31 +594,41 @@ def is_valid_lunch_restaurant_smart(menu_name: str, place_name: str, category_na
     if any(hard in clean_name for hard in ["룸살롱", "단란주점", "유흥주점", "나이트클럽"]):
         return False
 
-    # 2. 비식사 카페/디저트 차단
+    # 2. 식사 미제공 카페/디저트 차단
     if any(cafe in cat_full for cafe in CAFE_EXCLUDED_CATEGORIES):
         return False
 
-    # 3. [스테이크 전문점 엄격 필터링]
-    if menu_name == "스테이크":
-        # 도시락, 돈까스, 분식, 햄버거 등 부메뉴로 취급하는 업태 원천 배제
-        if any(bad in clean_name for bad in STEAK_EXCLUDED_KEYWORDS):
-            return False
-        if any(bad_cat in cat_full for bad_cat in ["도시락", "분식", "돈가스", "돈까스", "패스트푸드"]):
+    # 3. [전문점 엄격 필터링]
+    # 대표 단품 요리의 경우 상호명 및 업종 카테고리에 전문 키워드가 반드시 있어야 함
+    if menu_name in STRICT_SPECIALTY_KEYWORDS:
+        rule = STRICT_SPECIALTY_KEYWORDS[menu_name]
+        has_required = any(req.upper() in clean_name or req.upper() in cat_full for req in rule["required"])
+        if not has_required:
             return False
         
-        # 진짜 스테이크 전문 레스토랑인지 검증 (상호명 또는 카테고리에 스테이크/양식/레스토랑/이탈리안 명시 필수)
-        is_real_steakhouse = (
-            any(k in clean_name for k in ["스테이크", "STEAK", "립하우스", "그릴", "OUTBACK", "아웃백", "빕스", "VIPS"]) or
-            any(k in cat_full for k in ["스테이크,립", "패밀리레스토랑", "이탈리안", "양식"])
-        )
-        if not is_real_steakhouse:
+        # 금지 키워드가 메인으로 들어간 식당(예: 막국수 시켰는데 돼지국밥집인 경우) 차단
+        has_forbidden = any(forbid.upper() in clean_name for forbid in rule["forbidden"])
+        if has_forbidden:
             return False
 
-    # 4. Google Places 영업시간 데이터 기준 (점심 운영 여부 최우선)
+    # 4. [금액대 엄격 검증]
+    # 구글 플레이스에 가격대 정보가 등록되어 있는 경우 사용자 선택과 비교
+    if selected_price_code and g_details.get("price_level"):
+        pl = g_details["price_level"]
+        if selected_price_code == "low":
+            # 1만원 이하 선택 시 비싼 레스토랑(MODERATE 이상) 차단
+            if pl in ["PRICE_LEVEL_MODERATE", "PRICE_LEVEL_EXPENSIVE", "PRICE_LEVEL_VERY_EXPENSIVE"]:
+                return False
+        elif selected_price_code == "high":
+            # 2만원 이상 선택 시 저렴한 분식/패스트푸드(INEXPENSIVE) 차단
+            if pl == "PRICE_LEVEL_INEXPENSIVE":
+                return False
+
+    # 5. Google Places 영업시간 데이터 기준 점심 운영 여부 확인
     if g_details.get("found") and g_details.get("is_lunch_open") is not None:
         return g_details["is_lunch_open"]
 
-    # 5. Google 영업시간이 없을 때 보수적 야간 키워드 필터링
+    # 6. 구글 데이터 부재 시 보수적 야간 키워드 필터링
     if any(bad in clean_name for bad in SUSPECT_NIGHT_KEYWORDS):
         return False
     if any(c in cat_full for c in ["유흥주점", "룸살롱", "단란주점"]):
@@ -646,37 +706,30 @@ def kakao_get_coordinates(query: str):
 
     return None, None
 
-def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: str, radius_km: float = 1.8, need_parking: bool = False):
-    """카카오 검색 및 카테고리별 2단계 스마트 폴백 엔진"""
+def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: str, radius_km: float = 1.8, need_parking: bool = False, selected_price_code: str = None):
     if not KAKAO_REST_KEY:
         return []
     url = "https://dapi.kakao.com/v2/local/search/keyword.json"
     headers = {"Authorization": f"KakaoAK {KAKAO_REST_KEY}"}
     radius_meters = int(radius_km * 1000)
 
-    # 카테고리별 스마트 대체 검색어 사전
     CUISINE_FALLBACK_MAP = {
-        # 양식 (스테이크는 패밀리레스토랑/스테이크하우스로 정교화)
         "스테이크": ["스테이크하우스", "스테이크 레스토랑", "패밀리레스토랑"],
         "리조또": ["이탈리안", "파스타", "양식당"],
-        "브런치": ["브런치", "양식", "카페거리"],
-        # 멕시코식
+        "브런치": ["브런치", "양식"],
         "타코": ["타코", "멕시칸", "멕시코요리"],
         "부리또": ["부리또", "브리또", "멕시칸"],
         "퀘사디아": ["멕시칸", "멕시코", "타코"],
         "파히타": ["멕시코", "남미음식", "멕시칸"],
-        # 인도식
         "인도커리": ["인도커리", "인도음식", "인도요리"],
         "인도난커리": ["인도요리", "인도음식", "커리"],
         "탄두리치킨": ["인도음식", "인도요리", "커리"],
         "카레라이스": ["커리", "카레", "인도음식"],
-        # 동남아식
         "팟타이": ["태국음식", "아시아음식", "쌀국수"],
         "나시고랭": ["아시아음식", "동남아", "베트남"],
         "분짜": ["베트남음식", "쌀국수", "베트남"],
         "반미": ["베트남", "샌드위치", "쌀국수"],
         "똠얌꿍": ["태국음식", "아시아음식", "동남아"],
-        # 일식
         "사케동": ["연어덮밥", "일식덮밥", "일식당"],
         "가츠동": ["돈부리", "일식덮밥", "일식"],
         "텐동": ["텐동", "일식덮밥", "일식당"],
@@ -698,7 +751,6 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
         res = requests.get(url, headers=headers, params=params, timeout=3.0)
         docs = res.json().get("documents", []) if res.status_code == 200 else []
 
-        # 단품 검색 실패 시 스마트 폴백 검색 시도
         if not docs and menu_name in CUISINE_FALLBACK_MAP:
             for fallback_query in CUISINE_FALLBACK_MAP[menu_name]:
                 params["query"] = fallback_query
@@ -717,8 +769,8 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
 
                 g_details = fetch_google_place_details(p_name, p_lat, p_lng)
 
-                # 스테이크 전문점 엄격 필터링 및 스마트 점심 판별 적용
-                if not is_valid_lunch_restaurant_smart(menu_name, p_name, cat_name, g_details):
+                # 전문점 엄격 필터링 및 가격대 일치 검증
+                if not is_valid_specialized_restaurant(menu_name, p_name, cat_name, g_details, selected_price_code):
                     continue
 
                 kakao_parking = has_nearby_parking_kakao(p_lat, p_lng, p_name) if need_parking else False
@@ -1176,6 +1228,7 @@ else:
                 price_map = {"1만원 이하": "low", "1~2만원": "mid", "2만원 이상": "high"}
                 target_pr = price_map.get(pr, None)
 
+                # 카테고리 필터링
                 if cu == "상관없음":
                     candidates_pool = [f for f in DEFAULT_FOODS if f[0] != "죽"]
                 else:
@@ -1184,8 +1237,10 @@ else:
                 if not candidates_pool:
                     candidates_pool = [f for f in DEFAULT_FOODS if f[0] != "죽"]
 
+                # 가격대 필터링 엄격 준수
                 if target_pr:
                     selected_candidates = [f for f in candidates_pool if f[4] == target_pr]
+                    # 해당 카테고리에 지정한 가격대 메뉴가 없을 경우를 위해 카테고리 전체로 확장
                     if not selected_candidates:
                         selected_candidates = candidates_pool
                 else:
@@ -1218,11 +1273,16 @@ else:
                     )
                     time.sleep(0.06)
 
-                # 스마트 폴백 적용 하이브리드 탐색
+                # 전문점 엄격 필터링 및 가격대 일치 검증 탐색
                 final_menu = None
                 places = []
                 for m_name, m_emoji, m_kw, _, _ in shuffled[:6]:
-                    found = kakao_search_places(c_lat, c_lng, m_name, m_kw, radius_km=radius_km, need_parking=need_parking_flag)
+                    found = kakao_search_places(
+                        c_lat, c_lng, m_name, m_kw,
+                        radius_km=radius_km,
+                        need_parking=need_parking_flag,
+                        selected_price_code=target_pr
+                    )
                     if found:
                         final_menu = (m_name, m_emoji)
                         places = found
@@ -1231,7 +1291,12 @@ else:
                 if not places:
                     fallback_kw = "백반" if cu in ["한식", "상관없음"] else f"{cu} 전문점"
                     fallback_menu = "백반·가정식" if cu in ["한식", "상관없음"] else f"{cu} 밥집"
-                    fallback_found = kakao_search_places(c_lat, c_lng, fallback_menu, fallback_kw, radius_km=radius_km, need_parking=need_parking_flag)
+                    fallback_found = kakao_search_places(
+                        c_lat, c_lng, fallback_menu, fallback_kw,
+                        radius_km=radius_km,
+                        need_parking=need_parking_flag,
+                        selected_price_code=target_pr
+                    )
                     if fallback_found:
                         final_menu = (fallback_menu, "🍱")
                         places = fallback_found
@@ -1261,7 +1326,7 @@ else:
                                     box-shadow: 0 4px 20px rgba(232, 106, 62, 0.35);">
                             <div style="font-size: 62px; line-height: 1; margin-bottom: 6px;">{final_menu[1]}</div>
                             <div style="color: #2E1C10; font-size: 25px; font-weight: 900; margin: 4px 0;">{final_menu[0]}</div>
-                            <p style="color: #E86A3E; font-size: 13px; font-weight: 700; margin: 0;">당첨! 식당 정보를 불러옵니다... ✨</p>
+                            <p style="color: #E86A3E; font-size: 13px; font-weight: 700; margin: 0;">당첨! 전문 식당 정보를 불러옵니다... ✨</p>
                         </div>
                         """,
                         unsafe_allow_html=True
@@ -1284,6 +1349,6 @@ else:
                     }
                     st.rerun()
                 else:
-                    st.warning("⚠️ 설정하신 조건 내에 만족하는 식당을 찾지 못했습니다. 반경을 넓히거나 가격/주차 옵션을 조정해 보세요!")
+                    st.warning("⚠️ 설정하신 조건(단품 전문점 및 가격대)을 만족하는 식당을 찾지 못했습니다. 반경을 넓히거나 가격 옵션을 '상관없음'으로 조정해 보세요!")
                     time.sleep(1.8)
                     st.rerun()
