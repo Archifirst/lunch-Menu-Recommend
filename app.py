@@ -215,6 +215,21 @@ st.markdown(
         box-sizing: border-box;
     }
 
+    /* [결과 화면] 지도 하단 여백 및 버튼 간격 절반 축소 */
+    div.stElementContainer:has(iframe) {
+        margin-bottom: -4px !important;
+    }
+
+    div.stElementContainer:has(a[kind="secondaryFormSubmit"]),
+    div.stElementContainer:has(.stLinkButton) {
+        margin-top: 0px !important;
+        margin-bottom: 5px !important;
+    }
+
+    div.stElementContainer:has(button[key="btn_reset_bottom"]) {
+        margin-top: 0px !important;
+    }
+
     @keyframes smoothFadeIn {
         from { opacity: 0; transform: translateY(6px); }
         to { opacity: 1; transform: translateY(0); }
@@ -447,10 +462,6 @@ DEFAULT_FOODS = [
 # --- Google Places API (New) 기반 식당 상세 정보 수집 및 상호 보완 함수 ---
 @st.cache_data(ttl=86400, show_spinner=False)
 def fetch_google_place_details(place_name: str, lat: float, lng: float) -> dict:
-    """
-    Google Places API (New) Text Search를 통해 
-    영업시간, 가격대, 주차장 여부, 업태/요리정보 등을 종합 조회합니다.
-    """
     default_res = {
         "found": False,
         "is_dinner_only": False,
@@ -502,11 +513,9 @@ def fetch_google_place_details(place_name: str, lat: float, lng: float) -> dict:
             default_res["rating"] = p.get("rating")
             default_res["user_rating_count"] = p.get("userRatingCount")
 
-            # 1. 업태/요리 분류
             if "primaryTypeDisplayName" in p:
                 default_res["primary_type"] = p["primaryTypeDisplayName"].get("text", "")
 
-            # 2. 가격대 (Google Price Level 매핑)
             price_map = {
                 "PRICE_LEVEL_INEXPENSIVE": "1만원 이하",
                 "PRICE_LEVEL_MODERATE": "1~2만원대",
@@ -515,7 +524,6 @@ def fetch_google_place_details(place_name: str, lat: float, lng: float) -> dict:
             }
             default_res["price_level_text"] = price_map.get(p.get("priceLevel", ""), "")
 
-            # 3. 주차장 여부 정밀 확인 (식당 자체 주차 옵션)
             parking_opts = p.get("parkingOptions", {})
             if parking_opts.get("freeParkingLot") or parking_opts.get("freeGarageParking"):
                 default_res["parking_info"] = "무료 주차 가능"
@@ -524,19 +532,15 @@ def fetch_google_place_details(place_name: str, lat: float, lng: float) -> dict:
             elif parking_opts.get("streetParking"):
                 default_res["parking_info"] = "노상 주차 가능"
 
-            # 4. 영업시간 및 14시 이후 오픈 매장 필터링
             hours_data = p.get("currentOpeningHours") or p.get("regularOpeningHours")
             if hours_data:
                 default_res["open_now"] = hours_data.get("openNow")
 
-                # 오늘 요일(월0 ~ 일6) 구글 period day 매핑 (일0, 월1 ... 토6)
                 today_idx = datetime.now().weekday()
                 today_google_day = (today_idx + 1) % 7
 
-                # UI 표출용 오늘 영업시간 텍스트
                 weekday_texts = hours_data.get("weekdayDescriptions", [])
                 if weekday_texts and today_idx < len(weekday_texts):
-                    # "월요일: 오전 11:00 ~ 오후 9:00" 형식 파싱
                     raw_text = weekday_texts[today_idx]
                     if ":" in raw_text:
                         default_res["today_hours_text"] = raw_text.split(":", 1)[-1].strip()
@@ -548,10 +552,8 @@ def fetch_google_place_details(place_name: str, lat: float, lng: float) -> dict:
                     earliest_open_hour = min(per.get("open", {}).get("hour", 0) for per in today_periods)
                     latest_close_hour = max(per.get("close", {}).get("hour", 24) for per in today_periods if per.get("close"))
 
-                    # 규칙 1: 14시(오후 2시) 이후에 오픈하는 매장은 술집/저녁 전용 매장으로 간주
                     if earliest_open_hour >= 14:
                         default_res["is_dinner_only"] = True
-                    # 규칙 2: 14시 이전에 열더라도 11시 전에 이미 마감하는 매장 배제
                     elif latest_close_hour <= 11:
                         default_res["is_dinner_only"] = True
 
@@ -626,7 +628,6 @@ def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_na
     return True
 
 def has_nearby_parking_kakao(lat: float, lng: float, place_name: str) -> bool:
-    """카카오 로컬 API를 통한 건물명 및 300m 이내 주차장 탐색"""
     if any(k in place_name for k in ["주차", "타워", "빌딩", "스퀘어", "몰", "프라자", "센터"]):
         return True
     
@@ -713,7 +714,6 @@ def kakao_get_coordinates(query: str):
     return None, None
 
 def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: str, radius_km: float = 1.8, need_parking: bool = False):
-    """카카오 Local API로 1차 탐색 후 구글 Places API로 영업시간/상세정보 교차 보완"""
     if not KAKAO_REST_KEY:
         return []
     url = "https://dapi.kakao.com/v2/local/search/keyword.json"
@@ -746,24 +746,20 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
                 p_name = d.get("place_name", "")
                 cat_name = d.get("category_name", "")
                 
-                # 1. 카카오 키워드/업종 1차 필터링
                 if not is_valid_specialized_restaurant(menu_name, p_name, cat_name):
                     continue
                 
                 p_lat = float(d.get("y"))
                 p_lng = float(d.get("x"))
 
-                # 2. 구글 Places API 연계: 14시 이후 오픈/술집 여부 및 상세 정보 동시 수집
                 g_details = fetch_google_place_details(p_name, p_lat, p_lng)
                 if g_details["is_dinner_only"]:
                     continue
 
-                # 3. 주차장 여부 상호 보완 (구글 식당 자체 주차장 + 카카오 주변 주차시설)
                 kakao_parking = has_nearby_parking_kakao(p_lat, p_lng, p_name) if need_parking else False
                 google_parking = bool(g_details["parking_info"])
                 parking_available = google_parking or kakao_parking
 
-                # 4. 음식 카테고리 보완 (구글 업태명이 있으면 카카오와 병합)
                 clean_cat = cat_name.split(">")[-1].strip() if ">" in cat_name else cat_name
                 if g_details["primary_type"] and g_details["primary_type"] not in clean_cat:
                     final_cat = f"{clean_cat} · {g_details['primary_type']}"
@@ -842,7 +838,6 @@ if res is not None and res.get("places"):
     tag_bg = "#FCEFE6" if top_pick.get("is_personal", True) else "#F7E6D2"
     tag_color = "#C85A32" if top_pick.get("is_personal", True) else "#8A532B"
 
-    # 구글 플레이스 연동 배지 (실시간 영업 여부, 주차, 가격대, 평점)
     badges = []
     if top_pick.get("open_now") is True:
         badges.append('<span style="font-size: 11px; background: #E8F4EA; color: #2E7D32; padding: 2px 7px; border-radius: 6px; font-weight: 700;">🟢 지금 영업중</span>')
@@ -861,7 +856,6 @@ if res is not None and res.get("places"):
 
     badges_html = " ".join(badges)
 
-    # 영업시간 보충 텍스트
     hours_line = ""
     if top_pick.get("today_hours"):
         hours_line = f'<div style="font-size: 12.5px; color: #5D534A; margin-top: 5px;">🕒 오늘 운영: <b>{top_pick["today_hours"]}</b></div>'
@@ -937,11 +931,10 @@ if res is not None and res.get("places"):
     unique_map_key = f"map_{res['id']}_{int(top_pick['lat'] * 10000)}"
     st_folium(m, width="100%", height=380, key=unique_map_key, returned_objects=[])
 
-    st.markdown("<div style='height: 6px;'></div>", unsafe_allow_html=True)
+    # 지도 - 길찾기 - 다시 뽑기 간격 절반 축소 (인라인 빈 div 제거 및 CSS 마진 적용)
     kakao_directions_url = f"https://map.kakao.com/link/to/{urllib.parse.quote(top_pick['name'])},{top_pick['lat']},{top_pick['lng']}"
     st.link_button(f"🧭 '{top_pick['name']}' 길찾기 바로가기", kakao_directions_url, use_container_width=True)
 
-    st.markdown("<div style='height: 5px;'></div>", unsafe_allow_html=True)
     if st.button("🔄 다시 뽑기", use_container_width=True, key="btn_reset_bottom"):
         reset_to_selection()
 
