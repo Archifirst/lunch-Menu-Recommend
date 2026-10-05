@@ -230,6 +230,7 @@ st.markdown(
         margin-top: 0px !important;
     }
 
+    /* 부드러운 전환 효과 애니메이션 */
     @keyframes smoothFadeIn {
         from { opacity: 0; transform: translateY(6px); }
         to { opacity: 1; transform: translateY(0); }
@@ -931,7 +932,6 @@ if res is not None and res.get("places"):
     unique_map_key = f"map_{res['id']}_{int(top_pick['lat'] * 10000)}"
     st_folium(m, width="100%", height=380, key=unique_map_key, returned_objects=[])
 
-    # 지도 - 길찾기 - 다시 뽑기 간격 절반 축소 (인라인 빈 div 제거 및 CSS 마진 적용)
     kakao_directions_url = f"https://map.kakao.com/link/to/{urllib.parse.quote(top_pick['name'])},{top_pick['lat']},{top_pick['lng']}"
     st.link_button(f"🧭 '{top_pick['name']}' 길찾기 바로가기", kakao_directions_url, use_container_width=True)
 
@@ -942,10 +942,11 @@ if res is not None and res.get("places"):
 # [뷰 분기 2]: 선택 옵션 박스 및 룰렛 실행 루프
 # ============================================================
 else:
-    main_view = st.container()
+    main_view = st.empty()
 
-    # --- 1. 위치 입력 ---
+    # 옵션 선택 입력 폼
     with main_view.container():
+        # --- 1. 위치 입력 ---
         with st.container(border=True):
             st.markdown("<div class='section-title'>📍 위치</div>", unsafe_allow_html=True)
             col_input, col_gps = st.columns([3.5, 1.2], vertical_alignment="center")
@@ -1206,7 +1207,6 @@ else:
                 show_location_not_found_warning(region)
             else:
                 region_warning_spot.empty()
-                main_view.empty()
 
                 cu = st.session_state.selected_cuisine
                 pr = st.session_state.selected_price
@@ -1231,13 +1231,16 @@ else:
                 if not selected_candidates:
                     selected_candidates = [f for f in DEFAULT_FOODS if f[0] != "죽"]
 
-                rolling_spot = st.empty()
+                # 1. 기존 옵션 선택 창을 완전히 비우고 롤링 화면을 단독으로 마운트
+                main_view.empty()
+                rolling_spot = main_view.empty()
+
                 shuffled = selected_candidates.copy()
                 random.shuffle(shuffled)
                 need_parking_flag = (st.session_state.selected_parking == "식당 주차장 혹은 인근 주차장 있음")
 
-                # 롤링 애니메이션 전반부
-                for i in range(4):
+                # 2. 롤링 애니메이션 전반부 (빠른 속도 회전)
+                for i in range(5):
                     temp = random.choice(selected_candidates)
                     rolling_spot.markdown(
                         f"""
@@ -1251,9 +1254,9 @@ else:
                         """,
                         unsafe_allow_html=True
                     )
-                    time.sleep(0.04)
+                    time.sleep(0.06)
 
-                # 카카오맵 + Google Places API 하이브리드 탐색
+                # 3. 카카오맵 + Google Places API 하이브리드 탐색
                 final_menu = None
                 places = []
                 for m_name, m_emoji, m_kw, _, _ in shuffled[:6]:
@@ -1271,8 +1274,8 @@ else:
                         final_menu = (fallback_menu, "🍱")
                         places = fallback_found
 
-                # 롤링 애니메이션 후반부
-                for i in range(3):
+                # 4. 롤링 애니메이션 후반부 (점차 감속하며 확정되는 효과 연출)
+                for i in range(4):
                     temp = random.choice(selected_candidates)
                     rolling_spot.markdown(
                         f"""
@@ -1286,7 +1289,23 @@ else:
                         """,
                         unsafe_allow_html=True
                     )
-                    time.sleep(0.08 + (i * 0.05))
+                    time.sleep(0.09 + (i * 0.05))
+
+                # 당첨된 메뉴가 확정되었을 때 마지막 프레임으로 0.25초간 고정 표시
+                if final_menu:
+                    rolling_spot.markdown(
+                        f"""
+                        <div style="text-align: center; margin: 14px 0 14px 0; padding: 22px 18px; 
+                                    background: #FFFDF9; border-radius: 20px; border: 2px solid #E86A3E; 
+                                    box-shadow: 0 4px 20px rgba(232, 106, 62, 0.35);">
+                            <div style="font-size: 62px; line-height: 1; margin-bottom: 6px;">{final_menu[1]}</div>
+                            <div style="color: #2E1C10; font-size: 25px; font-weight: 900; margin: 4px 0;">{final_menu[0]}</div>
+                            <p style="color: #E86A3E; font-size: 13px; font-weight: 700; margin: 0;">당첨! 식당 정보를 불러옵니다... ✨</p>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+                    time.sleep(0.25)
 
                 rolling_spot.empty()
 
