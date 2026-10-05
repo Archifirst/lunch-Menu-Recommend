@@ -215,7 +215,7 @@ st.markdown(
         box-sizing: border-box;
     }
 
-    /* [결과 화면] 지도 하단 여백 및 버튼 간격 절반 축소 */
+    /* [결과 화면] 지도 하단 여백 및 버튼 간격 축소 */
     div.stElementContainer:has(iframe) {
         margin-bottom: -4px !important;
     }
@@ -230,7 +230,6 @@ st.markdown(
         margin-top: 0px !important;
     }
 
-    /* 부드러운 전환 효과 애니메이션 */
     @keyframes smoothFadeIn {
         from { opacity: 0; transform: translateY(6px); }
         to { opacity: 1; transform: translateY(0); }
@@ -312,83 +311,20 @@ if qp.get("action") == "gps" and "lat" in qp and "lng" in qp:
         pass
     st.query_params.clear()
 
-# --- 정밀 필터링 키워드 정의 ---
-EXCLUDED_CATEGORIES = [
-    "술집", "주점", "호프", "포차", "이자카야", "바(BAR)", "요리주점", "와인바",
-    "칵테일바", "민속주점", "맥주", "룸살롱", "단란주점", "유흥주점", "라이브카페", 
-    "나이트클럽", "오뎅바", "꼬치구이전문점", "선술집", "해물주점", "실내포차",
-    "포장마차", "와인", "위스키", "펍", "선술", "감성주점", "카페", "디저트", "제과,베이커리",
-    "실비집", "대포집", "맥줏집"
+# --- 최소한의 유흥/성인 업소 원천 차단 목록 ---
+HARD_EXCLUDED_CATEGORIES = [
+    "룸살롱", "단란주점", "유흥주점", "나이트클럽", "성인용품", "마사지", "안마", "노래방", "가라오케"
 ]
 
-EXCLUDED_NAME_KEYWORDS = [
-    "포차", "주점", "호프", "이자카야", "술집", "맥주", "와인", "펍", "PUB", "비어",
-    "BEER", "라운지", "BAR", "노래방", "포장마차", "야시장", "소주", "오뎅바",
-    "막걸리", "동동주", "생맥주", "달빛", "심야", "야식", "올나잇", "주막", "동동",
-    "탁주", "양조장", "브루어리", "BREW", "탭룸", "살롱", "가라오케", "선술집",
-    "대포", "대포집", "통닭발", "껍데기", "연탄구이", "원조골뱅이", "실비집", "실비"
+# 식사 미제공 카페/디저트 차단 목록
+CAFE_EXCLUDED_CATEGORIES = [
+    "카페", "디저트", "제과,베이커리", "떡,한과", "도넛", "아이스크림"
 ]
 
-JEON_KEYWORDS = [
-    "파전", "빈대떡", "부침개", "지짐이", "전이야기", "전나라", "전마을", 
-    "전선생", "종로전", "원조전", "전골목", "주막", "전사랑", "전세상"
+# Google Places 영업시간 데이터가 없을 때만 참고할 순수 야간 키워드
+SUSPECT_NIGHT_KEYWORDS = [
+    "포차", "실내포차", "소주방", "호프", "룸호프", "노가리", "맥주창고"
 ]
-
-NON_LUNCH_CATEGORIES = [
-    "육류,고기구이", "삼겹살", "곱창,막창", "양꼬치", "조개구이",
-    "치킨", "닭요리 > 치킨", "닭꼬치", "꼬치구이", "전,빈대떡", "닭발"
-]
-
-MEAT_SHOP_KEYWORDS = [
-    "축산", "정육", "식육", "마장", "화로", "연탄", "솥뚜껑",
-    "뒷고기", "주먹고기", "생고기", "생삼겹", "대패", "삼겹", "오겹",
-    "곱창", "막창", "대창", "특양", "양꼬치", "양갈비", "갈매기", "뽈살",
-    "야키니쿠", "우삼겹", "냉삼", "생갈비", "통닭발", "불닭발", "조개구이",
-    "장어구이", "야키토리", "쿠시카츠", "닭강정"
-]
-
-EVENING_RAW_FISH_KEYWORDS = [
-    "횟집", "회센타", "회센터", "수산", "회타운", "활어", "선어", "막회", "숙성회",
-    "물회마차", "포차회", "바다마차", "해물포차", "해산물포차", "참치정육점"
-]
-
-VIETNAMESE_NOODLE_KEYWORDS = [
-    "쌀국수", "포(PHO)", "PHO", "분짜", "반미", "포보", "미분당", "에머이",
-    "사이공", "반포식스", "포메인", "포베이", "까몬", "더포", "낭만쌀국수",
-    "아시아문", "팟타이", "포앤", "반쎄오", "월남쌈"
-]
-
-MULTI_MENU_FRANCHISES = [
-    "국수나무", "미소야", "역전우동", "한솥", "도시락",
-    "김밥천국", "고봉민", "김가네", "얌샘", "싸다김밥", "종로김밥", 
-    "선비꼬마김밥", "마녀김밥", "바르다김선생", "밥버거", "토마토김밥",
-    "분식천국", "나드리김밥", "소풍김밥"
-]
-
-KNOWN_FRANCHISE_BRANDS = [
-    "김밥천국", "고봉민", "김가네", "얌샘", "싸다김밥", "종로김밥", "선비꼬마김밥",
-    "마녀김밥", "바르다김선생", "밥버거", "토마토김밥", "국수나무", "미소야", "역전우동",
-    "한솥", "본죽", "신전떡볶이", "동대문엽기", "죠스떡볶이", "청년다방", "두끼",
-    "홍콩반점", "교동짬뽕", "백소정", "카츠젠", "롤링파스타", "서브웨이",
-    "맥도날드", "롯데리아", "버거킹", "노브랜드버거", "맘스터치", "KFC",
-    "상무초밥", "쿠우쿠우", "스시로", "갓덴스시", "미카도스시"
-]
-
-TONKATSU_NAME_INDICATORS = ["돈까스", "돈가스", "카츠", "카쯔", "가츠", "돈카츠", "포크커틀릿"]
-
-STRICT_SPECIALTY_NAME_RULES = {
-    "닭갈비": ["닭갈비"],
-    "수제비": ["수제비"],
-    "칼국수": ["칼국수"],
-    "막국수": ["막국수"],
-    "국밥": ["국밥", "순대", "순댓국", "돼지국밥", "따로국밥", "소머리국밥"],
-    "뼈해장국": ["해장국", "감자탕", "뼈"],
-    "초밥": ["스시", "초밥"],
-    "김밥": ["김밥"],
-    "죽": ["죽"],
-    "잔치국수": ["잔치국수", "국수집", "할매국수", "멸치국수", "국수마을", "국수나라", "국수전문", "국수"],
-    "육개장": ["육개장", "육대장", "혜장국"]
-}
 
 DEFAULT_FOODS = [
     ("김치찌개", "🥘", "김치찌개 전문점", "한식", "low"),
@@ -456,16 +392,18 @@ DEFAULT_FOODS = [
     ("팟타이", "🥢", "태국음식 팟타이", "동남아식", "mid"),
     ("나시고랭", "🍳", "인도네시아 나시고랭", "동남아식", "mid"),
     ("인도커리", "🍛", "인도커리 난 전문점", "인도식", "mid"),
-    ("타코", "🌮", "멕시칸 타코", "멕시코식", "mid"),
-    ("브리또", "🌯", "멕시칸 브리또", "멕시코식", "low")
+    ("타코", "🌮", "타코", "멕시코식", "mid"),
+    ("부리또", "🌯", "부리또", "멕시코식", "low"),
+    ("퀘사디아", "🫓", "멕시코음식", "멕시코식", "mid"),
+    ("파히타", "🥘", "멕시칸", "멕시코식", "high")
 ]
 
-# --- Google Places API (New) 기반 식당 상세 정보 수집 및 상호 보완 함수 ---
+# --- Google Places API (New) 기반 영업시간 및 상세 정보 분석 ---
 @st.cache_data(ttl=86400, show_spinner=False)
 def fetch_google_place_details(place_name: str, lat: float, lng: float) -> dict:
     default_res = {
         "found": False,
-        "is_dinner_only": False,
+        "is_lunch_open": None,       # 점심 영업 여부 (True: 점심영업함, False: 저녁만함, None: 정보없음)
         "open_now": None,
         "today_hours_text": "",
         "price_level_text": "",
@@ -550,81 +488,57 @@ def fetch_google_place_details(place_name: str, lat: float, lng: float) -> dict:
                 today_periods = [per for per in periods if per.get("open", {}).get("day") == today_google_day]
 
                 if today_periods:
-                    earliest_open_hour = min(per.get("open", {}).get("hour", 0) for per in today_periods)
-                    latest_close_hour = max(per.get("close", {}).get("hour", 24) for per in today_periods if per.get("close"))
+                    # 24시간 영업 체크
+                    is_24h = any(per.get("open", {}).get("hour") == 0 and not per.get("close") for per in today_periods)
+                    if is_24h:
+                        default_res["is_lunch_open"] = True
+                    else:
+                        earliest_open_hour = min(per.get("open", {}).get("hour", 0) for per in today_periods)
+                        latest_close_hour = max(per.get("close", {}).get("hour", 24) for per in today_periods if per.get("close"))
 
-                    if earliest_open_hour >= 14:
-                        default_res["is_dinner_only"] = True
-                    elif latest_close_hour <= 11:
-                        default_res["is_dinner_only"] = True
+                        # 점심시간(11:00 ~ 14:00) 포함 여부 판단
+                        # 오픈이 14시 이전이고 마감이 12시 이후이면 점심 영업으로 인정
+                        if earliest_open_hour <= 13 and latest_close_hour >= 12:
+                            default_res["is_lunch_open"] = True
+                        else:
+                            default_res["is_lunch_open"] = False
+                else:
+                    # 오늘 영업 스케줄이 비어있으면 휴무이거나 디너 전용일 확률
+                    default_res["is_lunch_open"] = False
 
     except Exception:
         pass
 
     return default_res
 
-def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_name: str) -> bool:
+def is_valid_lunch_restaurant_smart(place_name: str, category_name: str, g_details: dict) -> bool:
+    """
+    구글 플레이스 영업시간 데이터를 최우선으로 적용하는 점심 식당 판별기
+    """
     clean_name = place_name.replace(" ", "").upper()
     cat_full = category_name.replace(" ", "")
 
-    if any(ex in cat_full for ex in EXCLUDED_CATEGORIES):
+    # 1. 유흥/성인업소는 점심시간 영업 여부와 관계없이 절대 배제
+    if any(hard in cat_full for hard in HARD_EXCLUDED_CATEGORIES):
         return False
-    if any(bad in clean_name for bad in [k.upper() for k in EXCLUDED_NAME_KEYWORDS]):
-        return False
-    if any(jeon in clean_name for jeon in JEON_KEYWORDS):
-        return False
-    if any(c in cat_full for c in ["전,빈대떡", "빈대떡"]):
+    if any(hard in clean_name for hard in ["룸살롱", "단란주점", "유흥주점", "나이트클럽"]):
         return False
 
-    if any(non in cat_full for non in NON_LUNCH_CATEGORIES):
-        if not (menu_name == "닭갈비" and "닭요리" in cat_full):
-            return False
+    # 2. 식사 메뉴를 취급하지 않는 순수 카페/베이커리 제외
+    if any(cafe in cat_full for cafe in CAFE_EXCLUDED_CATEGORIES):
+        return False
 
-    if "굽자" not in place_name:
-        if "구이" in clean_name and menu_name != "생선구이백반":
-            return False
-        if any(bad in clean_name for bad in [k.upper() for k in MEAT_SHOP_KEYWORDS]):
-            return False
+    # 3. Google Places 영업시간 데이터가 있는 경우: 점심 영업 여부를 최우선 판별 기준으로 적용
+    if g_details.get("found") and g_details.get("is_lunch_open") is not None:
+        # 주점/펍/바/구이집 타이틀이 있더라도, 점심시간에 오픈하면 점심 식사 가능 매장으로 인정
+        return g_details["is_lunch_open"]
 
-    if menu_name == "닭갈비":
-        if "닭갈비" not in clean_name:
-            return False
-        if any(bad_chick in clean_name for bad_chick in ["치킨", "통닭", "찜닭", "삼계탕", "닭한마리", "닭발", "닭도리", "닭볶음"]):
-            return False
-
-    if menu_name == "수제비":
-        if "수제비" not in clean_name:
-            return False
-        if any(bad_soup in clean_name for bad_soup in ["매운탕", "감자탕", "부대찌개", "동태탕", "닭한마리", "포차"]):
-            return False
-
-    if menu_name not in ["김밥", "떡볶이"]:
-        if any(brand in clean_name for brand in MULTI_MENU_FRANCHISES):
-            return False
-        if "분식" in cat_full and not any(k in cat_full for k in ["일식", "양식", "한식", "중식", "아시아음식"]):
-            return False
-
-    if menu_name == "초밥":
-        if any(fish in clean_name for fish in EVENING_RAW_FISH_KEYWORDS):
-            return False
-        if "회" in cat_full and not any(k in clean_name for k in ["스시", "초밥"]):
-            return False
-
-    if menu_name == "돈까스":
-        is_tonkatsu = any(k in clean_name for k in TONKATSU_NAME_INDICATORS) or any(c in cat_full for c in ["돈가스", "돈까스"])
-        if not is_tonkatsu:
-            return False
-
-    if menu_name == "잔치국수":
-        if any(asian in cat_full for asian in ["아시아음식", "베트남", "태국", "동남아"]):
-            return False
-        if any(pho in clean_name for pho in VIETNAMESE_NOODLE_KEYWORDS):
-            return False
-
-    if menu_name in STRICT_SPECIALTY_NAME_RULES:
-        required_words = STRICT_SPECIALTY_NAME_RULES[menu_name]
-        if not any(req in clean_name for req in required_words):
-            return False
+    # 4. Google Places 영업시간 데이터가 없는 경우 (카카오 정보 기반 보수적 판별)
+    # 술집 성격이 명확한 키워드가 있으면 제외
+    if any(bad in clean_name for bad in SUSPECT_NIGHT_KEYWORDS):
+        return False
+    if any(c in cat_full for c in ["유흥주점", "룸살롱", "단란주점", "호프"]):
+        return False
 
     return True
 
@@ -656,29 +570,13 @@ def has_nearby_parking_kakao(lat: float, lng: float, place_name: str) -> bool:
 def calculate_priority(place: dict, menu_name: str, has_parking: bool = False, need_parking: bool = False) -> float:
     score = place["dist"]
     p_name = place["name"]
-    is_franchise = any(f_name in p_name for f_name in KNOWN_FRANCHISE_BRANDS) or any(p_name.strip().endswith(sfx) for sfx in ["점", "호점", "직영점"])
+    is_franchise = any(p_name.strip().endswith(sfx) for sfx in ["점", "호점", "직영점"])
     
     place["is_personal"] = not is_franchise
-    score += (2.5 if is_franchise else -0.5)
+    score += (1.5 if is_franchise else -0.5)
 
-    if menu_name in ["닭갈비", "수제비"] and menu_name in p_name:
-        score -= 3.0
-    if menu_name == "돈까스" and any(k in p_name for k in TONKATSU_NAME_INDICATORS):
-        score -= 2.0
-    if menu_name == "초밥" and any(k in p_name for k in ["스시", "초밥"]):
+    if menu_name in p_name:
         score -= 2.5
-    if menu_name == "죽" and "죽" in p_name:
-        score -= 2.0
-    if menu_name == "국밥" and any(k in p_name for k in ["국밥", "순대", "순댓국", "돼지국밥"]):
-        score -= 2.5
-    if menu_name == "잔치국수":
-        if any(k in p_name for k in ["잔치국수", "멸치국수", "할매국수"]):
-            score -= 3.0
-        elif "국수" in p_name:
-            score -= 1.5
-    if menu_name == "육개장":
-        if any(k in p_name for k in ["육개장", "육대장"]):
-            score -= 3.0
 
     if need_parking:
         score -= (3.5 if has_parking else 0.0)
@@ -721,7 +619,7 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
     headers = {"Authorization": f"KakaoAK {KAKAO_REST_KEY}"}
     radius_meters = int(radius_km * 1000)
 
-    query_text = f"{search_query} 주차" if need_parking else search_query
+    query_text = search_query
 
     params = {
         "query": query_text,
@@ -736,8 +634,11 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
     try:
         res = requests.get(url, headers=headers, params=params, timeout=3.0)
         docs = res.json().get("documents", []) if res.status_code == 200 else []
-        if not docs and need_parking:
-            params["query"] = search_query
+        
+        # 멕시코식 메뉴 대체 검색
+        if not docs and menu_name in ["타코", "부리또", "퀘사디아", "파히타"]:
+            fallback_map = {"타코": "타코", "부리또": "브리또", "퀘사디아": "멕시칸", "파히타": "남미음식"}
+            params["query"] = fallback_map.get(menu_name, "멕시코")
             res = requests.get(url, headers=headers, params=params, timeout=3.0)
             docs = res.json().get("documents", []) if res.status_code == 200 else []
 
@@ -746,15 +647,14 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
             for d in docs:
                 p_name = d.get("place_name", "")
                 cat_name = d.get("category_name", "")
-                
-                if not is_valid_specialized_restaurant(menu_name, p_name, cat_name):
-                    continue
-                
                 p_lat = float(d.get("y"))
                 p_lng = float(d.get("x"))
 
+                # 1. Google Places API 정보 조회 (영업시간 최우선 판별)
                 g_details = fetch_google_place_details(p_name, p_lat, p_lng)
-                if g_details["is_dinner_only"]:
+
+                # 2. 스마트 점심 식당 여부 판별 (점심 영업 시 주점 명칭 포함되어도 통과)
+                if not is_valid_lunch_restaurant_smart(p_name, cat_name, g_details):
                     continue
 
                 kakao_parking = has_nearby_parking_kakao(p_lat, p_lng, p_name) if need_parking else False
@@ -910,7 +810,7 @@ if res is not None and res.get("places"):
                 st.markdown(cand_html, unsafe_allow_html=True)
 
     st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
-    st.markdown("<div class='section-title'>🗺️ 식당 위치 지도</div>", unsafe_allow_html=True)
+    st.markdown("<div class='section-title'>🗺️️ 식당 위치 지도</div>", unsafe_allow_html=True)
     st.caption("🔴 빨간 핀: 1픽 매장 / 🔵 파란 핀: 주변 후보")
 
     m = folium.Map(location=[top_pick["lat"], top_pick["lng"]], zoom_start=15, control_scale=True)
@@ -944,7 +844,6 @@ if res is not None and res.get("places"):
 else:
     main_view = st.empty()
 
-    # 옵션 선택 입력 폼
     with main_view.container():
         # --- 1. 위치 입력 ---
         with st.container(border=True):
@@ -1054,7 +953,7 @@ else:
 
         # --- 3. 음식 종류 선택 ---
         with st.container(border=True):
-            st.markdown("<div class='section-title'>🍽️ 음식 종류</div>", unsafe_allow_html=True)
+            st.markdown("<div class='section-title'>🍽️️ 음식 종류</div>", unsafe_allow_html=True)
 
             cu1, cu2, cu3, cu4 = st.columns(4)
             current_cuisine = st.session_state.selected_cuisine
@@ -1166,7 +1065,7 @@ else:
             region_warning_spot.markdown(
                 """
                 <div class="warning-box">
-                    <span style="font-size: 16px;">⚠️</span>
+                    <span style="font-size: 16px;">⚠️️</span>
                     <span style="color: #6C4D0A; font-size: 13.5px; font-weight: 700;">
                         음식 종류를 선택해 주세요!
                     </span>
@@ -1231,7 +1130,6 @@ else:
                 if not selected_candidates:
                     selected_candidates = [f for f in DEFAULT_FOODS if f[0] != "죽"]
 
-                # 1. 기존 옵션 선택 창을 완전히 비우고 롤링 화면을 단독으로 마운트
                 main_view.empty()
                 rolling_spot = main_view.empty()
 
@@ -1239,7 +1137,7 @@ else:
                 random.shuffle(shuffled)
                 need_parking_flag = (st.session_state.selected_parking == "식당 주차장 혹은 인근 주차장 있음")
 
-                # 2. 롤링 애니메이션 전반부 (빠른 속도 회전)
+                # 롤링 애니메이션 전반부
                 for i in range(5):
                     temp = random.choice(selected_candidates)
                     rolling_spot.markdown(
@@ -1256,7 +1154,7 @@ else:
                     )
                     time.sleep(0.06)
 
-                # 3. 카카오맵 + Google Places API 하이브리드 탐색
+                # 스마트 영업시간 하이브리드 탐색
                 final_menu = None
                 places = []
                 for m_name, m_emoji, m_kw, _, _ in shuffled[:6]:
@@ -1274,7 +1172,7 @@ else:
                         final_menu = (fallback_menu, "🍱")
                         places = fallback_found
 
-                # 4. 롤링 애니메이션 후반부 (점차 감속하며 확정되는 효과 연출)
+                # 롤링 애니메이션 후반부
                 for i in range(4):
                     temp = random.choice(selected_candidates)
                     rolling_spot.markdown(
@@ -1291,7 +1189,6 @@ else:
                     )
                     time.sleep(0.09 + (i * 0.05))
 
-                # 당첨된 메뉴가 확정되었을 때 마지막 프레임으로 0.25초간 고정 표시
                 if final_menu:
                     rolling_spot.markdown(
                         f"""
