@@ -4,6 +4,7 @@ import time
 import requests
 import urllib.parse
 import re
+from datetime import datetime
 import folium
 from streamlit_folium import st_folium
 
@@ -163,6 +164,7 @@ st.markdown(
         }
     }
 
+    /* 룰렛 버튼 컨테이너: 상단 마진을 0으로 맞춤 */
     div.block-container > div[data-testid="stVerticalBlock"] > div.stElementContainer:not(div[data-testid="stVerticalBlockBorderWrapper"] *) div.stButton:has(button[key="btn_trigger_random"]) {
         margin-top: 0px !important;
         margin-bottom: 14px !important;
@@ -197,6 +199,7 @@ st.markdown(
         transform: scale(1.015) !important;
     }
 
+    /* 안내 경고 박스 */
     .warning-box {
         display: flex;
         justify-content: center;
@@ -224,8 +227,12 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+# --- API 키 로드 ---
 has_key = "KAKAO_REST_KEY" in st.secrets and bool(st.secrets["KAKAO_REST_KEY"].strip())
 KAKAO_REST_KEY = st.secrets["KAKAO_REST_KEY"].strip() if has_key else ""
+
+has_google_key = "GOOGLE_MAPS_KEY" in st.secrets and bool(st.secrets["GOOGLE_MAPS_KEY"].strip())
+GOOGLE_MAPS_KEY = st.secrets["GOOGLE_MAPS_KEY"].strip() if has_google_key else ""
 
 PRESET_RADIUS = {
     "인근": 0.7,
@@ -437,6 +444,79 @@ DEFAULT_FOODS = [
     ("브리또", "🌯", "멕시칸 브리또", "멕시코식", "low")
 ]
 
+# --- Google Places API (New) 기반 14시 이후 오픈/술집 전용 배제 함수 ---
+@st.cache_data(ttl=86400, show_spinner=False)
+def is_excluded_dinner_place_google(place_name: str, lat: float, lng: float) -> bool:
+    """
+    구글 Places API를 조회하여 당일 오픈시간이 14시 이후이거나,
+    점심 시간대(11~14시) 영업을 하지 않는 저녁/야간 전용 매장인지 확인합니다.
+    (제외 대상일 경우 True 반환)
+    """
+    if not GOOGLE_MAPS_KEY:
+        return False
+
+    url = "https://places.googleapis.com/v1/places:searchText"
+    headers = {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": GOOGLE_MAPS_KEY,
+        "X-Goog-FieldMask": "places.regularOpeningHours,places.currentOpeningHours"
+    }
+    
+    clean_name = place_name.split()[0]
+    payload = {
+        "textQuery": clean_name,
+        "locationBias": {
+            "circle": {
+                "center": {"latitude": lat, "longitude": lng},
+                "radius": 400.0
+            }
+        },
+        "maxResultCount": 1,
+        "languageCode": "ko"
+    }
+
+    try:
+        res = requests.post(url, headers=headers, json=payload, timeout=2.0)
+        if res.status_code == 200:
+            places = res.json().get("places", [])
+            if not places:
+                return False
+
+            hours_data = places[0].get("currentOpeningHours") or places[0].get("regularOpeningHours")
+            if not hours_data:
+                return False
+
+            periods = hours_data.get("periods", [])
+            if not periods:
+                return False
+
+            # 오늘 요일 계산: 월0 ~ 일6 -> 구글 period day (일0, 월1, 화2, 수3, 목4, 금5, 토6)
+            today_google_day = (datetime.now().weekday() + 1) % 7
+            
+            today_periods = [p for p in periods if p.get("open", {}).get("day") == today_google_day]
+            if not today_periods:
+                # 24시간 연중무휴인 경우
+                if len(periods) == 1 and periods[0].get("open", {}).get("day") == 0 and periods[0].get("open", {}).get("hour") == 0 and not periods[0].get("close"):
+                    return False
+                return False
+
+            # 오늘 오픈 시간 분석
+            earliest_open_hour = min(p.get("open", {}).get("hour", 0) for p in today_periods)
+            latest_close_hour = max(p.get("close", {}).get("hour", 24) for p in today_periods if p.get("close"))
+
+            # 핵심 규칙 1: 오픈 시간이 14시(오후 2시) 이후이면 술집/디너 매장이므로 배제
+            if earliest_open_hour >= 14:
+                return True
+
+            # 핵심 규칙 2: 14시 이전에 열더라도 점심 시간(11시~14시)에 문을 닫는 매장이면 배제
+            if latest_close_hour <= 11:
+                return True
+
+    except Exception:
+        pass
+
+    return False
+
 def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_name: str) -> bool:
     clean_name = place_name.replace(" ", "").upper()
     cat_full = category_name.replace(" ", "")
@@ -559,7 +639,6 @@ def calculate_priority(place: dict, menu_name: str, has_parking: bool = False, n
 
     return score
 
-# --- 주소 및 키워드 복합 검색 좌표 추출 함수 ---
 @st.cache_data(ttl=86400, show_spinner=False)
 def kakao_get_coordinates(query: str):
     if not KAKAO_REST_KEY or not query.strip():
@@ -625,10 +704,14 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
                 if not is_valid_specialized_restaurant(menu_name, p_name, cat_name):
                     continue
                 
-                dist_m = float(d.get("distance", 0))
                 p_lat = float(d.get("y"))
                 p_lng = float(d.get("x"))
-                
+
+                # Google Places API를 통해 14:00 이후 오픈 매장(술집/야간 매장) 원천 배제
+                if is_excluded_dinner_place_google(p_name, p_lat, p_lng):
+                    continue
+
+                dist_m = float(d.get("distance", 0))
                 parking_available = False
                 if need_parking:
                     parking_available = has_nearby_parking(p_lat, p_lng, p_name)
@@ -666,7 +749,7 @@ st.markdown("<h1 style='color: #2E1C10; font-size: 28px; font-weight: 800; margi
 st.markdown("<div style='color: #8C827A; font-size: 13.5px; margin-bottom: 22px; line-height: 1.5;'>고민되는 점심 메뉴와 검증된 주변 밥집을 랜덤으로 골라드립니다.</div>", unsafe_allow_html=True)
 
 if not has_key:
-    st.warning("⚠️ **API 키 설정 필요**: `.streamlit/secrets.toml` 또는 Cloud Secrets에 `KAKAO_REST_KEY`를 설정해주세요.")
+    st.warning("⚠️ **카카오 API 키 설정 필요**: `.streamlit/secrets.toml` 또는 Cloud Secrets에 `KAKAO_REST_KEY`를 설정해주세요.")
 
 # ============================================================
 # [뷰 분기 1]: 룰렛 결과 화면
@@ -1007,7 +1090,7 @@ else:
             region_warning_spot.markdown(
                 """
                 <div class="warning-box">
-                    <span style="font-size: 16px;">⚠️️</span>
+                    <span style="font-size: 16px;">⚠️</span>
                     <span style="color: #6C4D0A; font-size: 13.5px; font-weight: 700;">
                         음식 종류를 선택해 주세요!
                     </span>
@@ -1020,7 +1103,7 @@ else:
             region_warning_spot.markdown(
                 f"""
                 <div class="warning-box">
-                    <span style="font-size: 16px;">⚠️</span>
+                    <span style="font-size: 16px;">⚠️️</span>
                     <span style="color: #6C4D0A; font-size: 13.5px; font-weight: 700;">
                         '{target_region}' 위치를 찾지 못했습니다. 도로명/지번 주소 또는 주요 건물·역 이름을 확인해 주세요!
                     </span>
@@ -1056,26 +1139,23 @@ else:
                 price_map = {"1만원 이하": "low", "1~2만원": "mid", "2만원 이상": "high"}
                 target_pr = price_map.get(pr, None)
 
-                # 카테고리별 1차 풀 구성 (죽 제외)
+                # 카테고리별 풀 구성 (죽 제외)
                 if cu == "상관없음":
                     candidates_pool = [f for f in DEFAULT_FOODS if f[0] != "죽"]
                 else:
                     candidates_pool = [f for f in DEFAULT_FOODS if f[3] == cu and f[0] != "죽"]
 
-                # 선택한 카테고리 풀이 비어있을 경우 전체 풀로 복구
                 if not candidates_pool:
                     candidates_pool = [f for f in DEFAULT_FOODS if f[0] != "죽"]
 
                 # 가격 조건 적용
                 if target_pr:
                     selected_candidates = [f for f in candidates_pool if f[4] == target_pr]
-                    # 해당 가격대의 메뉴가 없으면 카테고리 전체 메뉴로 자동 확장
                     if not selected_candidates:
                         selected_candidates = candidates_pool
                 else:
                     selected_candidates = candidates_pool
 
-                # 최후 안전장치: 빈 리스트 방지
                 if not selected_candidates:
                     selected_candidates = [f for f in DEFAULT_FOODS if f[0] != "죽"]
 
@@ -1101,7 +1181,7 @@ else:
                     )
                     time.sleep(0.04)
 
-                # 카카오맵 Local API 전용 탐색
+                # 카카오맵 + Google Places API 영업시간 검증 파이프라인
                 final_menu = None
                 places = []
                 for m_name, m_emoji, m_kw, _, _ in shuffled[:6]:
@@ -1127,9 +1207,9 @@ else:
                         <div style="text-align: center; margin: 14px 0 14px 0; padding: 22px 18px; 
                                     background: #FFFDF9; border-radius: 20px; border: 1.5px solid #F5D5B8; 
                                     box-shadow: 0 4px 16px rgba(245, 213, 184, 0.35);">
-                        <div style="font-size: 58px; line-height: 1; margin-bottom: 6px;">{temp[1]}</div>
-                        <div style="color: #2E1C10; font-size: 23px; font-weight: 800; margin: 4px 0;">{temp[0]}</div>
-                        <p style="color: #8C827A; font-size: 13px; margin: 0;">{radius_display_text} 기준 맛집 추첨 중... 🎲</p>
+                            <div style="font-size: 58px; line-height: 1; margin-bottom: 6px;">{temp[1]}</div>
+                            <div style="color: #2E1C10; font-size: 23px; font-weight: 800; margin: 4px 0;">{temp[0]}</div>
+                            <p style="color: #8C827A; font-size: 13px; margin: 0;">{radius_display_text} 기준 맛집 추첨 중... 🎲</p>
                         </div>
                         """,
                         unsafe_allow_html=True
