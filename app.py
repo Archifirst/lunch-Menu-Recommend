@@ -163,8 +163,9 @@ st.markdown(
         }
     }
 
+    /* 룰렛 버튼 컨테이너: 상단 마진을 0으로 맞춰 안내 박스와 카드 사이 간격(14px) 통일 */
     div.block-container > div[data-testid="stVerticalBlock"] > div.stElementContainer:not(div[data-testid="stVerticalBlockBorderWrapper"] *) div.stButton:has(button[key="btn_trigger_random"]) {
-        margin-top: 14px !important;
+        margin-top: 0px !important;
         margin-bottom: 14px !important;
     }
 
@@ -197,6 +198,7 @@ st.markdown(
         transform: scale(1.015) !important;
     }
 
+    /* 안내 경고 박스: 이전 카드와의 간격 및 버튼과의 간격을 14px로 일치 */
     .warning-box {
         display: flex;
         justify-content: center;
@@ -204,7 +206,7 @@ st.markdown(
         gap: 8px;
         width: 100%;
         height: 44px;
-        margin: 6px 0 14px 0;
+        margin: 0 0 14px 0 !important;
         background-color: #FFFDF7;
         border: 1.5px solid #F7D488;
         border-radius: 12px;
@@ -708,7 +710,7 @@ if res is not None and res.get("places"):
         f'<div class="fade-in-content" style="margin-bottom: 20px; padding: 22px 18px; '
         f'background: #FFFDF9; border-radius: 22px; border: 1.5px solid #F5D5B8; '
         f'box-shadow: 0 4px 18px rgba(245, 213, 184, 0.35); text-align: center;">'
-        f'<div style="display: flex; justify-content: center; align-items: center; gap: 6px; margin-bottom: 8px; flex-wrap: wrap;">'
+        f'<div style="display: center; justify-content: center; align-items: center; gap: 6px; margin-bottom: 8px; flex-wrap: wrap;">'
         f'<span style="font-size: 12.5px; color: #E86A3E; font-weight: 700;">⭐ 오늘의 1픽 추천 밥집</span>'
         f'<span style="font-size: 11px; background: {tag_bg}; color: {tag_color}; padding: 2px 7px; border-radius: 6px; font-weight: 700;">{tag_text}</span>'
         f'<span style="font-size: 11px; background: #F3ECE4; color: #6E5F55; padding: 2px 7px; border-radius: 6px; font-weight: 600;">{top_pick.get("category", "식당")}</span>'
