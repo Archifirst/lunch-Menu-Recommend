@@ -311,14 +311,14 @@ if qp.get("action") == "gps" and "lat" in qp and "lng" in qp:
     st.query_params.clear()
 
 # ==============================================================================
-# [원상 복구]: 주점/술집/야식 원천 차단 카테고리 및 상호명 블랙리스트 키워드
+# [정밀 필터링 키워드]: 주점/술집/야식 및 던킨·디저트 원천 차단
 # ==============================================================================
 EXCLUDED_CATEGORIES = [
     "술집", "주점", "호프", "포차", "이자카야", "바(BAR)", "요리주점", "와인바",
     "칵테일바", "민속주점", "맥주", "룸살롱", "단란주점", "유흥주점", "라이브카페", 
     "나이트클럽", "오뎅바", "꼬치구이전문점", "선술집", "해물주점", "실내포차",
     "포장마차", "와인", "위스키", "선술", "감성주점", "카페", "디저트", "제과,베이커리",
-    "실비집", "대포집", "맥줏집"
+    "도넛", "실비집", "대포집", "맥줏집"
 ]
 
 EXCLUDED_NAME_KEYWORDS = [
@@ -326,7 +326,9 @@ EXCLUDED_NAME_KEYWORDS = [
     "BEER", "노래방", "포장마차", "야시장", "소주", "오뎅바", "소주방",
     "막걸리", "동동주", "생맥주", "달빛", "심야", "야식", "올나잇", "주막", "동동",
     "탁주", "양조장", "브루어리", "BREW", "탭룸", "살롱", "가라오케", "선술집",
-    "대포", "대포집", "통닭발", "껍데기", "연탄구이", "원조골뱅이", "실비집", "실비"
+    "대포", "대포집", "통닭발", "껍데기", "연탄구이", "원조골뱅이", "실비집", "실비",
+    # 던킨 및 순수 디저트/도넛류 브랜드 원천 배제
+    "던킨", "DUNKIN", "크리스피크림", "랜디스", "노티드", "배스킨라빈스", "베스킨"
 ]
 
 JEON_KEYWORDS = [
@@ -365,14 +367,12 @@ MULTI_MENU_FRANCHISES = [
     "분식천국", "나드리김밥", "소풍김밥"
 ]
 
-# 스테이크 검색 시 원천 배제할 분식/도시락/돈까스 브랜드
 STEAK_EXCLUDED_KEYWORDS = [
     "한솥", "도시락", "김밥", "천국", "돈까스", "돈가스", "카츠", "가츠", "카쯔",
     "함박", "함바그", "버거", "맥도날드", "롯데리아", "맘스터치", "버거킹", "토마토김밥",
     "얌샘", "고봉민", "싸다김밥", "분식", "포장마차", "국수나무", "역전우동"
 ]
 
-# --- 단품 대표 메뉴 전문점 엄격 매칭 규칙 ---
 STRICT_SPECIALTY_KEYWORDS = {
     "막국수": {
         "required": ["막국수"],
@@ -424,7 +424,6 @@ STRICT_SPECIALTY_KEYWORDS = {
     }
 }
 
-# --- 메뉴 및 가격대 데이터셋 ---
 DEFAULT_FOODS = [
     # 한식
     ("김치찌개", "🥘", "김치찌개", "한식", "low"),
@@ -619,7 +618,6 @@ def fetch_google_place_details(place_name: str, lat: float, lng: float) -> dict:
                         earliest_open_hour = min(per.get("open", {}).get("hour", 0) for per in today_periods)
                         latest_close_hour = max(per.get("close", {}).get("hour", 24) for per in today_periods if per.get("close"))
 
-                        # 14시 이전에 문을 열고 12시 이후까지 영업해야 점심 영업 인정
                         if earliest_open_hour <= 13 and latest_close_hour >= 12:
                             default_res["is_lunch_open"] = True
                         else:
@@ -632,19 +630,16 @@ def fetch_google_place_details(place_name: str, lat: float, lng: float) -> dict:
 
     return default_res
 
-# ==============================================================================
-# [복구 및 강화]: 주점 배제 + 전문점 엄격 필터링 + 가격대 검증 통합 판별기
-# ==============================================================================
+# --- 주점 배제 + 던킨 배제 + 전문점 엄격 필터링 + 가격대 검증 통합 판별기 ---
 def is_valid_specialized_restaurant(menu_name: str, place_name: str, category_name: str, g_details: dict, selected_price_code: str) -> bool:
     clean_name = place_name.replace(" ", "").upper()
     cat_full = category_name.replace(" ", "")
 
-    # 1. 카카오 카테고리 기반 주점/술집/유흥업소 원천 배제
+    # 1. 카카오 카테고리 기반 주점/술집/유흥/도넛 원천 배제
     if any(ex in cat_full for ex in EXCLUDED_CATEGORIES):
         return False
 
-    # 2. 상호명 내 술집/주점/호프/포차/소주방 키워드 원천 배제
-    # (타코 전문점의 경우 멕시칸/타코가 확실히 들어가면 일부 펍 명칭 유연 처리)
+    # 2. 상호명 내 술집/주점/호프/던킨 키워드 원천 배제
     if menu_name == "타코" and any(k in clean_name for k in ["타코", "TACO", "멕시칸"]):
         if any(bad in clean_name for bad in ["노래방", "나이트클럽", "룸살롱", "단란주점", "유흥주점", "소주방", "호프"]):
             return False
@@ -841,7 +836,7 @@ def kakao_search_places(lat: float, lng: float, menu_name: str, search_query: st
 
                 g_details = fetch_google_place_details(p_name, p_lat, p_lng)
 
-                # 복구된 주점 배제 + 전문점 엄격 필터링 + 가격대 검증 적용
+                # 복구된 주점 배제 + 던킨 배제 + 전문점 엄격 필터링 + 가격대 검증 적용
                 if not is_valid_specialized_restaurant(menu_name, p_name, cat_name, g_details, selected_price_code):
                     continue
 
@@ -998,6 +993,7 @@ if res is not None and res.get("places"):
                 st.markdown(cand_html, unsafe_allow_html=True)
 
     st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
+    # 접힌 파란색 지도 단일 이모티콘으로 변경
     st.markdown("<div class='section-title'>🗺 식당 위치 지도</div>", unsafe_allow_html=True)
     st.caption("🔴 빨간 핀: 1픽 매장 / 🔵 파란 핀: 주변 후보")
 
@@ -1139,9 +1135,9 @@ else:
             radius_km = 1.8
             radius_display_text = "지역 인근"
 
-        # --- 3. 음식 종류 선택 ---
+        # --- 3. 음식 종류 선택 (단일 이모티콘 🍴 적용) ---
         with st.container(border=True):
-            st.markdown("<div class='section-title'>🍽 음식 종류</div>", unsafe_allow_html=True)
+            st.markdown("<div class='section-title'>🍴 음식 종류</div>", unsafe_allow_html=True)
 
             cu1, cu2, cu3, cu4 = st.columns(4)
             current_cuisine = st.session_state.selected_cuisine
@@ -1344,7 +1340,7 @@ else:
                     )
                     time.sleep(0.06)
 
-                # 복구된 주점 배제 + 전문점 엄격 필터링 + 가격대 검증 적용 탐색
+                # 복구된 주점 배제 + 던킨 배제 + 전문점 엄격 필터링 + 가격대 검증 적용 탐색
                 final_menu = None
                 places = []
                 for m_name, m_emoji, m_kw, _, _ in shuffled[:6]:
