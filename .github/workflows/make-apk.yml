@@ -56,7 +56,7 @@ jobs:
           fi
 
           # 3) [핵심] 외부 브라우저로 튕기지 않고 앱 내부 화면에서 바로 구동되도록 설정!
-          STREAM_URL="https://여기에-스트림릿-주소.streamlit.app"
+          STREAM_URL="https://lunch-menu-recommend-jnjrrtvhafjvsaxxaoi62j.streamlit.app/"
           sed -i "s|<content src=\"index.html\" />|<content src=\"$STREAM_URL\" />\n    <allow-navigation href=\"*\" />\n    <access origin=\"*\" />|g" config.xml
 
           # 4) AndroidManifest.xml에 GPS 위치 권한 및 하드웨어 가속 주입
